@@ -26,4 +26,18 @@ describe('prepararUnidades', () => {
     expect(() => prepararUnidades({ nombre: 'x', archivos: { 'a.h': '' } })).toThrow(ErrorProyecto);
     expect(() => prepararUnidades({ nombre: 'x', archivos: { 'a.h': '' } })).toThrow('Tu proyecto no tiene ningún archivo .ino');
   });
+  it('cada prototipo lleva su propio #line', () => {
+    const [u] = prepararUnidades(p);
+    expect(u.codigo).toContain('#line 2 "motores.ino"\nvoid avanzar();');
+    expect(u.codigo).toContain('#line 2 "robot.ino"\nvoid setup();');
+  });
+  it('solo compila los .cpp y .c de la raíz y de src/', () => {
+    const q: Proyecto = { nombre: 'r', archivos: { 'r.ino': 'void setup() {}\nvoid loop() {}\n', 'respaldo/viejo.cpp': 'void setup() {}\n', 'src/a/b.cpp': '', 'x.cpp': '' } };
+    expect(prepararUnidades(q).map(u => u.ruta)).toEqual(['r.ino.cpp', 'src/a/b.cpp', 'x.cpp']);
+  });
+  it('inserta los prototipos después de un #ifdef inicial', () => {
+    const [u] = prepararUnidades({ nombre: 'r', archivos: { 'r.ino': '#ifdef DEPURAR\nvoid depurar() {}\n#endif\nvoid setup() { avanzar(); }\nvoid loop() {}\nvoid avanzar() {}\n' } });
+    const lineas = u.codigo.split('\n');
+    expect(lineas.indexOf('void avanzar();')).toBeGreaterThan(lineas.indexOf('#endif'));
+  });
 });

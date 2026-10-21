@@ -1,5 +1,5 @@
 import { it, expect } from 'vitest';
-import { parsearDiagnosticos } from '../../src/compilador/diagnosticos';
+import { parsearDiagnosticos, diagnosticosDeFallo } from '../../src/compilador/diagnosticos';
 
 it('lee errores de Clang con su detalle', () => {
   const salida = "seguidor.ino:1:24: error: expected ';' at end of declaration\n    1 | void setup(){ int x = 3\n      |                        ^\n      |                        ;\npines.h:1:9: error: expected expression\n    1 | int a = ;\n      |         ^\n2 errors generated.\n";
@@ -12,3 +12,9 @@ it('lee advertencias', () =>
 it('lee errores del enlazador y descarta el resumen', () =>
   expect(parsearDiagnosticos('wasm-ld: error: robot.ino.cpp.o: undefined symbol: loop()\nclang++: error: linker command failed with exit code 1 (use -v to see invocation)\n')).toEqual([
     { archivo: null, linea: null, columna: null, severidad: 'error', mensaje: 'undefined symbol: loop()', detalle: '' }]));
+
+it('un fallo sin ubicación igual produce un error con la salida completa', () =>
+  expect(diagnosticosDeFallo('LLVM ERROR: out of memory\n')).toEqual([{
+    archivo: null, linea: null, columna: null, severidad: 'error',
+    mensaje: 'El compilador se detuvo sin explicar por qué. Puede faltar memoria: cierra otras pestañas y vuelve a intentar.',
+    detalle: 'LLVM ERROR: out of memory' }]));

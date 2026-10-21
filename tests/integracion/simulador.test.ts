@@ -85,4 +85,35 @@ describe('Simulador', { timeout: 120_000 }, () => {
     sim.ejecutar(100_000);
     expect(tiempos.length).toBeGreaterThan(9); expect(tiempos.every((t, i) => i === 0 || t >= tiempos[i - 1])).toBe(true);
   });
+  it('printf sin fflush sale línea por línea', async () => {
+    const sim = await crearSim('void setup() {}\nvoid loop() { printf("t=%lu\\n", millis()); delay(100); }');
+    sim.ejecutar(350_000);
+    expect(sim.tomarSerial()).toBe('t=0\nt=100\nt=200\nt=300\n');
+  });
+  it('getenv no termina el programa', async () => {
+    const sim = await crearSim('void setup() { Serial.begin(115200); Serial.println(getenv("X") == NULL ? "nulo" : "algo"); }\nvoid loop() {}');
+    expect(sim.ejecutar(10_000).motivo).toBe('tiempo');
+    expect(sim.tomarSerial()).toBe('nulo\r\n');
+  });
+  it('un error en el modelo del profe no se le atribuye al estudiante', async () => {
+    const dinamica = {
+      estadoInicial: () => ({ x: 0, y: 0, z: 0, yaw: 0, pitch: 0, roll: 0 }),
+      pasoDinamica: () => { throw new TypeError('velocidad no definida'); },
+    };
+    const sim = await crearSim('void setup() {}\nvoid loop() { delay(10); }', { dinamica });
+    const r = sim.ejecutar(100_000);
+    expect(r.motivo).toBe('error');
+    expect(r.error).toMatchObject({ tipo: 'simulador', mensaje: 'Algo falló en el simulador, avisa a tu profe.' });
+    expect(r.error?.tecnico).toContain('velocidad no definida');
+    expect(r.error?.tecnico).toContain('modelo de dinámica');
+  });
+  it('esperar Serial.available() no congela el tiempo y avisa', async () => {
+    const sim = await crearSim('void setup() { Serial.begin(115200); while (!Serial.available()) {} }\nvoid loop() {}');
+    expect(sim.ejecutar(1_000)).toEqual({ motivo: 'tiempo', tiempoUs: 1_000 });
+    expect(sim.avisos).toContain('En el simulador nadie escribe por el Serial: Serial.available() siempre da 0.');
+  });
+  it('delay(0) en un ciclo igual hace avanzar el tiempo', async () => {
+    const sim = await crearSim('void setup() { while (true) { delay(0); } }\nvoid loop() {}');
+    expect(sim.ejecutar(1_000)).toEqual({ motivo: 'tiempo', tiempoUs: 1_000 });
+  });
 });

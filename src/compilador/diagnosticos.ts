@@ -58,3 +58,17 @@ export function parsearDiagnosticos(salida: string): Diagnostico[] {
   cerrar();
   return diagnosticos;
 }
+
+const FALLO_SIN_CAUSA = 'El compilador se detuvo sin explicar por qué. Puede faltar memoria: cierra otras pestañas y vuelve a intentar.';
+
+/**
+ * Diagnósticos de un paso que falló. Si Clang no dejó ningún error reconocible
+ * (por ejemplo, se quedó sin memoria), agrega uno genérico con su salida completa.
+ */
+export function diagnosticosDeFallo(salida: string): Diagnostico[] {
+  const diagnosticos = parsearDiagnosticos(salida);
+  if (diagnosticos.some(d => d.severidad === 'error')) return diagnosticos;
+  return [...diagnosticos, {
+    archivo: null, linea: null, columna: null, severidad: 'error', mensaje: FALLO_SIN_CAUSA, detalle: salida.trim(),
+  }];
+}

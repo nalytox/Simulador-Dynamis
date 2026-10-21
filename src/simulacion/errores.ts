@@ -1,6 +1,15 @@
 import { SalidaPrograma } from './puente';
 
-export type TipoErrorEjecucion = 'division-por-cero' | 'memoria' | 'pila' | 'sin-return' | 'salida' | 'desconocido';
+export type TipoErrorEjecucion =
+  | 'division-por-cero' | 'memoria' | 'pila' | 'sin-return' | 'salida' | 'simulador' | 'desconocido';
+
+/** Falla del simulador o de los modelos del profe: no es un error del programa del estudiante. */
+export class ErrorSimulador extends Error {
+  constructor(origen: string, causa: unknown) {
+    super(`Error en ${origen}: ${causa instanceof Error ? causa.message : String(causa)}`, { cause: causa });
+    this.name = 'ErrorSimulador';
+  }
+}
 
 export interface ErrorEjecucion {
   tipo: TipoErrorEjecucion;
@@ -16,11 +25,13 @@ const MENSAJES: Record<TipoErrorEjecucion, string> = {
   pila: 'Una función se llama a sí misma sin parar.',
   'sin-return': 'Una función que debía devolver un valor terminó sin return.',
   salida: 'Tu programa terminó (se llamó a exit).',
+  simulador: 'Algo falló en el simulador, avisa a tu profe.',
   desconocido: 'Tu programa se detuvo por un error inesperado.',
 };
 
 function tipoDe(e: unknown): TipoErrorEjecucion {
   if (e instanceof SalidaPrograma) return 'salida';
+  if (e instanceof ErrorSimulador) return 'simulador';
   if (e instanceof RangeError) return 'pila';
   if (e instanceof WebAssembly.RuntimeError) {
     const m = e.message.toLowerCase();

@@ -10,13 +10,18 @@ public:
   void begin(unsigned long baudios, uint32_t config = SERIAL_8N1, int8_t rxPin = -1, int8_t txPin = -1,
              bool invertir = false, unsigned long timeout = 20000UL, uint8_t umbralFifo = 112);
   void end() {}
-  int available() { return 0; }
-  int read() { return -1; }
-  int peek() { return -1; }
+  int available();
+  int read();
+  int peek();
   void flush() {}
   void setTimeout(unsigned long) {}
   size_t write(uint8_t c) override;
   size_t write(const uint8_t* buffer, size_t size) override;
+  // Como en el core: write(0) y write(65) envían un byte en vez de ser ambiguos.
+  size_t write(unsigned long n) { return write(static_cast<uint8_t>(n)); }
+  size_t write(long n) { return write(static_cast<uint8_t>(n)); }
+  size_t write(unsigned int n) { return write(static_cast<uint8_t>(n)); }
+  size_t write(int n) { return write(static_cast<uint8_t>(n)); }
   using Print::write;
   operator bool() const { return true; }
 };

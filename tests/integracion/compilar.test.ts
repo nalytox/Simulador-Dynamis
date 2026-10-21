@@ -28,4 +28,10 @@ describe('compilar', { timeout: 120_000 }, () => {
     const r = await compilar({ nombre: 'x', archivos: { 'a.h': '' } }, NUCLEO_FALSO);
     expect(r).toMatchObject({ ok: false, diagnosticos: [{ mensaje: expect.stringContaining('no tiene ningún archivo .ino') }] });
   });
+  it('con una llave de más, el primer error apunta cerca de la llave y no al comienzo', async () => {
+    const codigo = ['int modo = 1;', 'void setup() {', '}', '', 'void loop() {', '  int x = 1;', '  if (x > 0) {', '    x++;', '  }}', '  if (modo == 1) {', '    modo = 2;', '  }', '  while (modo > 5) {', '  }', '}'].join('\n');
+    const r = await compilar({ nombre: 'robot', archivos: { 'robot.ino': codigo } }, NUCLEO_FALSO);
+    expect(r.ok).toBe(false);
+    expect(r.diagnosticos[0].linea).toBeGreaterThanOrEqual(9);
+  });
 });

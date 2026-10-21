@@ -1,7 +1,7 @@
 import { runClang, runLLVM, Exit } from '@yowasp/clang';
 import type { Proyecto } from '../proyecto/proyecto';
 import { prepararUnidades, ErrorProyecto, type UnidadCompilacion } from './preprocesador';
-import { parsearDiagnosticos, type Diagnostico } from './diagnosticos';
+import { parsearDiagnosticos, diagnosticosDeFallo, type Diagnostico } from './diagnosticos';
 import { aArbol, leerDeArbol, type Arbol } from './arbol';
 import opciones from './opciones.json';
 
@@ -25,11 +25,15 @@ let precarga: Promise<unknown> | null = null;
 /**
  * Descarga y prepara LLVM una sola vez. runClang no pasa fetchProgress a sus
  * subprocesos, así que sin esta precarga se imprimiría el progreso en la consola.
+ * Si la descarga falla, la próxima llamada vuelve a intentarlo.
  */
 export function prepararCompilador(alProgresar: (hecho: number, total: number) => void = () => {}): Promise<unknown> {
   precarga ??= Promise.resolve(runLLVM(undefined, {}, {
     fetchProgress: ({ doneLength, totalLength }) => alProgresar(doneLength, totalLength),
-  }));
+  })).catch((e: unknown) => {
+    precarga = null;
+    throw e;
+  });
   return precarga;
 }
 
@@ -74,10 +78,14 @@ export async function compilar(p: Proyecto, nucleo: ArchivosNucleo): Promise<Res
   let fallo = false;
   for (const u of unidades) {
     const { arbol, salida } = await ejecutarClang(argumentosDeUnidad(u), aArbol(planos));
-    diagnosticos.push(...parsearDiagnosticos(salida));
     const objeto = arbol && leerDeArbol(arbol, `${u.ruta}.o`);
-    if (objeto instanceof Uint8Array) objetos[`${u.ruta}.o`] = objeto;
-    else fallo = true;
+    if (objeto instanceof Uint8Array) {
+      objetos[`${u.ruta}.o`] = objeto;
+      diagnosticos.push(...parsearDiagnosticos(salida));
+    } else {
+      fallo = true;
+      diagnosticos.push(...diagnosticosDeFallo(salida));
+    }
   }
   if (fallo) return { ok: false, diagnosticos };
 
@@ -87,8 +95,8 @@ export async function compilar(p: Proyecto, nucleo: ArchivosNucleo): Promise<Res
     ...(nucleo.biblioteca ? ['-Wl,--whole-archive', BIBLIOTECA, '-Wl,--no-whole-archive'] : []), '-o', SALIDA,
   ];
   const { arbol, salida } = await ejecutarClang(argsEnlace, aArbol({ ...planos, ...objetos }));
-  diagnosticos.push(...parsearDiagnosticos(salida));
   const wasm = arbol && leerDeArbol(arbol, SALIDA);
-  if (!(wasm instanceof Uint8Array)) return { ok: false, diagnosticos };
+  if (!(wasm instanceof Uint8Array)) return { ok: false, diagnosticos: [...diagnosticos, ...diagnosticosDeFallo(salida)] };
+  diagnosticos.push(...parsearDiagnosticos(salida));
   return { ok: true, wasm: new Uint8Array(wasm), diagnosticos };
 }

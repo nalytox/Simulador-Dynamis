@@ -22,3 +22,14 @@ describe('buscarDefiniciones con comentarios dentro de la firma', () => {
   it('no deja comentarios de línea dentro del prototipo', () =>
     expect(protos('void mover(int izq,   // izquierda\n           int der) /* fin */ {\n}\n')).toEqual(['void mover(int izq, int der);']));
 });
+
+describe('buscarDefiniciones y la compilación condicional', () => {
+  it('no genera prototipos para funciones dentro de #ifdef o #if 0', () =>
+    expect(buscarDefiniciones('//#define DEPURAR\n#ifdef DEPURAR\nvoid depurar(int v) { }\n#endif\n#if 0\nvoid viejo(TipoViejo t) { }\n#endif\n\nvoid setup() { }\n'))
+      .toEqual([{ prototipo: 'void setup();', linea: 8 }]));
+});
+
+describe('buscarDefiniciones con llaves desbalanceadas', () => {
+  it('no convierte if, while, for ni firmas sin tipo en prototipos', () =>
+    expect(protos('}\nif (modo == 1) {\n}\nwhile (millis() < 10) {\n}\nfor (int i = 0; i < 3; i++) {\n}\nsetup() {\n}\n')).toEqual([]));
+});

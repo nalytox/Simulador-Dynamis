@@ -9,7 +9,10 @@ const TODOS_LOS_PINES = 255;
 
 interface Pwm { valor: number; bits: number }
 
-/** Estado de los pines del ESP32 tal como los deja el programa. */
+/**
+ * Estado de los pines del ESP32 tal como los deja el programa. Como en el core 3.x, cada pin
+ * está en un solo bus: GPIO (pinMode) o PWM (analogWrite, ledcAttach); pasar a uno lo saca del otro.
+ */
 export class Pines {
   readonly avisos: AvisoPin[] = [];
   private readonly modos = new Map<number, number>();
@@ -48,16 +51,21 @@ export class Pines {
   pinMode(pin: number, modo: number): void {
     if (!this.existe(pin)) return;
     if ((modo & MODO_SALIDA_BIT) !== 0 && !this.puedeEscribir(pin)) return;
+    this.pwm.delete(pin);
+    this.ledc.delete(pin);
     this.modos.set(pin, modo);
   }
 
   digitalWrite(pin: number, valor: number): void {
     if (!this.puedeEscribir(pin)) return;
+    if (this.pwm.has(pin) || this.ledc.has(pin)) {
+      this.avisar(pin, `digitalWrite(${pin}, …) no tiene efecto: el pin está en PWM. Usa pinMode(${pin}, OUTPUT) antes.`);
+      return;
+    }
     if (!this.esSalida(pin)) {
       this.avisar(pin, `Usa pinMode(${pin}, OUTPUT) antes de digitalWrite(${pin}, …).`);
       return;
     }
-    this.pwm.delete(pin);
     this.niveles.set(pin, valor ? 1 : 0);
   }
 
@@ -83,11 +91,14 @@ export class Pines {
     if (valor < 0 || valor > maximo) {
       this.avisar(pin, `analogWrite(${pin}, ${valor}) está fuera de rango: con ${bits} bits el máximo es ${maximo}.`);
     }
+    this.modos.delete(pin);
     this.pwm.set(pin, { valor: Math.min(maximo, Math.max(0, valor)), bits });
   }
 
   ledcAttach(pin: number, _freq: number, bits: number): boolean {
     if (!this.puedeEscribir(pin)) return false;
+    this.modos.delete(pin);
+    this.pwm.delete(pin);
     this.ledc.set(pin, Math.min(20, Math.max(1, bits)));
     return true;
   }

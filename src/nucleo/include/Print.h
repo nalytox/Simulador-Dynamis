@@ -4,6 +4,12 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <string.h>
+#include "pgmspace.h"
+
+// F("texto"): en el ESP32 el texto ya se lee desde la flash, así que es el mismo texto.
+class __FlashStringHelper;
+#define FPSTR(pstr_pointer) (reinterpret_cast<const __FlashStringHelper*>(pstr_pointer))
+#define F(string_literal) (FPSTR(PSTR(string_literal)))
 
 #ifndef DEC
 #define DEC 10
@@ -20,6 +26,7 @@ public:
   size_t write(const char* str) { return str ? write(reinterpret_cast<const uint8_t*>(str), strlen(str)) : 0; }
   size_t write(const char* buffer, size_t size) { return write(reinterpret_cast<const uint8_t*>(buffer), size); }
 
+  size_t print(const __FlashStringHelper* texto) { return print(reinterpret_cast<const char*>(texto)); }
   size_t print(const char texto[]);
   size_t print(char c);
   size_t print(unsigned char n, int base = DEC);
@@ -31,6 +38,7 @@ public:
   size_t print(unsigned long long n, int base = DEC);
   size_t print(double n, int digitos = 2);
 
+  size_t println(const __FlashStringHelper* texto) { return println(reinterpret_cast<const char*>(texto)); }
   size_t println(const char texto[]);
   size_t println(char c);
   size_t println(unsigned char n, int base = DEC);

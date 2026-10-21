@@ -21,6 +21,8 @@ export interface Anfitrion {
   ledcDetach(pin: number): boolean;
   serialBegin(baudios: number): void;
   serialWrite(bytes: Uint8Array): void;
+  /** Bytes recibidos por el Serial que el programa todavía no lee. */
+  serialAvailable(): number;
   azarU32(): number;
   /** printf y la salida estándar de C (en el ESP32 salen por el mismo UART que Serial). */
   salidaEstandar(bytes: Uint8Array): void;
@@ -61,10 +63,13 @@ const DYNAMIS: Record<string, FabricaImport> = {
   serial_begin: a => (baudios: number) => a.serialBegin(u32(baudios)),
   serial_write: (a, memoria) => (ptr: number, largo: number) =>
     a.serialWrite(new Uint8Array(memoria().buffer, u32(ptr), u32(largo)).slice()),
+  serial_available: a => () => a.serialAvailable(),
   azar_u32: a => () => a.azarU32(),
 };
 
 const ERRNO = { exito: 0, descriptorInvalido: 8, noImplementado: 52 };
+const TIPO_DISPOSITIVO_DE_CARACTERES = 2;
+const DERECHO_FD_WRITE = 1n << 6n;
 
 function unir(trozos: Uint8Array[]): Uint8Array {
   const total = new Uint8Array(trozos.reduce((n, t) => n + t.length, 0));
@@ -90,6 +95,30 @@ function importWasi(nombre: string, a: Anfitrion, memoria: Memoria): (...args: n
         if (datos.length > 0) a.salidaEstandar(datos);
         return ERRNO.exito;
       };
+    case 'fd_fdstat_get':
+      // stdout y stderr son una terminal (dispositivo de caracteres sin seek): así la libc
+      // vacía printf en cada salto de línea, como en el monitor serie.
+      return (fd: number, ptr: number) => {
+        if (fd !== 1 && fd !== 2) return ERRNO.descriptorInvalido;
+        const vista = new DataView(memoria().buffer);
+        vista.setUint8(ptr, TIPO_DISPOSITIVO_DE_CARACTERES);
+        vista.setUint16(ptr + 2, 0, true);
+        vista.setBigUint64(ptr + 8, DERECHO_FD_WRITE, true);
+        vista.setBigUint64(ptr + 16, 0n, true);
+        return ERRNO.exito;
+      };
+    case 'environ_sizes_get':
+    case 'args_sizes_get':
+      // Sin variables de entorno ni argumentos: getenv() devuelve NULL en vez de cerrar el programa.
+      return (cantidad: number, bytes: number) => {
+        const vista = new DataView(memoria().buffer);
+        vista.setUint32(cantidad, 0, true);
+        vista.setUint32(bytes, 0, true);
+        return ERRNO.exito;
+      };
+    case 'environ_get':
+    case 'args_get':
+      return () => ERRNO.exito;
     case 'clock_time_get':
       return (_id: number, _precision: bigint, ptr: number) => {
         new DataView(memoria().buffer).setBigUint64(ptr, a.tiempoNs(), true);

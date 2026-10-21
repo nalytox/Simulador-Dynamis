@@ -199,7 +199,8 @@ Errores durante la ejecución:
 | `VL53L0X::readRangeContinuousMillimeters` | espera hasta la siguiente medición del período configurado |
 | `Adafruit_TCS34725::getRawData` | espera el tiempo de integración (como la librería real) |
 | `Serial.print*` | 10 bits por carácter a la velocidad configurada, solo si se llena el búfer de 128 bytes |
-| `delay(ms)` / `delayMicroseconds(us)` | exactamente lo pedido |
+| `Serial.available()`, `read()`, `peek()` | 1 µs (esperar datos no congela el tiempo) |
+| `delay(ms)` / `delayMicroseconds(us)` | exactamente lo pedido, con un mínimo de 1 µs (`delay(0)` también cede) |
 
 - **Determinismo:** cada ejecución tiene una **semilla**. Los modelos reciben un generador aleatorio con esa semilla (`ctx.azar()`), así una prueba se puede repetir exactamente (por ejemplo, "Ver esta prueba en la pista").
 - **Instantáneas a la UI** (~60 Hz): pose, motores, lecturas, eventos y mensajes de `Serial` acumulados desde la instantánea anterior.
@@ -213,8 +214,9 @@ Son reimplementaciones **compatibles con la API pública** de cada librería, es
 **Arduino / ESP32 core 3.x**
 - **Pines:** `pinMode`, `digitalWrite`, `digitalRead`, `analogRead` (12 bits, `analogReadResolution`), `analogWrite` (8 bits por defecto, `analogWriteResolution`), `ledcAttach(pin, freq, res)`, `ledcWrite(pin, duty)`, `ledcDetach`.
 - **Tiempo:** `millis`, `micros`, `delay`, `delayMicroseconds`, `yield`.
-- **Utilidades:** `random`, `randomSeed`, `map`, `constrain`, `min`, `max`, `abs`, `sq`, constantes `HIGH/LOW/INPUT/OUTPUT/INPUT_PULLUP`.
-- **`Serial`:** `begin`, `print`, `println`, `printf`, `write`, `flush`. `available()` y `read()` devuelven 0 y -1 (no hay entrada desde la UI en la v1).
+- **Utilidades:** `random`, `randomSeed`, `map`, `constrain`, `min`, `max`, `abs`, `sq`, constantes `HIGH/LOW/INPUT/OUTPUT/INPUT_PULLUP`, nombres de pines de la placa (`A0`…`A19`, `SDA`, `SCL`, `T0`…), `F()`/`PROGMEM`/`pgm_read_*`, `itoa`/`ltoa`/`utoa`/`ultoa`/`dtostrf` y `<inttypes.h>` (`PRIu32`…), `analogWriteFrequency` (se acepta y no cambia la simulación).
+- **Buses de un pin:** como en el core 3.x, un pin está en GPIO (`pinMode`) o en PWM (`analogWrite`, `ledcAttach`); `digitalWrite` sobre un pin en PWM no tiene efecto y produce un aviso.
+- **`Serial`:** `begin`, `print`, `println`, `printf`, `write`, `flush`. `available()` y `read()` devuelven 0 y -1 (no hay entrada desde la UI en la v1) y avisan que nadie escribe por el Serial.
 - **`String`** (subconjunto de `WString`): construcción desde números, concatenación, `length`, `toInt`, `toFloat`, `indexOf`, `substring`, `c_str`.
 - **`Wire`:** `begin([sda, scl])` y `setClock` no hacen nada. Los dispositivos se simulan a nivel de librería. El acceso directo a registros (`beginTransmission`/`requestFrom`) no está soportado en la v1 y produce un aviso claro.
 

@@ -1,5 +1,5 @@
 import { crearImports, type Anfitrion } from './puente';
-import { clasificarErrorEjecucion, type ErrorEjecucion } from './errores';
+import { clasificarErrorEjecucion, ErrorSimulador, type ErrorEjecucion } from './errores';
 import { Pines } from './pines';
 import { pinesAMotores, type Motores } from './motores';
 import { COSTOS_US, BUFER_SERIAL_BYTES, usPorCaracter } from './costos';
@@ -46,7 +46,17 @@ interface ExportsPrograma {
 /** Se lanza desde un import para cortar la ejecución del programa al llegar al límite. */
 class FinDeTiempo extends Error {}
 
+/** Ejecuta código del simulador o del profe; si falla, el error no se le atribuye al estudiante. */
+function protegido<T>(origen: string, f: () => T): T {
+  try {
+    return f();
+  } catch (e) {
+    throw new ErrorSimulador(origen, e);
+  }
+}
+
 const AVISO_SERIAL_SIN_BEGIN = 'Usaste Serial.print sin Serial.begin(): en el robot real no se verá nada.';
+const AVISO_SERIAL_SIN_ENTRADA = 'En el simulador nadie escribe por el Serial: Serial.available() siempre da 0.';
 const BITS_ADC_POR_DEFECTO = 12;
 const MAXIMO_ADC_CRUDO = 4095;
 const BAUDIOS_POR_DEFECTO = 115200;
@@ -149,11 +159,12 @@ export class Simulador {
     this.t = Math.min(this.t + us, this.limite);
     while (this.tFisica + this.dtFisicaUs <= this.t) {
       const motores = pinesAMotores(this.pinesSim, this.robot.motores);
-      this.estadoActual = this.dinamica.pasoDinamica(
-        this.estadoActual, motores, this.dtFisicaUs / 1e6, this.mundo, this.robot, this.azarModelos);
+      this.estadoActual = protegido('el modelo de dinámica', () => this.dinamica.pasoDinamica(
+        this.estadoActual, motores, this.dtFisicaUs / 1e6, this.mundo, this.robot, this.azarModelos));
       this.tFisica += this.dtFisicaUs;
     }
-    this.alAvanzar?.(this);
+    const alAvanzar = this.alAvanzar;
+    if (alAvanzar) protegido('alAvanzar', () => alAvanzar(this));
     if (this.t >= this.limite) throw new FinDeTiempo();
   }
 
@@ -186,15 +197,17 @@ export class Simulador {
     return {
       millis: () => { this.avanzar(COSTOS_US.millis); return Math.floor(this.t / 1000); },
       micros: () => { this.avanzar(COSTOS_US.micros); return Math.floor(this.t); },
-      delay: ms => this.avanzar(ms * 1000),
-      delayUs: us => this.avanzar(us),
+      // delay(0) igual cede el procesador: sin un costo mínimo, un ciclo de delay(0) congelaría el tiempo.
+      delay: ms => this.avanzar(Math.max(ms * 1000, COSTOS_US.yield)),
+      delayUs: us => this.avanzar(Math.max(us, COSTOS_US.yield)),
       rendir: () => this.avanzar(COSTOS_US.yield),
       pinMode: (pin, modo) => { this.avanzar(COSTOS_US.pinMode); p.pinMode(pin, modo); },
       digitalWrite: (pin, valor) => { this.avanzar(COSTOS_US.digitalWrite); p.digitalWrite(pin, valor); },
       digitalRead: pin => { this.avanzar(COSTOS_US.digitalRead); return p.digitalRead(pin); },
       analogRead: pin => {
         this.avanzar(COSTOS_US.analogRead);
-        const crudo = Math.min(MAXIMO_ADC_CRUDO, Math.max(0, Math.round(this.lectorAnalogico(pin, this))));
+        const lectura = protegido('el lector analógico', () => this.lectorAnalogico(pin, this));
+        const crudo = Math.min(MAXIMO_ADC_CRUDO, Math.max(0, Math.round(lectura)));
         return Math.round(crudo * (2 ** this.bitsAdc - 1) / MAXIMO_ADC_CRUDO);
       },
       analogReadResolution: bits => { this.bitsAdc = Math.min(16, Math.max(1, bits)); },
@@ -210,6 +223,11 @@ export class Simulador {
         this.tUltimoSerial = this.t;
       },
       serialWrite: bytes => this.escribirSerial(bytes),
+      serialAvailable: () => {
+        this.avisar(AVISO_SERIAL_SIN_ENTRADA);
+        this.avanzar(COSTOS_US.serialAvailable);
+        return 0;
+      },
       azarU32: () => Math.floor(this.azarPrograma() * 4294967296) >>> 0,
       salidaEstandar: bytes => { this.texto += this.decodificadorEstandar.decode(bytes, { stream: true }); },
       tiempoNs: () => BigInt(Math.floor(this.t)) * 1000n,

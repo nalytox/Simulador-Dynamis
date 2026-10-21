@@ -9,13 +9,19 @@ export interface DefinicionFuncion {
 }
 
 const PALABRAS_EXCLUIDAS = /^(template|struct|class|union|enum|namespace|extern|typedef)\b/;
+/** Palabras que pueden quedar antes de un '(' en el nivel superior si sobra una llave. */
+const PALABRAS_DE_CONTROL = new Set(['if', 'else', 'while', 'for', 'switch', 'do', 'case', 'return', 'sizeof', 'catch', 'throw', 'new', 'delete']);
+
+interface Directiva { posicion: number; nombre: string }
 
 /**
  * Reemplaza comentarios, literales de texto o carácter y líneas de preprocesador
- * por espacios, conservando los saltos de línea y las posiciones.
+ * por espacios, conservando los saltos de línea y las posiciones. Devuelve también
+ * dónde estaba cada directiva, para saber qué queda dentro de un #if.
  */
-function limpiar(codigo: string): string {
+function limpiar(codigo: string): { texto: string; directivas: Directiva[] } {
   const salida = codigo.split('');
+  const directivas: Directiva[] = [];
   const borrar = (desde: number, hasta: number) => {
     for (let k = desde; k < hasta; k++) if (salida[k] !== '\n') salida[k] = ' ';
   };
@@ -27,6 +33,7 @@ function limpiar(codigo: string): string {
     if (inicioDeLinea && c === '#') {
       let j = i;
       while (j < codigo.length && !(codigo[j] === '\n' && codigo[j - 1] !== '\\')) j++;
+      directivas.push({ posicion: i, nombre: codigo.slice(i + 1, j).match(/^\s*(\w*)/)![1] });
       borrar(i, j);
       i = j;
       continue;
@@ -52,7 +59,18 @@ function limpiar(codigo: string): string {
       i++;
     }
   }
-  return salida.join('');
+  return { texto: salida.join(''), directivas };
+}
+
+/** true si la posición queda dentro de un #if, #ifdef o #ifndef (activo o no). */
+function dentroDeCondicional(directivas: Directiva[], posicion: number): boolean {
+  let profundidad = 0;
+  for (const d of directivas) {
+    if (d.posicion >= posicion) break;
+    if (d.nombre === 'if' || d.nombre === 'ifdef' || d.nombre === 'ifndef') profundidad++;
+    else if (d.nombre === 'endif') profundidad = Math.max(0, profundidad - 1);
+  }
+  return profundidad > 0;
 }
 
 /** Índice del '(' que corresponde al ')' en la posición `cierre`. */
@@ -102,13 +120,16 @@ function prototipoDe(sentencia: string): string | null {
   const cabezaLimpia = colapsar(cabeza);
   if (!cabezaLimpia || cabeza.includes('=') || cabeza.includes('::') || cabeza.includes('(')) return null;
   if (PALABRAS_EXCLUIDAS.test(cabezaLimpia)) return null;
-  if (!/[A-Za-z_]\w*\s*$/.test(cabeza)) return null;
+  const nombre = cabezaLimpia.match(/[A-Za-z_]\w*$/)?.[0];
+  if (!nombre) return null;
+  const tipo = cabezaLimpia.slice(0, -nombre.length).trim();
+  if (!tipo || [nombre, ...tipo.split(/[\s*&]+/)].some(p => PALABRAS_DE_CONTROL.has(p))) return null;
   const params = parametrosSinDefecto(texto.slice(apertura + 1, texto.length - 1));
   return `${cabezaLimpia}(${params.map(colapsar).join(', ')});`;
 }
 
 export function buscarDefiniciones(codigo: string): DefinicionFuncion[] {
-  const limpio = limpiar(codigo);
+  const { texto: limpio, directivas } = limpiar(codigo);
   const definiciones: DefinicionFuncion[] = [];
   let profundidad = 0;
   let inicio = 0;
@@ -119,8 +140,8 @@ export function buscarDefiniciones(codigo: string): DefinicionFuncion[] {
         const sentencia = limpio.slice(inicio, i);
         const desplazamiento = sentencia.length - sentencia.trimStart().length;
         const prototipo = prototipoDe(sentencia.trimStart());
-        if (prototipo) {
-          const posicion = inicio + desplazamiento;
+        const posicion = inicio + desplazamiento;
+        if (prototipo && !dentroDeCondicional(directivas, posicion)) {
           const linea = codigo.slice(0, posicion).split('\n').length - 1;
           definiciones.push({ prototipo, linea });
         }

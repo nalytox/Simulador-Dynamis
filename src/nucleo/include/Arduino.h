@@ -3,11 +3,17 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdarg.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <inttypes.h>
 #include <math.h>
 #include "dynamis_host.h"
+#include "pgmspace.h"
+#include "pins_arduino.h"
+#include "stdlib_noniso.h"
 
 #define HIGH 0x1
 #define LOW 0x0
@@ -63,6 +69,8 @@ static inline int digitalRead(uint8_t pin) { return dyn_digital_read(pin); }
 static inline uint16_t analogRead(uint8_t pin) { return dyn_analog_read(pin); }
 static inline void analogReadResolution(uint8_t bits) { dyn_analog_read_resolution(bits); }
 static inline void analogWrite(uint8_t pin, int valor) { dyn_analog_write(pin, valor); }
+// La frecuencia del PWM no cambia lo que ve el simulador: solo se acepta la llamada.
+static inline void analogWriteFrequency(uint8_t pin, uint32_t freq) { (void)pin; (void)freq; }
 static inline bool ledcAttach(uint8_t pin, uint32_t freq, uint8_t bits) { return dyn_ledc_attach(pin, freq, bits); }
 static inline bool ledcWrite(uint8_t pin, uint32_t duty) { return dyn_ledc_write(pin, duty); }
 static inline bool ledcDetach(uint8_t pin) { return dyn_ledc_detach(pin); }

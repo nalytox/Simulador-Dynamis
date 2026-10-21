@@ -27,6 +27,7 @@ DYN_IMPORTAR("ledc_write") int dyn_ledc_write(uint8_t pin, uint32_t duty);
 DYN_IMPORTAR("ledc_detach") int dyn_ledc_detach(uint8_t pin);
 DYN_IMPORTAR("serial_begin") void dyn_serial_begin(uint32_t baudios);
 DYN_IMPORTAR("serial_write") void dyn_serial_write(const uint8_t* datos, size_t largo);
+DYN_IMPORTAR("serial_available") int dyn_serial_available(void);
 DYN_IMPORTAR("azar_u32") uint32_t dyn_azar_u32(void);
 
 #ifdef __cplusplus

@@ -21,7 +21,7 @@ export function crearAnfitrionFalso(): { anfitrion: Anfitrion; llamadas: unknown
     analogRead: registrar('analogRead', 0), analogReadResolution: registrar('analogReadResolution'),
     analogWrite: registrar('analogWrite'), analogWriteResolution: registrar('analogWriteResolution'),
     ledcAttach: registrar('ledcAttach', true), ledcWrite: registrar('ledcWrite', true), ledcDetach: registrar('ledcDetach', true),
-    serialBegin: registrar('serialBegin'), serialWrite: escribir('serialWrite'),
+    serialBegin: registrar('serialBegin'), serialWrite: escribir('serialWrite'), serialAvailable: registrar('serialAvailable', 0),
     azarU32: registrar('azarU32', 12345), salidaEstandar: escribir('salidaEstandar'), tiempoNs: () => 0n,
   };
   return { anfitrion, llamadas, texto: () => texto };

@@ -20,7 +20,8 @@ const directivaLinea = (linea: number, ruta: string) => `#line ${linea} ${JSON.s
 /**
  * Prepara las unidades de compilación como el Arduino IDE: une los .ino de la raíz
  * (el principal primero), agrega Arduino.h y los prototipos, y conserva la numeración
- * original con directivas #line. Cada .cpp y .c es su propia unidad.
+ * original con directivas #line. Cada .cpp y .c de la raíz o de src/ es su propia
+ * unidad; los de otras carpetas no se compilan, igual que en el Arduino IDE.
  */
 export function prepararUnidades(p: Proyecto): UnidadCompilacion[] {
   const orden = ordenarArchivos(p);
@@ -33,7 +34,9 @@ export function prepararUnidades(p: Proyecto): UnidadCompilacion[] {
     const texto = normalizarTexto(p.archivos[ruta]);
     return { ruta, lineas: texto.split('\n'), definiciones: buscarDefiniciones(texto) };
   });
-  const prototipos = archivosIno.flatMap(a => a.definiciones.map(d => d.prototipo));
+  // Cada prototipo apunta a su definición, para que un error en la firma se vea allí.
+  const prototipos = archivosIno.flatMap(a =>
+    a.definiciones.flatMap(d => [directivaLinea(d.linea + 1, a.ruta), d.prototipo]));
   const conPrototipos = archivosIno.findIndex(a => a.definiciones.length > 0);
 
   const partes = ['#include <Arduino.h>'];
@@ -54,6 +57,7 @@ export function prepararUnidades(p: Proyecto): UnidadCompilacion[] {
 
   const otras: UnidadCompilacion[] = orden
     .filter(r => tipoDeArchivo(r) === 'cpp' || tipoDeArchivo(r) === 'c')
+    .filter(r => !r.includes('/') || r.startsWith('src/'))
     .map(ruta => ({
       ruta,
       lenguaje: tipoDeArchivo(ruta) === 'c' ? 'c' : 'c++',

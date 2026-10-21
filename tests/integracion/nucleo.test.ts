@@ -43,4 +43,8 @@ describe('núcleo Arduino del ESP32', { timeout: 120_000 }, () => {
     const { llamadas } = await correrSetup('volatile long a = random(10); randomSeed(42); volatile long b = random(10);');
     expect(llamadas.filter(l => l[0] === 'azarU32')).toHaveLength(1);
   });
+  it('acepta la API común del ESP32: F(), A0, SDA, dtostrf, itoa, PRIu32, write(0) y analogWriteFrequency', async () => {
+    const { texto } = await correrSetup('Serial.begin(115200); Serial.println(F("hola")); Serial.println(A0); Serial.println(A7); Serial.println(SDA); char b[16]; Serial.println(dtostrf(3.14159, 6, 2, b)); Serial.println(itoa(-42, b, 10)); Serial.printf("%" PRIu32 "\\n", (uint32_t)7); Serial.write(0); analogWriteFrequency(18, 20000);');
+    expect(texto()).toBe('hola\r\n36\r\n35\r\n21\r\n  3.14\r\n-42\r\n7\n\u0000');
+  });
 });

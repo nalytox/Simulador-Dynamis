@@ -30,12 +30,21 @@ describe('Pines del ESP32', () => {
     expect(p.nivel(21)).toBe(0);
     expect(p.avisos).toEqual([{ pin: 21, mensaje: 'Usa ledcAttach(21, frecuencia, bits) antes de ledcWrite(21, …).' }]);
   });
-  it('ledcAttach y ledcWrite normalizan con los bits elegidos; digitalWrite quita el PWM', () => {
+  it('ledcAttach y ledcWrite normalizan con los bits elegidos; pinMode devuelve el pin a GPIO', () => {
     const p = new Pines();
     expect(p.ledcAttach(21, 5000, 10)).toBe(true);
     p.ledcWrite(21, 512);
     expect(p.nivel(21)).toBeCloseTo(512 / 1023);
     p.pinMode(21, 0x03); p.digitalWrite(21, 0);
     expect(p.nivel(21)).toBe(0);
+  });
+  it('digitalWrite sobre un pin en PWM no tiene efecto, como en el ESP32', () => {
+    const p = new Pines(); p.pinMode(18, 0x03); p.analogWrite(18, 200); p.digitalWrite(18, 0);
+    expect(p.nivel(18)).toBeCloseTo(200 / 255);
+    expect(p.avisos.map(a => a.mensaje)).toContain('digitalWrite(18, …) no tiene efecto: el pin está en PWM. Usa pinMode(18, OUTPUT) antes.');
+  });
+  it('pinMode después de analogWrite detiene el PWM', () => {
+    const p = new Pines(); p.analogWrite(18, 200); p.pinMode(18, 0x03);
+    expect(p.nivel(18)).toBe(0);
   });
 });
