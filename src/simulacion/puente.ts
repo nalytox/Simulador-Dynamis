@@ -1,0 +1,130 @@
+/**
+ * Puente entre el programa compilado (wasm) y el simulador: construye los imports
+ * "dynamis" (ver src/nucleo/include/dynamis_host.h) y un WASI mínimo.
+ */
+export interface Anfitrion {
+  millis(): number;
+  micros(): number;
+  delay(ms: number): void;
+  delayUs(us: number): void;
+  rendir(): void;
+  pinMode(pin: number, modo: number): void;
+  digitalWrite(pin: number, valor: number): void;
+  digitalRead(pin: number): number;
+  analogRead(pin: number): number;
+  analogReadResolution(bits: number): void;
+  analogWrite(pin: number, valor: number): void;
+  /** pin 255 = todos los pines. */
+  analogWriteResolution(pin: number, bits: number): void;
+  ledcAttach(pin: number, freq: number, bits: number): boolean;
+  ledcWrite(pin: number, duty: number): boolean;
+  ledcDetach(pin: number): boolean;
+  serialBegin(baudios: number): void;
+  serialWrite(bytes: Uint8Array): void;
+  azarU32(): number;
+  /** printf y la salida estándar de C (en el ESP32 salen por el mismo UART que Serial). */
+  salidaEstandar(bytes: Uint8Array): void;
+  tiempoNs(): bigint;
+}
+
+/** El programa llamó a exit(): se detiene la ejecución. */
+export class SalidaPrograma extends Error {
+  readonly codigo: number;
+  constructor(codigo: number) {
+    super(`exit(${codigo})`);
+    this.name = 'SalidaPrograma';
+    this.codigo = codigo;
+  }
+}
+
+type Memoria = () => WebAssembly.Memory;
+type FabricaImport = (a: Anfitrion, memoria: Memoria) => (...args: never[]) => unknown;
+
+const u32 = (x: number) => x >>> 0;
+
+const DYNAMIS: Record<string, FabricaImport> = {
+  millis: a => () => a.millis(),
+  micros: a => () => a.micros(),
+  delay: a => (ms: number) => a.delay(u32(ms)),
+  delay_us: a => (us: number) => a.delayUs(u32(us)),
+  yield: a => () => a.rendir(),
+  pin_mode: a => (pin: number, modo: number) => a.pinMode(pin, modo),
+  digital_write: a => (pin: number, valor: number) => a.digitalWrite(pin, valor),
+  digital_read: a => (pin: number) => a.digitalRead(pin),
+  analog_read: a => (pin: number) => a.analogRead(pin),
+  analog_read_resolution: a => (bits: number) => a.analogReadResolution(bits),
+  analog_write: a => (pin: number, valor: number) => a.analogWrite(pin, valor),
+  analog_write_resolution: a => (pin: number, bits: number) => a.analogWriteResolution(pin, bits),
+  ledc_attach: a => (pin: number, freq: number, bits: number) => (a.ledcAttach(pin, u32(freq), bits) ? 1 : 0),
+  ledc_write: a => (pin: number, duty: number) => (a.ledcWrite(pin, u32(duty)) ? 1 : 0),
+  ledc_detach: a => (pin: number) => (a.ledcDetach(pin) ? 1 : 0),
+  serial_begin: a => (baudios: number) => a.serialBegin(u32(baudios)),
+  serial_write: (a, memoria) => (ptr: number, largo: number) =>
+    a.serialWrite(new Uint8Array(memoria().buffer, u32(ptr), u32(largo)).slice()),
+  azar_u32: a => () => a.azarU32(),
+};
+
+const ERRNO = { exito: 0, descriptorInvalido: 8, noImplementado: 52 };
+
+function unir(trozos: Uint8Array[]): Uint8Array {
+  const total = new Uint8Array(trozos.reduce((n, t) => n + t.length, 0));
+  let desde = 0;
+  for (const t of trozos) { total.set(t, desde); desde += t.length; }
+  return total;
+}
+
+function importWasi(nombre: string, a: Anfitrion, memoria: Memoria): (...args: never[]) => unknown {
+  switch (nombre) {
+    case 'fd_write':
+      return (fd: number, iovs: number, cantidad: number, escritos: number) => {
+        const vista = new DataView(memoria().buffer);
+        const trozos: Uint8Array[] = [];
+        for (let i = 0; i < cantidad; i++) {
+          const ptr = vista.getUint32(iovs + i * 8, true);
+          const largo = vista.getUint32(iovs + i * 8 + 4, true);
+          trozos.push(new Uint8Array(memoria().buffer, ptr, largo).slice());
+        }
+        const datos = unir(trozos);
+        vista.setUint32(escritos, datos.length, true);
+        if (fd !== 1 && fd !== 2) return ERRNO.descriptorInvalido;
+        if (datos.length > 0) a.salidaEstandar(datos);
+        return ERRNO.exito;
+      };
+    case 'clock_time_get':
+      return (_id: number, _precision: bigint, ptr: number) => {
+        new DataView(memoria().buffer).setBigUint64(ptr, a.tiempoNs(), true);
+        return ERRNO.exito;
+      };
+    case 'random_get':
+      return (ptr: number, largo: number) => {
+        const bytes = new Uint8Array(memoria().buffer, ptr, largo);
+        for (let i = 0; i < largo; i += 4) {
+          const valor = a.azarU32();
+          for (let k = 0; k < 4 && i + k < largo; k++) bytes[i + k] = (valor >>> (8 * k)) & 0xff;
+        }
+        return ERRNO.exito;
+      };
+    case 'proc_exit':
+      return (codigo: number) => { throw new SalidaPrograma(codigo); };
+    case 'sched_yield':
+      return () => ERRNO.exito;
+    default:
+      return () => ERRNO.noImplementado;
+  }
+}
+
+export function crearImports(modulo: WebAssembly.Module, anfitrion: Anfitrion, memoria: Memoria): WebAssembly.Imports {
+  const dynamis: Record<string, (...args: never[]) => unknown> = {};
+  const wasi: Record<string, (...args: never[]) => unknown> = {};
+  for (const imp of WebAssembly.Module.imports(modulo)) {
+    if (imp.kind !== 'function') continue;
+    if (imp.module === 'dynamis') {
+      const fabrica = DYNAMIS[imp.name];
+      if (!fabrica) throw new Error(`El núcleo pide una función desconocida: ${imp.name}`);
+      dynamis[imp.name] = fabrica(anfitrion, memoria);
+    } else if (imp.module === 'wasi_snapshot_preview1') {
+      wasi[imp.name] = importWasi(imp.name, anfitrion, memoria);
+    }
+  }
+  return { dynamis, wasi_snapshot_preview1: wasi } as WebAssembly.Imports;
+}
