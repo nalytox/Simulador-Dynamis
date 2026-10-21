@@ -161,7 +161,7 @@ main.gutter { padding-block: 18px 28px; }
 .logro.mal { background: var(--error-fondo); color: var(--error); }
 
 .lienzo-caja { position: relative; padding: 12px; }
-canvas.lienzo { width: 100%; aspect-ratio: 3 / 2; display: block; border-radius: 14px; background: #EAF5FD; touch-action: none; }
+canvas.lienzo { width: 100%; aspect-ratio: 4 / 3; display: block; border-radius: 14px; background: #EAF5FD; touch-action: none; }
 .pista-pie { display: flex; gap: 14px; padding: 0 16px 12px; font-size: 12.5px; color: var(--tinta-suave); flex-wrap: wrap; }
 .pista-pie span { display: inline-flex; align-items: center; gap: 6px; }
 .pista-pie i { width: 12px; height: 12px; border-radius: 4px; display: inline-block; }
@@ -207,6 +207,7 @@ canvas.lienzo { width: 100%; aspect-ratio: 3 / 2; display: block; border-radius:
 .pieza canvas { width: 64px; height: 64px; border-radius: 8px; box-shadow: 0 0 0 1px var(--hielo); }
 .pieza:hover { border-color: var(--celeste); }
 .pieza[aria-pressed="true"] { border-color: var(--azul); background: var(--hielo); }
+.paleta-grupos { display: flex; flex-direction: column; gap: 10px; }
 .pieza.tuyas { border-style: dashed; border-color: var(--rosa); color: var(--tinta-suave); cursor: default; justify-content: center; text-align: center; grid-column: 1 / -1; padding: 10px; font-size: 12px; }
 .pieza.tuyas b { color: var(--tinta); font-family: var(--f-display); font-size: 14px; font-weight: 600; }
 .props { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 14px; }
@@ -294,11 +295,34 @@ canvas.lienzo { width: 100%; aspect-ratio: 3 / 2; display: block; border-radius:
 .comparar tbody th { font-family: var(--f-codigo); font-weight: 600; }
 .comparar tbody th small { display: block; font-family: var(--f-texto); font-weight: 400; font-size: 11px; color: var(--tinta-suave); }
 .comparar td.mejora { font-weight: 600; color: var(--azul); }
-canvas.mini { width: 100%; aspect-ratio: 3 / 2; display: block; border-radius: 12px; }
+canvas.mini { width: 100%; aspect-ratio: 4 / 3; display: block; border-radius: 12px; }
 .btn-usar { display: flex; align-items: center; justify-content: center; gap: 8px; background: var(--sol); color: var(--tinta); border: 0; font-family: var(--f-display); font-weight: 600; font-size: 18px; padding: 12px 18px; border-radius: 999px; box-shadow: 0 4px 0 #D9A93A; }
 .btn-usar:hover { background: #FFDB85; }
 .btn-usar:disabled { opacity: .5; cursor: default; box-shadow: none; }
 @media (max-width: 1100px) { .ventana-cuerpo { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---------- Juez virtual y propiedades de baldosas ---------- */
+.juez-cuerpo { padding: 12px 16px 14px; display: flex; flex-direction: column; gap: 12px; }
+.hitos { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 6px; }
+.hito { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px; border-radius: 12px; background: var(--nube); color: var(--tinta-suave); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.hito b { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--blanco); border: 2px solid var(--borde); color: var(--tinta-suave); font-family: var(--f-display); font-size: 15px; }
+.hito.ok { background: #FFF4D6; color: var(--sol-tinta); }
+.hito.ok b { background: var(--sol); border-color: var(--sol); color: var(--azul); }
+.juez-datos { display: flex; gap: 22px; align-items: center; flex-wrap: wrap; }
+.juez-datos .etq { display: block; font-size: 11.5px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--tinta-suave); font-weight: 600; }
+.juez-datos b { font-family: var(--f-display); font-size: 24px; color: var(--azul); font-variant-numeric: tabular-nums; }
+.juez-datos .btn-mini { margin-left: auto; }
+.btn-mini:disabled { opacity: .5; cursor: default; }
+.opcion { display: flex; gap: 8px; align-items: flex-start; font-size: 13.5px; }
+.opcion input { width: 18px; height: 18px; accent-color: var(--azul); flex: none; margin: 1px 0 0; }
+.opcion-rango, .opcion-sel { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.props input[type="range"] { accent-color: var(--azul); width: 100%; }
+.props select { border: 2px solid var(--hielo); border-radius: 10px; padding: 6px 8px; background: var(--blanco); }
+.nota-props, .val { font-size: 12.5px; color: var(--tinta-suave); }
+.val { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--azul); }
+.accion { background: var(--hielo); border-radius: 10px; padding: 8px 10px; font-size: 13px; }
+.accion b { color: var(--azul); }
+@media (max-width: 640px) { .hitos { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
 
 .toast {
   position: fixed; left: 50%; transform: translateX(-50%);
@@ -433,7 +457,7 @@ canvas.mini { width: 100%; aspect-ratio: 3 / 2; display: block; border-radius: 1
         <article class="card">
           <header>
             <h2><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>Pista</h2>
-            <span class="chip">6 × 4 baldosas de 30 cm</span>
+            <span class="chip">8 × 6 baldosas de 30 cm</span>
             <span class="chip" id="chip-tiempo">t = 0,0 s</span>
           </header>
           <div class="lienzo-caja"><canvas class="lienzo" id="lienzo-sim" aria-label="Vista de la pista con el robot"></canvas></div>
@@ -442,6 +466,22 @@ canvas.mini { width: 100%; aspect-ratio: 3 / 2; display: block; border-radius: 1
             <span><i style="background:rgba(101,199,247,.55)"></i>Rayo del sensor de distancia</span>
             <span><i style="background:#FF9FAD"></i>Camino recorrido</span>
             <span><i style="background:linear-gradient(90deg,#DDF4FF,#65C7F7)"></i>Rampa: las flechas apuntan hacia arriba</span>
+          </div>
+        </article>
+
+        <article class="card">
+          <header>
+            <h2><svg class="ico" viewBox="0 0 24 24"><path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M9 20h6"/></svg>Juez virtual</h2>
+            <span class="chip">Bases Rescue Line FIRVI 2026</span>
+            <div class="header-der"><span class="chip" id="juez-tiempo">Quedan 5:00</span></div>
+          </header>
+          <div class="juez-cuerpo">
+            <div class="hitos" id="hitos" aria-label="Hitos alcanzados"></div>
+            <div class="juez-datos">
+              <div><span class="etq">Puntaje</span><b id="juez-pts">0</b></div>
+              <div><span class="etq">Reinicios</span><b id="juez-rein">0 de 3</b></div>
+              <button class="btn-mini" id="btn-ultimo-hito">Volver al último hito (−10)</button>
+            </div>
           </div>
         </article>
 
@@ -522,18 +562,17 @@ mpu.getEvent(&amp;a, &amp;g, &amp;temp);</pre>
       <article class="card">
         <header><h2>Piezas</h2></header>
         <div class="paleta">
-          <h3>Baldosas</h3>
-          <div class="piezas" id="piezas-baldosas"></div>
+          <div id="paleta-baldosas" class="paleta-grupos"></div>
           <h3>Objetos</h3>
           <div class="piezas" id="piezas-objetos"></div>
-          <div class="pieza tuyas"><b>Aquí van tus casos</b>Las baldosas de la competencia se agregan al catálogo.</div>
+          <div class="pieza tuyas"><b>Bases Rescue Line FIRVI 2026</b>Escenario de 2,4 × 1,8 m, cinta de 19 mm, cortes de hasta 4 cm y rampas de hasta 35°.</div>
         </div>
       </article>
 
       <article class="card">
         <header>
           <h2>Mi pista</h2>
-          <span class="chip">1,8 m × 1,2 m</span>
+          <span class="chip">2,4 m × 1,8 m</span>
           <span class="chip" id="chip-herr">Pieza: Recta</span>
         </header>
         <div class="lienzo-caja"><canvas class="lienzo" id="lienzo-editor" aria-label="Editor de la pista"></canvas></div>
@@ -547,6 +586,7 @@ mpu.getEvent(&amp;a, &amp;g, &amp;temp);</pre>
             <span class="grande" id="sel-tipo">Recta</span>
             <span class="sub" id="sel-pos" style="color:var(--tinta-suave);font-size:13px">Columna 2, fila 1 · 0°</span>
           </div>
+          <div id="sel-props" class="props" style="padding:0"></div>
           <div class="bloque">
             <span class="etq">Girar</span>
             <div class="fila-botones">
@@ -628,90 +668,131 @@ mpu.getEvent(&amp;a, &amp;g, &amp;temp);</pre>
 
 <script>
 (() => {
-  // ---------------- Constantes de la pista (mm) ----------------
-  const TILE = 300, COLS = 6, ROWS = 4, W = COLS * TILE, H = ROWS * TILE;
+  // ---------------- Pista (mm) · Bases Rescue Line FIRVI 2026: 2,4 × 1,8 m, baldosas de 30 cm, cinta de 19 mm ----------------
+  const TILE = 300, COLS = 8, ROWS = 6, W = COLS * TILE, H = ROWS * TILE, LINEA = 19;
   const C = { azul: '#0B0F98', celeste: '#65C7F7', hielo: '#DDF4FF', sol: '#FFD166', rosa: '#FF9FAD', linea: '#11131F', verde: '#1FA35B' };
-  const NOMBRES = { vacia: 'Vacía', recta: 'Recta', curva: 'Curva', cruce: 'Cruce', te: 'Unión en T', rampa: 'Rampa', obstaculo: 'Obstáculo', verde: 'Marca verde', inicio: 'Inicio del robot' };
+  const NOMBRES = { vacia: 'Vacía', recta: 'Recta', curva: 'Giro suave', giroL: 'Giro en L', segmentada: 'Línea con cortes',
+    cruce: 'Cruce +', te: 'Unión en T', rampa: 'Rampa', f1: 'Cuadrado F1', f2: 'Indicador F2', partida: 'Partida', meta: 'Meta',
+    obstaculo: 'Obstáculo', bache: 'Bache', hito: 'Hito', inicio: 'Inicio del robot' };
+  const PROPS_BASE = { rampa: { angulo: 20 }, segmentada: { guion: 50, espacio: 40 }, f1: { correcto: 'izq' }, f2: { lado: 'izq' } };
 
   const pista = { baldosas: [], objetos: [], inicio: { x: 300, y: 150 } };
-  const set = (c, r, tipo, rot = 0) => { pista.baldosas[r * COLS + c] = { tipo, rot }; };
+  const set = (c, r, tipo, rot = 0, props = {}, nivel = 0) => { pista.baldosas[r * COLS + c] = { tipo, rot, nivel, props: { ...(PROPS_BASE[tipo] || {}), ...props } }; };
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) set(c, r, 'vacia');
-  set(0, 0, 'curva', 0); set(5, 0, 'curva', 90); set(5, 3, 'curva', 180); set(0, 3, 'curva', 270);
-  for (let c = 1; c <= 4; c++) { set(c, 0, 'recta', 0); set(c, 3, 'recta', 0); }
-  for (let r = 1; r <= 2; r++) { set(0, r, 'recta', 90); set(5, r, 'recta', 90); }
-  set(5, 1, 'rampa', 90); set(5, 2, 'rampa', 270);
+  set(0, 0, 'curva', 0); set(7, 0, 'curva', 90); set(7, 5, 'curva', 180); set(0, 5, 'curva', 270);
+  for (let c = 1; c <= 6; c++) { set(c, 0, 'recta', 0); set(c, 5, 'recta', 0); }
+  for (let r = 1; r <= 4; r++) { set(0, r, 'recta', 90); set(7, r, 'recta', 90); }
+  set(1, 0, 'partida', 0); set(3, 0, 'segmentada', 0); set(4, 0, 'segmentada', 0);
+  // Rampa de 20°: sube, plataforma y baja (como la figura 3 de las bases)
+  set(7, 1, 'rampa', 90); set(7, 2, 'recta', 90, {}, Math.round(TILE * Math.tan(20 * Math.PI / 180))); set(7, 3, 'rampa', 270);
+  // Cruce con marcas después del cruce (el robot debe ignorarlas y seguir derecho) y rama hacia la meta
+  set(4, 5, 'cruce', 180, { marcas: { di: true, dd: true } }); set(4, 4, 'meta', 270);
   pista.objetos = [
-    { tipo: 'obstaculo', x: 1738, y: 150, w: 80, h: 80 },
-    { tipo: 'verde', x: 700, y: 196 },
-    { tipo: 'verde', x: 1200, y: 1004 },
+    { tipo: 'obstaculo', x: 2340, y: 150, w: 100, h: 100 },
+    { tipo: 'bache', x: 2250, y: 1290, largo: 300, ang: 0 },
+    { tipo: 'bache', x: 2250, y: 1420, largo: 300, ang: 45 },
   ];
 
-  // ---------------- Dibujo compartido: pantalla y "lo que ve el robot" ----------------
-  function dibujarBaldosa(ctx, tipo) {
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(0, 0, TILE, TILE);
-    ctx.strokeStyle = C.linea; ctx.lineWidth = 20; ctx.lineCap = 'butt';
-    ctx.beginPath();
-    if (tipo === 'recta' || tipo === 'cruce' || tipo === 'te' || tipo === 'rampa') { ctx.moveTo(0, 150); ctx.lineTo(300, 150); }
-    if (tipo === 'cruce') { ctx.moveTo(150, 0); ctx.lineTo(150, 300); }
-    if (tipo === 'te') { ctx.moveTo(150, 150); ctx.lineTo(150, 300); }
-    if (tipo === 'curva') { ctx.arc(300, 300, 150, Math.PI, 1.5 * Math.PI); }
-    ctx.stroke();
+  // ---------------- Dibujo compartido ----------------
+  // Coordenadas locales de cada baldosa: 0…300 mm; el robot entra por la izquierda (x = 0) avanzando hacia +x.
+  function seg(ctx, x1, y1, x2, y2) { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); }
+  function dibujarMarcas(ctx, m) {
+    if (!m) return; const s = 25, a = 150 - LINEA / 2 - s, d = 150 + LINEA / 2;
+    ctx.fillStyle = C.verde;
+    if (m.ai) ctx.fillRect(a, a, s, s); if (m.ad) ctx.fillRect(a, d, s, s);
+    if (m.di) ctx.fillRect(d, a, s, s); if (m.dd) ctx.fillRect(d, d, s, s);
   }
-  function dibujarObjeto(ctx, o) {
-    if (o.tipo === 'verde') { ctx.fillStyle = C.verde; ctx.fillRect(o.x - 12.5, o.y - 12.5, 25, 25); }
-    if (o.tipo === 'obstaculo') {
-      ctx.fillStyle = '#A9B4E0'; roundRect(ctx, o.x - o.w / 2, o.y - o.h / 2, o.w, o.h, 10); ctx.fill();
-      ctx.fillStyle = '#C9D2F2'; roundRect(ctx, o.x - o.w / 2 + 8, o.y - o.h / 2 + 8, o.w - 16, o.h - 16, 6); ctx.fill();
+  function dibujarBaldosa(ctx, b) {
+    const p = b.props || {};
+    ctx.fillStyle = p.invertida ? C.linea : '#FFFFFF'; ctx.fillRect(0, 0, TILE, TILE);
+    ctx.strokeStyle = p.invertida ? '#FFFFFF' : C.linea; ctx.lineWidth = LINEA; ctx.lineCap = 'butt'; ctx.lineJoin = 'miter';
+    switch (b.tipo) {
+      case 'recta': case 'rampa': seg(ctx, 0, 150, 300, 150); break;
+      case 'curva': ctx.beginPath(); ctx.arc(300, 300, 150, Math.PI, 1.5 * Math.PI); ctx.stroke(); break;
+      case 'giroL': ctx.beginPath(); ctx.moveTo(0, 150); ctx.lineTo(150, 150); ctx.lineTo(150, 300); ctx.stroke(); break;
+      case 'segmentada': for (let x = 0; x < 300; x += p.guion + p.espacio) seg(ctx, x, 150, Math.min(300, x + p.guion), 150); break;
+      case 'cruce': seg(ctx, 0, 150, 300, 150); seg(ctx, 150, 0, 150, 300); dibujarMarcas(ctx, p.marcas); break;
+      case 'te': seg(ctx, 0, 150, 300, 150); seg(ctx, 150, 150, 150, 300); dibujarMarcas(ctx, p.marcas); break;
+      case 'partida': seg(ctx, 0, 150, 300, 150); seg(ctx, 60, 70, 60, 230); break;
+      case 'meta': seg(ctx, 0, 150, 200, 150); seg(ctx, 200 + LINEA / 2, 70, 200 + LINEA / 2, 230); break;
+      case 'f1': seg(ctx, 0, 150, 45, 150); seg(ctx, 255, 150, 300, 150); ctx.strokeRect(45, 45, 210, 210); break;
+      case 'f2': seg(ctx, 0, 150, 300, 150); seg(ctx, 100, 85, 100, 215);
+        if (p.lado === 'der') seg(ctx, 190, 150, 190, 215); else seg(ctx, 190, 85, 190, 150); break;
     }
   }
-  function dibujarPista(ctx) {
-    pista.baldosas.forEach((b, i) => {
-      const c = i % COLS, r = Math.floor(i / COLS);
-      ctx.save();
-      ctx.translate(c * TILE + 150, r * TILE + 150); ctx.rotate(b.rot * Math.PI / 180); ctx.translate(-150, -150);
-      dibujarBaldosa(ctx, b.tipo);
+  // Objetos: solo pantalla. No cambian el color del suelo que ven los sensores.
+  function dibujarObjeto(ctx, o) {
+    if (o.tipo === 'obstaculo') {
+      ctx.fillStyle = 'rgba(11,15,152,.16)'; roundRect(ctx, o.x - o.w / 2 + 10, o.y - o.h / 2 + 12, o.w, o.h, 10); ctx.fill();
+      ctx.fillStyle = '#A9B4E0'; roundRect(ctx, o.x - o.w / 2, o.y - o.h / 2, o.w, o.h, 10); ctx.fill();
+      ctx.fillStyle = '#C9D2F2'; roundRect(ctx, o.x - o.w / 2 + 12, o.y - o.h / 2 + 12, o.w - 24, o.h - 24, 6); ctx.fill();
+    }
+    if (o.tipo === 'bache') {
+      ctx.save(); ctx.translate(o.x, o.y); ctx.rotate(o.ang * Math.PI / 180);
+      const g = o.grosor || 12;
+      ctx.fillStyle = 'rgba(11,15,152,.18)'; roundRect(ctx, -o.largo / 2, -g / 2 + 4, o.largo, g, g / 2); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.3)'; roundRect(ctx, -o.largo / 2, -g / 2, o.largo, g, g / 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(11,15,152,.55)'; ctx.lineWidth = Math.max(2.5, g / 5); ctx.stroke();
       ctx.restore();
-    });
-    pista.objetos.forEach(o => dibujarObjeto(ctx, o));
+    }
+    if (o.tipo === 'hito') {
+      const r = o.r || 34;
+      ctx.fillStyle = C.sol; ctx.beginPath(); ctx.arc(o.x, o.y, r, 0, 7); ctx.fill();
+      ctx.strokeStyle = C.azul; ctx.lineWidth = r / 7; ctx.stroke();
+      ctx.fillStyle = C.azul; ctx.font = `600 ${Math.round(r * 1.15)}px Fredoka, system-ui, sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(o.n), o.x, o.y + r * 0.06);
+    }
   }
+  function enBaldosa(ctx, i, fn) {
+    const c = i % COLS, r = Math.floor(i / COLS);
+    ctx.save(); ctx.translate(c * TILE + 150, r * TILE + 150); ctx.rotate(pista.baldosas[i].rot * Math.PI / 180); ctx.translate(-150, -150);
+    fn(); ctx.restore();
+  }
+  function dibujarPista(ctx) { pista.baldosas.forEach((b, i) => enBaldosa(ctx, i, () => dibujarBaldosa(ctx, b))); }
   function roundRect(ctx, x, y, w, h, r) {
     ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
     ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
   }
 
-  // Rampas: la baldosa sube 10 cm a lo largo de su eje x local (la rotación la orienta)
-  const ALTO_RAMPA = 100;
+  // Relieve: nivel de cada baldosa + rampa (sube a lo largo de su x local) + baches (medio cilindro de 6 mm de radio)
+  const altoRampa = b => TILE * Math.tan((b.props.angulo || 20) * Math.PI / 180);
   function altura(x, y) {
-    const c = Math.floor(x / TILE), r = Math.floor(y / TILE);
-    if (c < 0 || r < 0 || c >= COLS || r >= ROWS) return 0;
-    const b = pista.baldosas[r * COLS + c]; if (b.tipo !== 'rampa') return 0;
-    const a = -b.rot * Math.PI / 180, dx = x - (c * TILE + 150), dy = y - (r * TILE + 150);
-    const u = dx * Math.cos(a) - dy * Math.sin(a) + 150;
-    return ALTO_RAMPA * Math.max(0, Math.min(1, u / TILE));
+    let h = 0; const c = Math.floor(x / TILE), r = Math.floor(y / TILE);
+    if (c >= 0 && r >= 0 && c < COLS && r < ROWS) {
+      const b = pista.baldosas[r * COLS + c]; h = b.nivel || 0;
+      if (b.tipo === 'rampa') {
+        const a = -b.rot * Math.PI / 180, dx = x - (c * TILE + 150), dy = y - (r * TILE + 150);
+        h += altoRampa(b) * Math.max(0, Math.min(1, (dx * Math.cos(a) - dy * Math.sin(a) + 150) / TILE));
+      }
+    }
+    for (const o of pista.objetos) {
+      if (o.tipo !== 'bache') continue;
+      const a = o.ang * Math.PI / 180, dx = x - o.x, dy = y - o.y;
+      const u = dx * Math.cos(a) + dy * Math.sin(a), v = -dx * Math.sin(a) + dy * Math.cos(a);
+      if (Math.abs(u) <= o.largo / 2 && Math.abs(v) < 6) h += Math.sqrt(36 - v * v);
+    }
+    return h;
   }
   function inclinacion(p) {
     const c = Math.cos(p.th), s = Math.sin(p.th);
     return Math.atan2(altura(p.x + c * 25, p.y + s * 25) - altura(p.x - c * 25, p.y - s * 25), 50) * 180 / Math.PI;
   }
-  // El relieve solo se dibuja en pantalla: los sensores ven el color real de la superficie
-  function dibujarRelieveBaldosa(ctx) {
-    const g = ctx.createLinearGradient(0, 0, TILE, 0);
-    g.addColorStop(0, 'rgba(101,199,247,0.04)'); g.addColorStop(1, 'rgba(101,199,247,0.5)');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, TILE, TILE);
-    ctx.strokeStyle = 'rgba(11,15,152,0.5)'; ctx.lineWidth = 10; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    for (const y of [64, 236]) for (const x of [86, 166, 246]) { ctx.beginPath(); ctx.moveTo(x - 18, y - 22); ctx.lineTo(x + 4, y); ctx.lineTo(x - 18, y + 22); ctx.stroke(); }
+  // Solo pantalla: degradado y flechas en rampas, tinte en baldosas elevadas, y los objetos
+  function dibujarRelieveBaldosa(ctx, b) {
+    if (b.tipo === 'rampa') {
+      const g = ctx.createLinearGradient(0, 0, TILE, 0);
+      g.addColorStop(0, 'rgba(101,199,247,0.04)'); g.addColorStop(1, 'rgba(101,199,247,0.5)');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, TILE, TILE);
+      ctx.strokeStyle = 'rgba(11,15,152,0.5)'; ctx.lineWidth = 10; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      for (const y of [64, 236]) for (const x of [86, 166, 246]) { ctx.beginPath(); ctx.moveTo(x - 18, y - 22); ctx.lineTo(x + 4, y); ctx.lineTo(x - 18, y + 22); ctx.stroke(); }
+    } else if (b.nivel > 0) { ctx.fillStyle = 'rgba(101,199,247,0.3)'; ctx.fillRect(0, 0, TILE, TILE); }
   }
   function dibujarRelieves(ctx) {
-    pista.baldosas.forEach((b, i) => {
-      if (b.tipo !== 'rampa') return;
-      const c = i % COLS, r = Math.floor(i / COLS);
-      ctx.save(); ctx.translate(c * TILE + 150, r * TILE + 150); ctx.rotate(b.rot * Math.PI / 180); ctx.translate(-150, -150);
-      dibujarRelieveBaldosa(ctx); ctx.restore();
-    });
+    pista.baldosas.forEach((b, i) => { if (b.tipo === 'rampa' || b.nivel > 0) enBaldosa(ctx, i, () => dibujarRelieveBaldosa(ctx, b)); });
+    pista.objetos.forEach(o => dibujarObjeto(ctx, o));
   }
 
-  // Mapa a 1 px = 1 mm: lo que muestrean los sensores (la misma función que dibuja la pantalla)
+  // Mapa a 1 px = 1 mm: lo que muestrean los sensores (las mismas funciones que dibujan la pantalla)
   const mapa = document.createElement('canvas'); mapa.width = W; mapa.height = H;
   const mctx = mapa.getContext('2d', { willReadFrequently: true });
   let pix = null;
@@ -724,12 +805,15 @@ mpu.getEvent(&amp;a, &amp;g, &amp;temp);</pre>
   // ---------------- Recorrido de ejemplo (en la app real lo calcula tu modelo de dinámica) ----------------
   const R = 150;
   const SEG = [
-    { L: [300, 150, 1500, 150] }, { A: [1500, 300, -90, 0] },
-    { L: [1650, 300, 1650, 900] }, { A: [1500, 900, 0, 90] },
-    { L: [1500, 1050, 300, 1050] }, { A: [300, 900, 90, 180] },
-    { L: [150, 900, 150, 300] }, { A: [300, 300, 180, 270] },
+    { L: [300, 150, 2100, 150] }, { A: [2100, 300, -90, 0] },
+    { L: [2250, 300, 2250, 1500] }, { A: [2100, 1500, 0, 90] },
+    { L: [2100, 1650, 300, 1650] }, { A: [300, 1500, 90, 180] },
+    { L: [150, 1500, 150, 300] }, { A: [300, 300, 180, 270] },
   ].map(s => ({ ...s, len: s.L ? Math.hypot(s.L[2] - s.L[0], s.L[3] - s.L[1]) : Math.PI / 2 * R }));
   const TOTAL = SEG.reduce((a, s) => a + s.len, 0);
+  // 8 hitos a lo largo del recorrido, con el puntaje de las bases
+  const HITOS_S = [600, 1500, 2336, 2936, 3971, 4771, 5807, 6407], PUNTOS = [5, 10, 20, 20, 10, 15, 15, 20];
+  HITOS_S.forEach((sh, i) => { const p = poseBase(sh); pista.objetos.push({ tipo: 'hito', n: i + 1, x: p.x + 108 * Math.sin(p.th), y: p.y - 108 * Math.cos(p.th) }); });
   function poseBase(s) {
     s = ((s % TOTAL) + TOTAL) % TOTAL;
     for (const g of SEG) {
@@ -891,6 +975,7 @@ mpu.getEvent(&amp;a, &amp;g, &amp;temp);</pre>
       const b = $('m-' + lado); b.style.left = v >= 0 ? '50%' : (50 + v / 2) + '%'; b.style.width = Math.abs(v / 2) + '%'; $('m-' + lado + '-n').textContent = fmt(v) + '%';
     }
     $('chip-tiempo').textContent = `t = ${fmt(tSim, 1)} s`;
+    pintarJuez();
   }
 
   // Mensajes: si estás mirando el final, lo nuevo empuja lo anterior hacia arriba.
@@ -911,7 +996,7 @@ mpu.getEvent(&amp;a, &amp;g, &amp;temp);</pre>
     if (tPrevReal == null) tPrevReal = ts;
     const dtReal = Math.min(0.05, (ts - tPrevReal) / 1000); tPrevReal = ts;
     if (corriendo && !pausado) {
-      const dt = dtReal * mult; pPrev = pose(s); s += V * dt; tSim += dt;
+      const dt = dtReal * mult; pPrev = pose(s); s += V * dt; tSim += dt; revisarHitos();
       const p = pose(s); lec = leerSensores(p, pPrev, dt);
       rastro.push({ x: p.x, y: p.y }); if (rastro.length > 260) rastro.shift();
       if (tSim >= proxSerial) { serial(String(lec.pos)); proxSerial = tSim + 0.25; }
@@ -941,7 +1026,7 @@ mpu.getEvent(&amp;a, &amp;g, &amp;temp);</pre>
     if (!corriendo) return; pausado = !pausado; $('txt-pausa').textContent = pausado ? 'Seguir' : 'Pausa';
     ponerEstado(pausado ? 'En pausa' : 'El robot está corriendo', !pausado);
   });
-  $('btn-inicio').addEventListener('click', () => { s = 0; tSim = 0; rastro = []; proxSerial = 0; pPrev = pose(0); lec = leerSensores(pose(0), pPrev, 0); pintarPaneles(); serial('Robot de vuelta en la partida.', true); });
+  $('btn-inicio').addEventListener('click', () => { s = 0; tSim = 0; juez.alcanzados = 0; juez.reinicios = 0; rastro = []; proxSerial = 0; pPrev = pose(0); lec = leerSensores(pose(0), pPrev, 0); pintarPaneles(); serial('Robot de vuelta en la partida.', true); });
   $('vel').addEventListener('input', e => { mult = VELS[+e.target.value]; $('vel-out').textContent = '×' + String(mult).replace('.', ','); });
   $('btn-limpiar').addEventListener('click', () => { consola.innerHTML = ''; pildora.hidden = true; });
   document.querySelectorAll('.como').forEach(b => b.addEventListener('click', () => { const p = $(b.dataset.snip); p.hidden = !p.hidden; b.textContent = p.hidden ? '¿Cómo lo uso?' : 'Ocultar'; }));
@@ -1044,28 +1129,53 @@ mpu.getEvent(&amp;a, &amp;g, &amp;temp);</pre>
 
   // ---------------- Editor de pista ----------------
   const vistaProg = $('vista-programar'), vistaPista = $('vista-pista'), lienzoEd = $('lienzo-editor');
-  let herr = { tipo: 'baldosa', valor: 'recta' }, sel = { c: 1, r: 0 }, hover = null;
-  function miniatura(tipo, objeto) {
+  const PALETA = [
+    { grupo: 'Líneas', piezas: [{ tipo: 'vacia' }, { tipo: 'recta' }, { tipo: 'curva' }, { tipo: 'giroL' }, { tipo: 'segmentada' }] },
+    { grupo: 'Cruces y marcas de color', piezas: [
+      { tipo: 'cruce', nombre: 'Cruce + sin marcas' },
+      { tipo: 'cruce', nombre: 'Marca a la izquierda', props: { marcas: { ai: true } } },
+      { tipo: 'cruce', nombre: 'Marca a la derecha', props: { marcas: { ad: true } } },
+      { tipo: 'cruce', nombre: 'Marcas a ambos lados', props: { marcas: { ai: true, ad: true } } },
+      { tipo: 'cruce', nombre: 'Marcas en las 4 puntas', props: { marcas: { ai: true, ad: true, di: true, dd: true } } },
+      { tipo: 'te' }] },
+    { grupo: 'Desafíos', piezas: [{ tipo: 'rampa' }, { tipo: 'f2' }, { tipo: 'f1' }] },
+    { grupo: 'Partida y meta', piezas: [{ tipo: 'partida' }, { tipo: 'meta' }] },
+  ];
+  const PALETA_OBJ = [{ tipo: 'obstaculo', nombre: 'Obstáculo de 10 cm' }, { tipo: 'bache', nombre: 'Bache recto', ang: 0 },
+    { tipo: 'bache', nombre: 'Bache diagonal', ang: 45 }, { tipo: 'hito' }, { tipo: 'inicio' }];
+  const DIRECCIONALES = new Set(['cruce', 'te', 'f1', 'f2', 'partida', 'meta', 'rampa']);
+  const ACCION = m => (m.ai && m.ad) ? 'Dar la vuelta (180°)' : m.ai ? 'Girar a la izquierda' : m.ad ? 'Girar a la derecha' : 'Seguir derecho';
+  const propsNuevas = (tipo, props) => ({ ...(PROPS_BASE[tipo] || {}), ...JSON.parse(JSON.stringify(props || {})) });
+  let herr = { clase: 'baldosa', tipo: 'recta' }, sel = { c: 4, r: 5 }, hover = null;
+
+  function miniatura(e, objeto) {
     const cv = document.createElement('canvas'), dpr = window.devicePixelRatio || 1; cv.width = cv.height = 64 * dpr;
     const ctx = cv.getContext('2d'); ctx.scale(64 * dpr / TILE, 64 * dpr / TILE);
-    if (!objeto) { dibujarBaldosa(ctx, tipo); if (tipo === 'rampa') dibujarRelieveBaldosa(ctx); }
-    else { ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, TILE, TILE);
-      if (tipo === 'inicio') { ctx.save(); ctx.translate(150, 150); ctx.scale(1.3, 1.3); ctx.translate(-14, 0); dibujarRobot(ctx, { x: 0, y: 0, th: 0 }, null); ctx.restore(); }
-      else dibujarObjeto(ctx, tipo === 'verde' ? { tipo, x: 150, y: 150 } : { tipo, x: 150, y: 150, w: 170, h: 170 }); }
+    if (!objeto) { const b = { tipo: e.tipo, rot: 0, nivel: 0, props: propsNuevas(e.tipo, e.props) }; dibujarBaldosa(ctx, b); dibujarRelieveBaldosa(ctx, b); return cv; }
+    ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, TILE, TILE);
+    if (e.tipo === 'inicio') { ctx.save(); ctx.translate(150, 150); ctx.scale(1.3, 1.3); ctx.translate(-14, 0); dibujarRobot(ctx, { x: 0, y: 0, th: 0 }, null); ctx.restore(); }
+    else if (e.tipo === 'bache') { ctx.strokeStyle = C.linea; ctx.lineWidth = LINEA * 1.6; seg(ctx, 150, 0, 150, 300); dibujarObjeto(ctx, { tipo: 'bache', x: 150, y: 150, largo: 260, ang: e.ang, grosor: 44 }); }
+    else if (e.tipo === 'hito') dibujarObjeto(ctx, { tipo: 'hito', n: 1, x: 150, y: 150, r: 95 });
+    else dibujarObjeto(ctx, { tipo: e.tipo, x: 150, y: 150, w: 170, h: 170 });
     return cv;
   }
-  function crearPiezas(cont, tipos, objeto) {
-    tipos.forEach(t => {
-      const b = document.createElement('button'); b.className = 'pieza'; b.setAttribute('aria-pressed', String(herr.valor === t));
-      b.dataset.tipo = t; b.append(miniatura(t, objeto), document.createTextNode(NOMBRES[t]));
-      b.addEventListener('click', () => { herr = { tipo: objeto ? 'objeto' : 'baldosa', valor: t };
-        document.querySelectorAll('.pieza[data-tipo]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
-        $('chip-herr').textContent = 'Pieza: ' + NOMBRES[t]; });
-      cont.append(b);
+  function botonPieza(e, objeto) {
+    const b = document.createElement('button'), nombre = e.nombre || NOMBRES[e.tipo];
+    b.className = 'pieza'; b.setAttribute('aria-pressed', String(!objeto && !e.nombre && e.tipo === herr.tipo));
+    b.append(miniatura(e, objeto), document.createTextNode(nombre));
+    b.addEventListener('click', () => {
+      herr = { clase: objeto ? 'objeto' : 'baldosa', ...e };
+      document.querySelectorAll('.pieza[aria-pressed]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+      $('chip-herr').textContent = 'Pieza: ' + nombre;
     });
+    return b;
   }
-  crearPiezas($('piezas-baldosas'), ['vacia', 'recta', 'curva', 'cruce', 'te', 'rampa'], false);
-  crearPiezas($('piezas-objetos'), ['obstaculo', 'verde', 'inicio'], true);
+  PALETA.forEach(g => {
+    const h = document.createElement('h3'), cont = document.createElement('div');
+    h.textContent = g.grupo; cont.className = 'piezas'; g.piezas.forEach(e => cont.append(botonPieza(e, false)));
+    $('paleta-baldosas').append(h, cont);
+  });
+  PALETA_OBJ.forEach(e => $('piezas-objetos').append(botonPieza(e, true)));
 
   let geoEd = null;
   function dibujarEditor() {
@@ -1073,36 +1183,79 @@ mpu.getEvent(&amp;a, &amp;g, &amp;temp);</pre>
     const { ctx, k } = L;
     ctx.drawImage(mapa, 0, 0); dibujarRelieves(ctx); rejilla(ctx, k, true); marcaInicio(ctx, k);
     if (hover) { ctx.fillStyle = 'rgba(101,199,247,.22)'; ctx.fillRect(hover.c * TILE, hover.r * TILE, TILE, TILE); }
-    if (sel) { ctx.strokeStyle = C.azul; ctx.lineWidth = 4 / k * L.dpr; ctx.setLineDash([]); ctx.strokeRect(sel.c * TILE + 4, sel.r * TILE + 4, TILE - 8, TILE - 8);
-      ctx.fillStyle = C.sol; ctx.beginPath(); ctx.arc(sel.c * TILE + TILE - 22, sel.r * TILE + 22, 12, 0, 7); ctx.fill(); }
+    if (sel) {
+      const i = sel.r * COLS + sel.c;
+      if (DIRECCIONALES.has(pista.baldosas[i].tipo)) enBaldosa(ctx, i, () => {
+        ctx.fillStyle = C.rosa; ctx.beginPath(); ctx.moveTo(6, 108); ctx.lineTo(52, 150); ctx.lineTo(6, 192); ctx.closePath(); ctx.fill();
+      });
+      ctx.strokeStyle = C.azul; ctx.lineWidth = 4 / k * L.dpr; ctx.setLineDash([]); ctx.strokeRect(sel.c * TILE + 4, sel.r * TILE + 4, TILE - 8, TILE - 8);
+      ctx.fillStyle = C.sol; ctx.beginPath(); ctx.arc(sel.c * TILE + TILE - 22, sel.r * TILE + 22, 12, 0, 7); ctx.fill();
+    }
   }
   function aPista(ev) {
     if (!geoEd) return null; const r = lienzoEd.getBoundingClientRect(), d = geoEd.dpr;
     const x = ((ev.clientX - r.left) * d - geoEd.ox) / geoEd.k, y = ((ev.clientY - r.top) * d - geoEd.oy) / geoEd.k;
     if (x < 0 || y < 0 || x >= W || y >= H) return null; return { x, y, c: Math.floor(x / TILE), r: Math.floor(y / TILE) };
   }
-  function pintarSel() {
-    const b = pista.baldosas[sel.r * COLS + sel.c]; $('sel-tipo').textContent = NOMBRES[b.tipo];
-    $('sel-pos').textContent = `Columna ${sel.c + 1}, fila ${sel.r + 1} · ${b.rot}°` + (b.tipo === 'rampa' ? ' · sube 10 cm' : '');
+  const textoVal = (prop, b) => prop === 'angulo' ? `${b.props.angulo}° · sube ${fmt(altoRampa(b) / 10, 1)} cm` : `${fmt(b.props[prop] / 10, 1)} cm`;
+  function propsHtml(b) {
+    const p = b.props || {}; let h = '';
+    if (b.tipo === 'cruce' || b.tipo === 'te') {
+      const m = p.marcas || {};
+      const caja = (k, t) => `<label class="opcion" for="pr-${k}"><input type="checkbox" id="pr-${k}" data-marca="${k}" ${m[k] ? 'checked' : ''}>${t}</label>`;
+      h += `<div class="bloque"><span class="etq">Marcas de color</span>${caja('ai', 'Antes del cruce, a la izquierda')}${caja('ad', 'Antes del cruce, a la derecha')}${caja('di', 'Después del cruce, a la izquierda')}${caja('dd', 'Después del cruce, a la derecha')}
+        <span class="nota-props">Izquierda y derecha se miran desde la flecha rosada, que muestra por dónde entra el robot.</span>
+        <span class="accion">El robot debe: <b>${ACCION(m)}</b></span></div>`;
+    }
+    if (b.tipo === 'rampa') h += `<div class="bloque"><span class="etq">Inclinación</span><input type="range" id="pr-angulo" data-prop="angulo" min="5" max="35" step="1" value="${p.angulo}" aria-label="Inclinación de la rampa"><span class="val">${textoVal('angulo', b)}</span><span class="nota-props">Las bases permiten hasta 35°, de subida y de bajada.</span></div>`;
+    if (b.tipo === 'segmentada') h += `<div class="bloque"><span class="etq">Cortes</span>
+      <label class="opcion-rango" for="pr-espacio">Espacio entre trazos<input type="range" id="pr-espacio" data-prop="espacio" min="10" max="40" step="5" value="${p.espacio}"><span class="val">${textoVal('espacio', b)}</span></label>
+      <label class="opcion-rango" for="pr-guion">Largo de cada trazo<input type="range" id="pr-guion" data-prop="guion" min="20" max="80" step="5" value="${p.guion}"><span class="val">${textoVal('guion', b)}</span></label>
+      <span class="nota-props">Las bases permiten cortes de hasta 4 cm.</span></div>`;
+    const opciones = (val, a, b2) => `<option value="izq" ${val === 'izq' ? 'selected' : ''}>${a}</option><option value="der" ${val === 'der' ? 'selected' : ''}>${b2}</option>`;
+    if (b.tipo === 'f1') h += `<div class="bloque"><label class="opcion-sel" for="pr-correcto"><span class="etq">Camino correcto</span><select id="pr-correcto" data-prop="correcto">${opciones(p.correcto, 'Por la izquierda', 'Por la derecha')}</select></label><span class="nota-props">Solo uno de los dos caminos es correcto. Lo indica el F2 que va antes.</span></div>`;
+    if (b.tipo === 'f2') h += `<div class="bloque"><label class="opcion-sel" for="pr-lado"><span class="etq">Indica girar a la</span><select id="pr-lado" data-prop="lado">${opciones(p.lado, 'Izquierda', 'Derecha')}</select></label><span class="nota-props">La primera línea avisa; la segunda, más corta, muestra hacia dónde girar en el cuadrado F1.</span></div>`;
+    if (b.tipo !== 'vacia') h += `<div class="bloque"><label class="opcion" for="pr-invertida"><input type="checkbox" id="pr-invertida" data-prop="invertida" ${p.invertida ? 'checked' : ''}>Línea blanca sobre fondo negro</label></div>`;
+    return h;
   }
+  function pintarSel() {
+    const b = pista.baldosas[sel.r * COLS + sel.c];
+    $('sel-tipo').textContent = NOMBRES[b.tipo];
+    $('sel-pos').textContent = `Columna ${sel.c + 1}, fila ${sel.r + 1} · ${b.rot}°` + (b.nivel ? ` · a ${fmt(b.nivel / 10, 1)} cm de altura` : '');
+    $('sel-props').innerHTML = propsHtml(b);
+  }
+  $('sel-props').addEventListener('input', e => {
+    const el = e.target, b = pista.baldosas[sel.r * COLS + sel.c];
+    if (el.dataset.marca) b.props.marcas = { ...(b.props.marcas || {}), [el.dataset.marca]: el.checked };
+    else if (el.dataset.prop) b.props[el.dataset.prop] = el.type === 'checkbox' ? el.checked : el.type === 'range' ? +el.value : el.value;
+    else return;
+    renderMapa();
+    if (el.type === 'range') el.nextElementSibling.textContent = textoVal(el.dataset.prop, b); else pintarSel();
+  });
   lienzoEd.addEventListener('pointermove', e => { const p = aPista(e); hover = p ? { c: p.c, r: p.r } : null; });
   lienzoEd.addEventListener('pointerleave', () => { hover = null; });
   lienzoEd.addEventListener('click', e => {
     const p = aPista(e); if (!p) return; sel = { c: p.c, r: p.r };
-    if (herr.tipo === 'baldosa') { const act = pista.baldosas[p.r * COLS + p.c]; pista.baldosas[p.r * COLS + p.c] = { tipo: herr.valor, rot: act.tipo === herr.valor ? act.rot : 0 }; renderMapa(); }
-    else if (herr.valor === 'inicio') { pista.inicio = { x: p.c * TILE + 150, y: p.r * TILE + 150 }; }
-    else { pista.objetos.push(herr.valor === 'verde' ? { tipo: 'verde', x: Math.round(p.x), y: Math.round(p.y) } : { tipo: 'obstaculo', x: Math.round(p.x), y: Math.round(p.y), w: 80, h: 80 }); renderMapa(); }
+    if (herr.clase === 'baldosa') {
+      const i = p.r * COLS + p.c, act = pista.baldosas[i];
+      pista.baldosas[i] = { tipo: herr.tipo, rot: act.tipo === herr.tipo ? act.rot : 0, nivel: act.nivel || 0, props: propsNuevas(herr.tipo, herr.props) };
+      renderMapa();
+    }
+    else if (herr.tipo === 'inicio') pista.inicio = { x: p.c * TILE + 150, y: p.r * TILE + 150 };
+    else if (herr.tipo === 'obstaculo') pista.objetos.push({ tipo: 'obstaculo', x: Math.round(p.x), y: Math.round(p.y), w: 100, h: 100 });
+    else if (herr.tipo === 'bache') pista.objetos.push({ tipo: 'bache', x: Math.round(p.x), y: Math.round(p.y), largo: 300, ang: herr.ang || 0 });
+    else if (herr.tipo === 'hito') pista.objetos.push({ tipo: 'hito', n: pista.objetos.filter(o => o.tipo === 'hito').length + 1, x: Math.round(p.x), y: Math.round(p.y) });
     pintarSel();
   });
   function girar(d) { const b = pista.baldosas[sel.r * COLS + sel.c]; b.rot = (b.rot + d + 360) % 360; renderMapa(); pintarSel(); }
   function vaciar() {
-    pista.baldosas[sel.r * COLS + sel.c] = { tipo: 'vacia', rot: 0 };
+    pista.baldosas[sel.r * COLS + sel.c] = { tipo: 'vacia', rot: 0, nivel: 0, props: {} };
     pista.objetos = pista.objetos.filter(o => Math.floor(o.x / TILE) !== sel.c || Math.floor(o.y / TILE) !== sel.r); renderMapa(); pintarSel();
   }
   $('btn-girar-izq').addEventListener('click', () => girar(-90)); $('btn-girar-der').addEventListener('click', () => girar(90));
   $('btn-borrar').addEventListener('click', vaciar);
   document.addEventListener('keydown', e => {
-    if (vistaPista.hidden || e.target.closest('input')) return;
+    if (vistaPista.hidden || !fondoAj.hidden || e.target.closest('input, select')) return;
     if (e.key === 'r' || e.key === 'R') girar(90); if (e.key === 'Delete' || e.key === 'Backspace') vaciar();
   });
 
@@ -1122,6 +1275,29 @@ mpu.getEvent(&amp;a, &amp;g, &amp;temp);</pre>
   $('btn-nueva').addEventListener('click', () => avisar('En la app esto crea una pista vacía (con confirmación)'));
   $('btn-ejemplos').addEventListener('click', () => avisar('Ejemplos: mover motores, leer la línea, seguidor de línea, esquivar obstáculos'));
   $('btn-ayuda').addEventListener('click', () => avisar('Ayuda: guía de cada sensor con ejemplos de código'));
+
+  // ---------------- Juez virtual (puntaje según las bases FIRVI 2026) ----------------
+  const juez = { alcanzados: 0, reinicios: 0 };
+  $('hitos').innerHTML = PUNTOS.map((p, i) => `<div class="hito" id="hito-${i + 1}"><b>${i + 1}</b>+${p}</div>`).join('') + '<div class="hito" id="hito-meta"><b>M</b>+15</div>';
+  function pintarJuez() {
+    for (let i = 1; i <= 8; i++) $('hito-' + i).classList.toggle('ok', i <= juez.alcanzados);
+    const pts = PUNTOS.slice(0, juez.alcanzados).reduce((a, b) => a + b, 0) - 10 * juez.reinicios;
+    $('juez-pts').textContent = fmt(pts); $('juez-rein').textContent = `${juez.reinicios} de 3`;
+    const resta = Math.max(0, 300 - tSim);
+    $('juez-tiempo').textContent = `Quedan ${Math.floor(resta / 60)}:${String(Math.floor(resta % 60)).padStart(2, '0')}`;
+    $('btn-ultimo-hito').disabled = juez.reinicios >= 3 || juez.alcanzados === 0;
+  }
+  function revisarHitos() {
+    while (juez.alcanzados < 8 && s >= HITOS_S[juez.alcanzados]) {
+      juez.alcanzados++; avisar(`¡Hito ${juez.alcanzados} alcanzado! +${PUNTOS[juez.alcanzados - 1]} puntos`);
+    }
+  }
+  $('btn-ultimo-hito').addEventListener('click', () => {
+    if (juez.reinicios >= 3 || !juez.alcanzados) return;
+    juez.reinicios++; s = HITOS_S[juez.alcanzados - 1]; pPrev = pose(s); rastro = [];
+    lec = leerSensores(pose(s), pPrev, 0); pintarPaneles();
+    avisar(`Reinicio desde el hito ${juez.alcanzados} (−10 puntos)`); serial(`Reinicio desde el hito ${juez.alcanzados}.`, true);
+  });
 
   // ---------------- Ajustar parámetros (maqueta: en la app, el agente y la recompensa los programa el profe) ----------------
   const fondoAj = $('ventana-ajuste'), svgG = $('aj-grafico'), tipG = $('aj-tip');

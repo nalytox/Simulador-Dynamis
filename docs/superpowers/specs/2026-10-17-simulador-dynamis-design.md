@@ -1,6 +1,6 @@
 # Simulador Dynamis — Diseño
 
-**Fecha:** 2026-10-17
+**Fecha:** 2026-10-17 (actualizado 2026-10-21 con las bases FIRVI 2026)
 **Estado:** aprobado en conversación; pendiente de revisión escrita
 **Maqueta de referencia:** [`docs/maqueta/simulador-dynamis.html`](../../maqueta/simulador-dynamis.html) (ábrela en el navegador)
 
@@ -8,7 +8,7 @@
 
 ## 1. Propósito
 
-Simulador web para el programa **Dynamis** (Fundación Mustakis). Estudiantes de **14 años** escriben el código **Arduino real** de su robot y lo prueban sobre una pista virtual antes de subirlo al robot físico.
+Simulador web para el programa **Dynamis** (Fundación Mustakis). Estudiantes de **14 a 16 años**, sin conocimientos avanzados de computación, escriben el código **Arduino real** de su robot y lo prueban sobre una pista virtual antes de subirlo al robot físico. La pista sigue las **Bases Rescue Line FIRVI 2026** (§10).
 
 El robot usa:
 
@@ -25,7 +25,7 @@ El robot usa:
 
 - **Este proyecto (lo construimos aquí):** interfaz gráfica, editor de código, compilación y ejecución del código Arduino, librerías simuladas, editor de pista, primitivas geométricas del mundo, motor de pruebas para "Ajustar parámetros", persistencia y pruebas automáticas.
 - **El profesor/autor (lo implementa él):** los **modelos matemáticos** (dinámica del robot y modelo de cada sensor), el **agente de aprendizaje por refuerzo** y la **función de recompensa**. El proyecto deja *placeholders* simples marcados con `TODO` para que todo funcione de punta a punta mientras tanto.
-- **Pendiente del usuario:** los **casos de la pista** (tipos de baldosa y objetos de la competencia) llegarán en un mensaje posterior. El catálogo de baldosas queda preparado para recibirlos.
+- **Casos de la pista:** vienen de las bases FIRVI 2026 y de lo que pidió el usuario: cruces + con marcas de color, línea con cortes, giro suave, rampa, baches, F1/F2, obstáculo, partida y meta (§10).
 
 ### Criterios de éxito
 
@@ -34,6 +34,8 @@ El robot usa:
 3. Los errores de compilación se explican en español simple, marcando el archivo y la línea.
 4. El profesor puede reemplazar los modelos, el agente y la recompensa editando archivos JavaScript aislados, sin tocar el resto del sistema.
 5. "Ajustar parámetros" corre cientos de pruebas sin dibujar, en paralelo, y escribe los mejores valores de vuelta en el código.
+6. **Fácil de ejecutar:** basta abrir un link en Chrome o Edge (también en Chromebooks). No hay que instalar nada, crear cuentas ni configurar nada. La primera vez se abre con un proyecto y una pista de ejemplo listos para "Probar mi robot" (§16).
+7. El **juez virtual** puntúa cada ejecución según las bases (hitos, meta, tiempo y reinicios).
 
 ---
 
@@ -44,10 +46,12 @@ El robot usa:
 | Ejecución del código | Se compila el **C++ real** con Clang→WebAssembly **en el navegador** (`@yowasp/clang`). Probado: un sketch con clases, `math.h`, `millis/delay/analogWrite/Serial` compila en ~4,5 s y corre con tiempo simulado. |
 | Plataforma | **App web** estática (Vite + TypeScript), publicable en GitHub Pages. |
 | Lenguaje de los modelos del profesor | **JavaScript** (archivos `.js` con tipos en JSDoc). |
-| Pista | **Grilla de baldosas** (30 × 30 cm por defecto) + objetos libres encima. Con **rampas**. |
+| Pista | **Grilla de baldosas** de 30 cm (8 × 6 = 240 × 180 cm, como las bases FIRVI 2026) + objetos libres encima. Con rampas, baches, cortes, cruces con marcas de color, F1/F2 y obstáculo. |
+| Puntaje | **Juez virtual** con las reglas de las bases (hitos, meta, tiempo, reinicios). La recompensa de entrenamiento puede usarlo. |
 | Placeholders de modelos | Ideales y sin ruido, marcados con `TODO`. |
 | Ajustar parámetros | El proyecto hace la ventana, el motor de pruebas y las interfaces; el profesor hace el **agente RL** y la **recompensa** (con placeholder de búsqueda aleatoria). |
-| Interfaz | **No** imita al Arduino IDE: amigable para 14 años, en español, con la paleta de Dynamis. |
+| Interfaz | **No** imita al Arduino IDE: amigable para 14 a 16 años, en español, con la paleta de Dynamis. |
+| Uso | Un link (GitHub Pages) que se puede **instalar como app** y funciona **sin internet** después de la primera carga. |
 | Proyectos | **Carpetas con varios archivos** (`.ino`, `.h`, `.cpp`), cada uno en su pestaña. |
 | Mensajes del robot | Scroll automático tipo terminal mientras se mira el final; si el usuario sube, no se le mueve la vista. |
 
@@ -154,7 +158,7 @@ Si el proyecto no cambió desde la última compilación, se reutiliza el módulo
 
 ### Errores amigables
 
-Cada diagnóstico de Clang se traduce con una tabla de patrones a un mensaje en español para 14 años. La mascota lo muestra en una burbuja, el editor salta a la pestaña y línea del error, y la línea queda marcada. El texto técnico original queda disponible en "Ver mensaje técnico".
+Cada diagnóstico de Clang se traduce con una tabla de patrones a un mensaje en español para estudiantes de 14 a 16 años. La mascota lo muestra en una burbuja, el editor salta a la pestaña y línea del error, y la línea queda marcada. El texto técnico original queda disponible en "Ver mensaje técnico".
 
 | Patrón de Clang | Mensaje |
 |---|---|
@@ -259,6 +263,7 @@ La configuración (`src/robot/config.ts`) describe el **robot físico de Dynamis
   - Resultado: `motores = { izq: { duty: −1…1, modo: 'avance'|'retroceso'|'freno'|'libre' }, der: {…} }`.
 - **Avisos amigables de cableado:** si el código escribe en un pin que en el robot no está conectado a nada, o lee el QTR en otro pin, la UI avisa ("El pin 23 no está conectado a nada en tu robot").
 - La ayuda incluye una tarjeta **"Conexiones de mi robot"**, generada desde esta configuración.
+- **Tamaño:** se valida contra el máximo de las bases (20 × 20 × 20 cm). Si se excede, la tarjeta del robot lo indica y el juez descuenta 20 puntos por centímetro de más (§10.6).
 
 ---
 
@@ -295,7 +300,7 @@ export function pasoDinamica(estado, motores, dt, mundo, robot, azar) → Estado
 //   motores: { izq: { duty, modo }, der: { duty, modo } }
 
 // qtr.js
-export function leerQTR({ t, estado, sensores /* 8 × {x,y,z} en el mundo */, emisoresEncendidos, mundo, azar })
+export function leerQTR({ t, estado, sensores /* 8 × {x,y,z} en el mundo */, emisoresEncendidos, mundo, ambiente, azar })
   → number[8]                         // ADC crudo 0–4095
 
 // vl53l0x.js
@@ -307,7 +312,7 @@ export function leerMPU6050({ t, dt, estado, estadoAnterior, montaje, mundo, aza
   → { ax, ay, az /* m/s² */, gx, gy, gz /* rad/s */, temp /* °C */ }   // en el marco del sensor
 
 // tcs34725.js
-export function leerTCS34725({ t, estado, sensor, tiempoIntegracionMs, ganancia, ledEncendido, mundo, azar })
+export function leerTCS34725({ t, estado, sensor, tiempoIntegracionMs, ganancia, ledEncendido, mundo, ambiente, azar })
   → { r, g, b, c }                    // cuentas crudas 0–65535
 ```
 
@@ -318,57 +323,141 @@ export function leerTCS34725({ t, estado, sensor, tiempoIntegracionMs, ganancia,
 - MPU6050: gravedad proyectada según la inclinación, más `gz = Δyaw/dt`.
 - TCS34725: color muestreado, escalado por la ganancia y el tiempo de integración.
 
+`ambiente` = `{ luz: 'normal' | 'fuerte' | 'tenue' }`, elegido en la pista. Las bases advierten que la luz del recinto varía, así que los modelos ópticos (QTR y TCS) pueden usarlo para simular ese efecto. Los placeholders lo ignoran.
+
 `src/modelos/README.md` documenta cada firma, las unidades, los marcos y un ejemplo.
 
 ---
 
-## 10. Pista
+## 10. Pista (según las Bases Rescue Line FIRVI 2026)
 
-### Modelo (JSON)
+Fuente: *Bases Generales Rescue Line – FIRVI 2026* (Fundación Mustakis y UTFSM, basadas en RoboCup Rescue Line Jr.), más los casos que pidió el usuario.
+
+### 10.1 Escenario
+
+- **Tamaño:** 240 × 180 cm, es decir, una grilla de **8 × 6 baldosas de 30 cm** por defecto (editable).
+- **Superficie:** melamina blanca con líneas de **cinta negra de 19 mm**. Cualquier baldosa puede invertirse: **línea blanca sobre fondo negro**.
+- **Partida y meta:** cada una se marca con una línea negra perpendicular al recorrido.
+
+### 10.2 Modelo (JSON)
 
 ```json
 {
   "version": 1,
-  "nombre": "Mi pista",
+  "nombre": "Práctica FIRVI",
   "tamanoBaldosa": 300,
-  "columnas": 6, "filas": 4,
-  "baldosas": [ { "c": 0, "r": 0, "tipo": "curva", "rot": 0, "nivel": 0, "props": {} } ],
-  "objetos":  [ { "tipo": "obstaculo", "x": 1738, "y": 1050, "rot": 0, "props": { "ancho": 80, "largo": 80, "alto": 150 } } ],
-  "inicio":   { "x": 300, "y": 1050, "yaw": 0 }
+  "columnas": 8, "filas": 6,
+  "ambiente": { "luz": "normal" },
+  "baldosas": [
+    { "c": 4, "r": 0, "tipo": "cruce", "rot": 180, "nivel": 0,
+      "props": { "marcas": { "ai": false, "ad": false, "di": true, "dd": true }, "invertida": false } }
+  ],
+  "objetos": [
+    { "tipo": "obstaculo", "x": 2340, "y": 1650, "rot": 0, "props": { "ancho": 100, "largo": 100, "alto": 100 } },
+    { "tipo": "bache", "x": 2250, "y": 510, "rot": 45, "props": { "largo": 300, "radio": 6 } },
+    { "tipo": "hito", "x": 900, "y": 1755, "rot": 0, "props": { "numero": 1, "yaw": 0 } }
+  ],
+  "inicio": { "x": 300, "y": 1650, "yaw": 0 }
 }
 ```
 
 - `rot` toma los valores 0, 90, 180 o 270.
-- `nivel` es la altura base de la baldosa en mm. Permite plataformas elevadas a las que se llega por rampas.
+- `nivel` es la altura base de la baldosa en mm (para plataformas y para lo que queda arriba de una rampa).
+- Todas las baldosas aceptan `props.invertida`.
 
-### Catálogo extensible
+### 10.3 Catálogo de piezas
 
-Cada tipo de baldosa es un módulo registrado en `src/pista/catalogo/`:
+**Convención:** en coordenadas locales de la baldosa (0…300 mm), el robot **entra por el borde izquierdo** (x = 0) y avanza hacia +x. La rotación orienta la pieza. En el editor, una flecha rosada muestra por dónde entra el robot. Izquierda y derecha siempre se miran desde esa flecha.
 
-```ts
-interface TipoBaldosa {
-  id: string; nombre: string; categoria: string;
-  dibujar(ctx, props): void;                         // superficie en coordenadas locales 0…T, sin rotar
-  alturaLocal?(u, v, props): number;                 // relieve sobre el nivel (rampa: alto · u / T)
-  dibujarRelieve?(ctx, props): void;                 // solo pantalla (degradado + flechas de subida)
-  propiedades?: DescriptorPropiedad[];               // editables en el panel (por ejemplo, alto de la rampa)
-}
-```
+**Baldosas**
 
-Los objetos libres siguen el mismo patrón (`dibujar`, `huella`, `alto`, `propiedades`).
+| Pieza | Qué es | Propiedades | Regla de las bases |
+|---|---|---|---|
+| Vacía | Sin línea | `invertida` | — |
+| Recta | Línea de borde a borde | — | — |
+| Giro suave | Cuarto de círculo de radio 15 cm | — | Radio ≥ 10 cm |
+| Giro en L | Esquina de 90° en el centro | — | 90° ± 1° |
+| Línea con cortes (*gap*) | Trazos y espacios: "– – –" | `guion` (2–8 cm, por defecto 5), `espacio` (1–4 cm, por defecto 4) | Espacio máximo de 4 cm |
+| Cruce + | Cruce de dos líneas, con marcas de color opcionales | `marcas {ai, ad, di, dd}`, `colorMarca`, `accion` (ver abajo) | Caso del usuario / RCJ |
+| Unión en T | Línea con una rama | `marcas`, `colorMarca`, `accion` | RCJ |
+| Rampa | Recta que sube a lo largo de la pieza | `angulo` (5–35°, por defecto 20°) | Máximo 35° de subida y de bajada; zona de seguridad ≥ 10 cm a cada lado de la línea |
+| Indicador F2 | Línea **L1** completa que avisa, seguida de una línea corta por cada decisión, hacia el lado del giro | `decisiones: ['izq' \| 'der', …]` | Avisa qué camino tomar en el cuadrado F1 |
+| Cuadrado F1 | Cuadrado de 21 cm con entrada y salida centradas: dos caminos (por arriba o por abajo) | `correcto: 'izq' \| 'der'` | Solo uno de los dos caminos es correcto |
+| Partida | Recta con línea perpendicular | — | Delimita la zona de inicio |
+| Meta | Fin de línea con línea perpendicular | — | El robot debe detenerse en ella |
 
-**Catálogo inicial de ejemplo** (se reemplaza o amplía con los casos del usuario):
-- **Baldosas:** vacía, recta, curva, cruce, unión en T, rampa (sube 10 cm por defecto, editable).
-- **Objetos:** obstáculo (caja), marca verde, inicio del robot.
+**Marcas de color en cruces y uniones** (caso del usuario):
+- Son cuadrados de 25 × 25 mm, verdes por defecto (`colorMarca` es editable), **pegados a la esquina** de la intersección.
+- Hay cuatro posiciones: antes del cruce a la izquierda (`ai`), antes a la derecha (`ad`), después a la izquierda (`di`) y después a la derecha (`dd`).
+- La paleta trae atajos para las variantes que pidió el usuario: sin marcas, a la izquierda, a la derecha, a ambos lados y en las 4 puntas.
+- **Acción esperada** (para el juez), según la convención de RoboCup Rescue Line. La deduce el editor y se puede cambiar por baldosa:
 
-### Editor de pista
+| Marcas antes del cruce | El robot debe |
+|---|---|
+| Solo izquierda | Girar a la izquierda |
+| Solo derecha | Girar a la derecha |
+| Ambos lados | Dar la vuelta (180°) |
+| Ninguna | Seguir derecho |
 
-- **Paleta** de piezas con miniaturas: eliges una y haces clic en la grilla.
-- **Baldosa elegida:** girar a la izquierda o derecha (también con `R`), dejar vacía (`Supr`) y editar sus propiedades.
-- **Tamaño de la grilla** ajustable. La **posición de inicio** del robot se arrastra.
-- **Guardar y abrir** la pista como `.json`, y autoguardado en IndexedDB.
+Las marcas **después** del cruce no cuentan. Por eso "4 puntas" equivale a "ambos lados": el robot tiene que distinguir las marcas de antes y las de después.
 
-**Limitación conocida:** la pista es un mapa de alturas sobre un plano 2D. Sirve para rampas y plataformas, pero no para puentes ni túneles.
+**Objetos** (se colocan libremente, encima de la grilla)
+
+| Objeto | Qué es | Propiedades | Regla de las bases |
+|---|---|---|---|
+| Obstáculo (F4) | Cubo que se debe rodear sin tocar | `ancho`, `largo`, `alto` (por defecto 10 cm) | A más de 25 cm de los vértices (giros en L) |
+| Bache | Medio cilindro sobre el suelo, del mismo color de lo que tiene debajo | `largo` (≤ 30 cm), `radio` (≤ 6 mm), `rot` (atajos de 90° y 45° respecto de la línea) | Recto o diagonal respecto de la línea |
+| Hito | Punto de control numerado y pose de reinicio. No lo ven los sensores | `numero`, `yaw` | 8 hitos en orden |
+| Inicio del robot | Pose inicial | `yaw` | Dentro de la zona de partida |
+
+### 10.4 Relieve, superficie y validaciones
+
+- **Superficie (lo que ven los sensores):** se dibuja con las mismas funciones de la pantalla. Los objetos **no** cambian el color del suelo: el bache es del mismo color que lo que tiene debajo, y el obstáculo y los hitos no están en el suelo.
+- **Altura** = `nivel` de la baldosa + la subida de la rampa (`30 cm · tan(ángulo) · u / 30 cm`) + los baches (perfil de medio cilindro). Todo es analítico, así que `altura`, `inclinacion` y `raycast` ven rampas y baches.
+- **Continuidad:**
+  - al colocar o editar una rampa, el editor ajusta el `nivel` de la baldosa siguiente en la dirección de subida;
+  - si dos baldosas vecinas no coinciden en altura, avisa: "Hay un escalón de 11 cm entre estas baldosas".
+- **Validaciones amigables** (avisan, no bloquean):
+  - cortes de más de 4 cm;
+  - rampa de más de 35°;
+  - obstáculo a menos de 25 cm de un giro en L;
+  - bache de más de 30 cm;
+  - número de hitos distinto de 8 o hitos fuera de orden.
+
+### 10.5 Editor de pista
+
+- **Paleta agrupada** (*Líneas*, *Cruces y marcas de color*, *Desafíos*, *Partida y meta*, *Objetos*) con miniaturas. Eliges una pieza y haces clic en la grilla.
+- **Panel "Baldosa elegida":**
+  - tipo, posición, rotación y altura;
+  - girar (`R`) y dejar vacía (`Supr`);
+  - **propiedades según el tipo:** casillas de las 4 marcas con la acción esperada, control de la inclinación de la rampa (con "sube 10,9 cm"), controles de largo y espacio de los cortes, selector del camino correcto de F1 o del lado de F2, e "invertir colores".
+- **Tamaño de la grilla** editable. La **posición de inicio** se arrastra.
+- **Guardar y abrir** `.json`, y autoguardado.
+- **Pistas de ejemplo:**
+  - **Práctica FIRVI:** inspirada en la figura 1 de las bases (partida, curvas en S, línea con cortes, F2 y F1, obstáculo entre H4 y H5, meta y 8 hitos).
+  - **Cruces con marcas:** todas las variantes de marcas.
+  - **Rampa y baches.**
+
+**Limitación conocida:** la pista es un mapa de alturas sobre un plano 2D. Sirve para rampas, plataformas y baches, pero no para puentes ni túneles.
+
+### 10.6 Juez virtual (puntaje según las bases)
+
+El simulador evalúa cada ejecución como lo haría un juez, para que los estudiantes practiquen con las reglas reales y para que la recompensa del entrenamiento pueda usar el mismo puntaje.
+
+| Regla | Cómo la evalúa el simulador |
+|---|---|
+| **Hitos** 1–8 en orden: 5, 10, 20, 20, 10, 15, 15 y 20 puntos | Un hito se alcanza cuando la huella del robot pasa sobre él, en orden. |
+| **Meta:** 15 puntos | El robot se detiene (velocidad < 5 mm/s durante ≥ 1 s) con su huella sobre la línea de meta. |
+| **Tiempo:** (300 − t)/4 | Solo si llegó a la meta y se detuvo. `t` corre desde que la huella sale de la baldosa de partida, así que la calibración inicial no cuenta. Límite: 300 s. |
+| **Reinicios:** máximo 3, −10 cada uno | Botones "Volver al último hito" y "Saltar al siguiente hito". Saltar solo se permite si ya se intentó el hito actual, y el hito saltado no da puntos ni deja sumar el puntaje de tiempo. Reiniciar es como reencender el robot: el programa se instancia de nuevo y queda en la pose del hito. |
+| **Proyección sobre la línea** | Evento "perdió la línea" si no hay línea bajo la huella durante más de 0,5 s (configurable). Excepción: alrededor del obstáculo, hasta que el robot vuelve a la línea. |
+| **Obstáculo** | Evento "tocó el obstáculo" si la huella del robot lo toca. |
+| **Decisiones** (marcas y F1) | Evento "camino equivocado" si el robot sale del cruce o recorre el cuadrado F1 por un lado distinto del esperado. |
+| **Tamaño del robot:** ≤ 20 × 20 × 20 cm | −20 puntos por cada centímetro de más, según `robot/config.ts`. Se muestra en la tarjeta del robot. |
+
+- En la UI, la tarjeta **"Juez virtual"** muestra los hitos 1–8 y la meta (se encienden en amarillo `#FFD166` al alcanzarlos), el puntaje, el tiempo restante y los reinicios usados.
+- El estado del juez viaja en las instantáneas y en el registro de cada prueba (`registro.juez = { hitos, meta, tiempo, reinicios, eventos, puntaje }`).
+- **Fuera de alcance:** las dos rondas acumulativas y las penalizaciones por manipulación o por los mentores.
 
 ---
 
@@ -418,7 +507,7 @@ export function debeTerminar(paso /* { t, estado, lecturas, motores, eventos } *
 
 **Placeholders:**
 - **Agente:** búsqueda aleatoria. 25 % de las veces explora uniformemente el rango; el resto perturba el mejor resultado con ruido gaussiano (σ = 10 % del rango).
-- **Recompensa:** premia la distancia recorrida mientras el QTR ve la línea, y penaliza salir de la pista o chocar.
+- **Recompensa:** el **puntaje del juez virtual** (§10.6: hitos, meta y tiempo, menos descuentos), más un pequeño bono por la distancia avanzada sobre la línea, para desempatar al comienzo del entrenamiento, cuando todavía no se alcanza ningún hito. `debeTerminar` corta la prueba cuando el juez marca "perdió la línea", "tocó el obstáculo" o "camino equivocado".
 
 ### 11.4 Ventana (interfaz para estudiantes)
 
@@ -433,7 +522,7 @@ export function debeTerminar(paso /* { t, estado, lecturas, motores, eventos } *
 
 ## 12. Interfaz
 
-Referencia visual: la maqueta en `docs/maqueta/`. Todo en **español (Chile)**, tuteando, para estudiantes de 14 años.
+Referencia visual: la maqueta en `docs/maqueta/`. Todo en **español (Chile)**, tuteando, para estudiantes de 14 a 16 años sin conocimientos avanzados de computación.
 
 ### Paleta (tokens CSS)
 
@@ -457,11 +546,15 @@ Referencia visual: la maqueta en `docs/maqueta/`. Todo en **español (Chile)**, 
   - **Mi programa:** pestañas de archivos, "Abrir carpeta", **+** para crear archivos, y el editor con resaltado y marcas `@ajustar` destacadas.
   - **Mensajes del robot:** el monitor serie.
   - **Pista:** el robot con cara; el rayo del VL53L0X; los puntos del QTR que se encienden en amarillo al ver línea; el camino recorrido; las rampas con degradado y flechas, y el robot que se agranda un poco al subir. Tiene zoom y desplazamiento.
+  - **Juez virtual:** hitos 1–8 y meta (amarillos al alcanzarlos), puntaje, tiempo restante (de 5:00 hacia abajo), reinicios (0 de 3), y los botones "Volver al último hito (−10)" y "Saltar al siguiente hito". Cada hito alcanzado muestra un aviso de logro.
   - **Lo que siente el robot:** tarjetas del QTR (8 barras, valores y posición de la línea), la distancia, el color (muestra y nombre), giro e inclinación (brújula y "Inclinación 18°, subiendo") y los motores (−100 a 100 %). Cada tarjeta tiene **"¿Cómo lo uso?"** con el código de ejemplo.
-- **Construir pista:** paleta de piezas, la pista, el panel "Baldosa elegida", y los botones Guardar, Abrir y Pista nueva.
+- **Construir pista:** paleta agrupada de piezas, la pista con la flecha de entrada en la baldosa elegida, el panel "Baldosa elegida" con propiedades según el tipo (§10.5), y los botones Guardar, Abrir y Pista nueva.
 - **Ajustar parámetros:** ventana superpuesta (§11.4).
-- **Ejemplos:** proyectos listos para abrir: mover motores, leer la línea, seguidor de línea con PID, esquivar obstáculos, leer color y leer el giroscopio.
-- **Ayuda:** guía de cada sensor con fragmentos de código, "Conexiones de mi robot" y el aviso de la dirección I2C repetida.
+- **Ejemplos:**
+  - Proyectos: mover motores, leer la línea, seguidor de línea con PID, cruzar cortes, leer marcas de color en cruces, esquivar el obstáculo, subir la rampa (leer la inclinación) y leer el giroscopio.
+  - Pistas: Práctica FIRVI, Cruces con marcas, y Rampa y baches.
+- **Ayuda:** guía de cada sensor con fragmentos de código, "Conexiones de mi robot", un resumen de las bases (qué hace cada pieza de la pista y cómo se puntúa) y el aviso de la dirección I2C repetida.
+- **Primera visita:** un recorrido corto (4 pasos) con la mascota: "Este es tu código", "Presiona aquí para probar", "Aquí ves lo que siente tu robot" y "Aquí construyes la pista". Se puede saltar y volver a ver desde Ayuda.
 
 ### Mensajes del robot
 
@@ -485,7 +578,7 @@ Referencia visual: la maqueta en `docs/maqueta/`. Todo en **español (Chile)**, 
 | Proyecto (todos los archivos), pista, preferencias (vista, velocidad) | IndexedDB, autoguardado |
 | Proyecto | `.zip` (descarga y carga), carpeta (abrir y, en Chromium, guardar de vuelta) |
 | Pista | `.json` (descarga y carga) |
-| Compilador | Cache Storage (se descarga una sola vez) |
+| Compilador y la app completa | Cache Storage del service worker (se descarga una sola vez; luego funciona sin internet) |
 
 ---
 
@@ -508,6 +601,10 @@ Referencia visual: la maqueta en `docs/maqueta/`. Todo en **español (Chile)**, 
   - reloj virtual y agenda de pasos de física;
   - primitivas del mundo (`muestrear`, `altura` en rampas rotadas, `inclinacion`, `raycast` contra cajas y rampas);
   - serialización de la pista;
+  - catálogo: cada pieza dibuja lo esperado en su mapa de superficie (por ejemplo, el ancho de 19 mm, los cortes ≤ 4 cm y la posición de las 4 marcas);
+  - la acción esperada según las marcas;
+  - continuidad de alturas y avisos del editor;
+  - el juez virtual (hitos, meta, tiempo, reinicios, "perdió la línea" con la excepción del obstáculo, "camino equivocado");
   - placeholders del agente y la recompensa.
 - **Integración (Vitest + Node):**
   - compilar proyectos de ejemplo reales con `@yowasp/clang` y ejecutarlos con el simulador sin navegador;
@@ -517,14 +614,34 @@ Referencia visual: la maqueta en `docs/maqueta/`. Todo en **español (Chile)**, 
   - el error de ejemplo;
   - abrir una carpeta con `pines.h`;
   - editar la pista con una rampa;
+  - el juez virtual: llegar a los hitos de la pista de prueba, "Volver al último hito" descuenta 10 puntos y la meta suma tiempo solo si el robot se detiene;
   - "Ajustar parámetros" con pocas pruebas y "Usar estos valores".
 
 ---
 
-## 16. Despliegue
+## 16. Uso y despliegue
 
+### Estudiantes: abrir un link
+
+- Se abre `https://<organización>.github.io/Simulador-Dynamis/` en **Chrome o Edge** (Chromebooks incluidos). No se instala nada, no hay cuentas ni configuración.
+- **La primera vez** descarga el compilador con una barra de progreso amigable ("Preparando tu laboratorio, solo la primera vez"). Después queda guardado.
+- **Botón "Instalar en este computador"** (PWA): deja un ícono en el escritorio y permite usar el simulador **sin internet**, por ejemplo en el lugar de la competencia.
+- **Abre listo para usar:** con el proyecto de ejemplo "Seguidor de línea" y la pista "Práctica FIRVI". El primer clic útil es "Probar mi robot".
+- **Todo se guarda solo** en el navegador. "Descargar mi proyecto" entrega un `.zip` que se abre directo en el Arduino IDE para subirlo al robot.
+
+### Profesor: modificar y publicar
+
+- **El `README.md` del repositorio explica, paso a paso, cómo:**
+  - editar los modelos en `src/modelos/` y el agente y la recompensa en `src/ajuste/`;
+  - probar en su computador con `npm install` y `npm run dev`;
+  - publicar: al hacer *push* a la rama principal, un workflow de GitHub Actions construye y publica la app en GitHub Pages automáticamente.
 - `npm run build` genera `dist/` estático, que incluye el compilador, `nucleo.a` y las cabeceras.
-- GitHub Pages lo publica (workflow de GitHub Actions) con `coi-serviceworker` para el aislamiento de origen cruzado.
+
+### Detalles técnicos
+
+- **Un solo service worker** cumple dos funciones:
+  - agrega las cabeceras COOP/COEP (técnica de `coi-serviceworker`), que habilitan `SharedArrayBuffer`;
+  - guarda en caché la app y el compilador para el uso sin internet.
 - El archivo más grande (`llvm.core.wasm`, ~75 MB) queda bajo el límite de 100 MB por archivo de GitHub Pages.
 
 ---
@@ -561,7 +678,7 @@ El alcance es grande. Se sugiere implementarlo en fases que dejen algo usable al
    - reloj virtual, pines → motores y placeholder de dinámica.
    
    Prueba: un sketch que avanza mueve al robot, en Node.
-2. **Pista y mundo:** modelo de pista, catálogo inicial, mapa de superficie, `altura`/`inclinacion`/`raycast`/`colisiona` y rampas.
+2. **Pista, mundo y juez:** modelo de pista, catálogo FIRVI, mapa de superficie, `altura`/`inclinacion`/`raycast`/`colisiona`, rampas, baches y juez virtual.
 3. **Librerías de sensores:** QTRSensors, VL53L0X, MPU6050 (Adafruit e i2cdevlib) y TCS34725, con sus placeholders de modelo.
 4. **UI Programar:**
    - editor con pestañas;
@@ -573,12 +690,13 @@ El alcance es grande. Se sugiere implementarlo en fases que dejen algo usable al
 6. **Ajustar parámetros:** `@ajustar`, pool de workers, registro, contratos del agente y la recompensa, ventana y "Usar estos valores".
 7. **Ejemplos, ayuda, despliegue** en GitHub Pages y pruebas extremo a extremo.
 
-Los casos de la pista del usuario se integran en la fase 2 o 5, según cuándo lleguen.
+El catálogo FIRVI (§10.3) se implementa en la fase 2 (dibujo, relieve y superficie) y en la fase 5 (editor y propiedades). El **juez virtual** va en la fase 2 como lógica pura y en la fase 4 como tarjeta de la UI. La PWA y el uso sin internet van en la fase 7.
 
 ---
 
 ## 20. Pendientes que dependen del usuario
 
-1. **Casos de la pista** (tipos de baldosa y objetos de la competencia, con medidas): llegan en el próximo mensaje y se agregan al catálogo (§10).
-2. Qué sensor alimenta el PID de **"posición"** (el grupo funciona igual con cualquier variable marcada; solo cambia el nombre y el ícono que se muestran).
-3. Confirmar el cableado real del robot de Dynamis para `src/robot/config.ts` (pines, medidas y montaje de los sensores). Los valores de §8 son provisionales.
+1. **Marcas de color:** confirmar que son verdes y que la acción esperada sigue la convención de RoboCup (§10.3: izquierda, derecha, ambos lados = vuelta en U, y las marcas después del cruce no cuentan). Si en Dynamis se usa otra regla (por ejemplo, que "4 puntas" signifique otra cosa), se cambia en la acción por defecto.
+2. **Indicador F2 con varias decisiones:** confirmar la lectura de las bases. L1 avisa, y luego hay una línea corta por cada decisión, hacia el lado del giro desde el punto de vista del robot.
+3. Qué sensor alimenta el PID de **"posición"** (el grupo funciona igual con cualquier variable marcada; solo cambia el nombre y el ícono que se muestran).
+4. Confirmar el **cableado real** del robot de Dynamis para `src/robot/config.ts` (pines, medidas y montaje de los sensores). Los valores de §8 son provisionales.
