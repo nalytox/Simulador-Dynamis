@@ -8,7 +8,8 @@
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "nucleo": "node scripts/construir-nucleo.mjs"
+    "nucleo": "node scripts/construir-nucleo.mjs",
+    "medir": "vitest run --config vitest.medicion.config.ts"
   },
   "repository": {
     "type": "git",
