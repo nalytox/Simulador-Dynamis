@@ -1,4 +1,4 @@
-import { runClang, Exit } from '@yowasp/clang';
+import { runClang, runLLVM, Exit } from '@yowasp/clang';
 import type { Proyecto } from '../proyecto/proyecto';
 import { prepararUnidades, ErrorProyecto, type UnidadCompilacion } from './preprocesador';
 import { parsearDiagnosticos, type Diagnostico } from './diagnosticos';
@@ -19,6 +19,19 @@ export type ResultadoCompilacion =
 const DIR_NUCLEO = 'nucleo';
 const BIBLIOTECA = `${DIR_NUCLEO}/nucleo.a`;
 const SALIDA = 'programa.wasm';
+
+let precarga: Promise<unknown> | null = null;
+
+/**
+ * Descarga y prepara LLVM una sola vez. runClang no pasa fetchProgress a sus
+ * subprocesos, así que sin esta precarga se imprimiría el progreso en la consola.
+ */
+export function prepararCompilador(alProgresar: (hecho: number, total: number) => void = () => {}): Promise<unknown> {
+  precarga ??= Promise.resolve(runLLVM(undefined, {}, {
+    fetchProgress: ({ doneLength, totalLength }) => alProgresar(doneLength, totalLength),
+  }));
+  return precarga;
+}
 
 /** Ejecuta Clang y devuelve el árbol resultante o la salida de error si falló. */
 async function ejecutarClang(args: string[], archivos: Arbol): Promise<{ arbol: Arbol | null; salida: string }> {
@@ -42,6 +55,7 @@ const argumentosDeUnidad = (u: UnidadCompilacion) => [
 
 /** Compila un proyecto Arduino a un módulo WebAssembly enlazado con el núcleo. */
 export async function compilar(p: Proyecto, nucleo: ArchivosNucleo): Promise<ResultadoCompilacion> {
+  await prepararCompilador();
   let unidades: UnidadCompilacion[];
   try {
     unidades = prepararUnidades(p);
@@ -69,7 +83,8 @@ export async function compilar(p: Proyecto, nucleo: ArchivosNucleo): Promise<Res
 
   const argsEnlace = [
     'clang++', ...opciones.enlace, ...Object.keys(objetos),
-    ...(nucleo.biblioteca ? [BIBLIOTECA] : []), '-o', SALIDA,
+    // --whole-archive: principal.o (dyn_setup/dyn_loop) no tiene otras referencias que lo saquen del .a.
+    ...(nucleo.biblioteca ? ['-Wl,--whole-archive', BIBLIOTECA, '-Wl,--no-whole-archive'] : []), '-o', SALIDA,
   ];
   const { arbol, salida } = await ejecutarClang(argsEnlace, aArbol({ ...planos, ...objetos }));
   diagnosticos.push(...parsearDiagnosticos(salida));
