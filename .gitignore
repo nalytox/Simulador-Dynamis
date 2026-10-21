@@ -1,0 +1,4 @@
+node_modules/
+generado/
+dist/
+coverage/
