@@ -238,7 +238,13 @@ Son reimplementaciones **compatibles con la API pública** de cada librería, es
 
 ## 8. Robot
 
-La configuración (`src/robot/config.ts`) describe el **robot físico de Dynamis**. Es la "verdad" del cableado: el código del estudiante debe coincidir con ella, igual que en la realidad.
+La configuración del robot describe el **robot físico de Dynamis**. Es la "verdad" del cableado: el código del estudiante debe coincidir con ella, igual que en la realidad.
+
+**El robot todavía no está medido y su circuito puede cambiar**, así que la configuración **se edita desde la app**, sin tocar código:
+- **Ventana "Mi robot"** (desde la tarjeta del robot y desde Ayuda): medidas, posición de cada sensor y pines, con un dibujo del robot que se actualiza mientras editas.
+- **Se guarda** en el navegador junto al proyecto. Se puede **exportar e importar** como `robot.json`, para que el profesor reparta la misma configuración a todo el curso.
+- **Valores por defecto** en `src/robot/config.ts` (provisionales, abajo). El botón "Volver a los valores del profe" los restaura.
+- **Validaciones amigables:** pines que no existen en el ESP32, pines repetidos, sensores fuera del chasis, tamaño mayor a 20 × 20 × 20 cm.
 
 ```ts
 {
@@ -378,7 +384,7 @@ Fuente: *Bases Generales Rescue Line – FIRVI 2026* (Fundación Mustakis y UTFS
 | Giro suave | Cuarto de círculo de radio 15 cm | — | Radio ≥ 10 cm |
 | Giro en L | Esquina de 90° en el centro | — | 90° ± 1° |
 | Línea con cortes (*gap*) | Trazos y espacios: "– – –" | `guion` (2–8 cm, por defecto 5), `espacio` (1–4 cm, por defecto 4) | Espacio máximo de 4 cm |
-| Cruce + | Cruce de dos líneas, con marcas de color opcionales | `marcas {ai, ad, di, dd}`, `colorMarca`, `accion` (ver abajo) | Caso del usuario / RCJ |
+| Cruce + | Cruce de dos líneas, con marcas de color opcionales | `marcas {ai, ad, di, dd}`, `colorMarca` (verde por defecto; puede ser otro color), `accion` (ver abajo) | Caso del usuario / RCJ |
 | Unión en T | Línea con una rama | `marcas`, `colorMarca`, `accion` | RCJ |
 | Rampa | Recta que sube a lo largo de la pieza | `angulo` (5–35°, por defecto 20°) | Máximo 35° de subida y de bajada; zona de seguridad ≥ 10 cm a cada lado de la línea |
 | Indicador F2 | Línea **L1** completa que avisa, seguida de una línea corta por cada decisión, hacia el lado del giro | `decisiones: ['izq' \| 'der', …]` | Avisa qué camino tomar en el cuadrado F1 |
@@ -694,9 +700,15 @@ El catálogo FIRVI (§10.3) se implementa en la fase 2 (dibujo, relieve y superf
 
 ---
 
-## 20. Pendientes que dependen del usuario
+## 20. Decisiones confirmadas y pendientes
 
-1. **Marcas de color:** confirmar que son verdes y que la acción esperada sigue la convención de RoboCup (§10.3: izquierda, derecha, ambos lados = vuelta en U, y las marcas después del cruce no cuentan). Si en Dynamis se usa otra regla (por ejemplo, que "4 puntas" signifique otra cosa), se cambia en la acción por defecto.
-2. **Indicador F2 con varias decisiones:** confirmar la lectura de las bases. L1 avisa, y luego hay una línea corta por cada decisión, hacia el lado del giro desde el punto de vista del robot.
-3. Qué sensor alimenta el PID de **"posición"** (el grupo funciona igual con cualquier variable marcada; solo cambia el nombre y el ícono que se muestran).
-4. Confirmar el **cableado real** del robot de Dynamis para `src/robot/config.ts` (pines, medidas y montaje de los sensores). Los valores de §8 son provisionales.
+**Confirmado por el usuario (2026-10-21):**
+- **Marcas de color:** verdes en principio, pero **pueden ser de otro color**. El color es una propiedad editable por baldosa (`colorMarca`), y también se puede fijar para toda la pista (`pista.colorMarcas`). La acción esperada sigue la convención de RoboCup descrita en §10.3.
+- **Indicador F2:** la lectura de §10.3 es correcta (L1 avisa y después viene una línea corta por decisión, hacia el lado del giro).
+- **Los circuitos pueden cambiar:**
+  - las pistas cambian entre rondas, y se editan, importan y exportan libremente (§10.5);
+  - el robot se configura desde la app (§8).
+
+**Pendiente (no bloquea la implementación):**
+1. Medidas, pines y montaje reales del robot. El usuario los medirá más adelante; mientras tanto se usan los valores provisionales de §8, editables desde la app.
+2. Qué sensor alimenta el PID de **"posición"**. No bloquea, porque el grupo `@ajustar posicion` funciona con cualquier variable; solo cambian el nombre y el ícono que se muestran.
