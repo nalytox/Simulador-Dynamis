@@ -3,6 +3,8 @@ import { Bitacora } from './bitacora';
 import { crearConsola } from './consola';
 import { registrarPrueba } from './pruebas';
 import { crearLienzo } from './lienzo';
+import { crearTarjetas } from './tarjetas';
+import { crearTarjetaJuez } from './juez';
 import { puntosDePartida } from '../pista/puntos';
 import { ROBOT_POR_DEFECTO } from '../robot/config';
 import { abrirAlmacen, conRetardo, type Almacen, type DatosGuardados, type Preferencias } from '../proyecto/almacen';
@@ -69,7 +71,17 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
   });
   const lienzo = crearLienzo($('lienzo-sim') as HTMLCanvasElement, ROBOT_POR_DEFECTO);
   lienzo.mostrarPista(pista);
-  lienzo.reiniciar(puntosDePartida(pista)[0].pose);
+  const poseDe = (id: string) => (puntosDePartida(pista).find(p => p.id === id) ?? puntosDePartida(pista)[0]).pose;
+  lienzo.reiniciar(poseDe('partida'));
+  const tarjetas = crearTarjetas(raiz);
+  tarjetas.mostrar(null, null, null);
+  const juez = crearTarjetaJuez(raiz, {
+    alPedir: () => {},
+    alElegirDesde: id => lienzo.reiniciar(poseDe(id)),
+  });
+  juez.mostrarPista(pista);
+  juez.mostrar(null);
+  juez.habilitar(false);
   registrarPrueba('lienzo', { aPantalla: lienzo.aPantalla, vista: lienzo.vista });
   if (!almacen) mensajeSistema(SIN_AUTOGUARDADO);
 }

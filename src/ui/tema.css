@@ -352,3 +352,8 @@ button:disabled { opacity: .55; cursor: not-allowed; }
 .dialogo .dialogo-error { color: var(--error); min-height: 1.4em; margin: 8px 0; }
 .dialogo .fila-botones { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
 .consola .sistema { color: var(--tinta-suave); font-family: var(--f-texto); }
+.hito.saltado { opacity: .55; text-decoration: line-through; }
+.juez-eventos { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 13px; color: var(--tinta-suave); }
+.juez-eventos li::before { content: '•'; color: var(--celeste); margin-right: 6px; }
+.desde { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; font-weight: 600; color: var(--tinta-suave); }
+.desde select { font: inherit; padding: 4px 8px; border-radius: 10px; border: 2px solid var(--borde); min-height: 32px; color: var(--tinta); background: var(--blanco); }
