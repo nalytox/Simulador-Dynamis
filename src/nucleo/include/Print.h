@@ -18,6 +18,8 @@ class __FlashStringHelper;
 #define BIN 2
 #endif
 
+class String;
+
 class Print {
 public:
   virtual ~Print() {}
@@ -28,6 +30,7 @@ public:
 
   size_t print(const __FlashStringHelper* texto) { return print(reinterpret_cast<const char*>(texto)); }
   size_t print(const char texto[]);
+  size_t print(const String& texto);
   size_t print(char c);
   size_t print(unsigned char n, int base = DEC);
   size_t print(int n, int base = DEC);
@@ -40,6 +43,7 @@ public:
 
   size_t println(const __FlashStringHelper* texto) { return println(reinterpret_cast<const char*>(texto)); }
   size_t println(const char texto[]);
+  size_t println(const String& texto);
   size_t println(char c);
   size_t println(unsigned char n, int base = DEC);
   size_t println(int n, int base = DEC);

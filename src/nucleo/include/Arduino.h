@@ -95,6 +95,7 @@ long random(long howbig);
 long random(long howsmall, long howbig);
 void randomSeed(unsigned long seed);
 
+#include "WString.h"
 #include "Print.h"
 #include "HardwareSerial.h"
 #endif

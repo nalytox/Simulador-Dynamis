@@ -10,6 +10,7 @@ size_t Print::write(const uint8_t* buffer, size_t size) {
 }
 
 size_t Print::print(const char texto[]) { return write(texto); }
+size_t Print::print(const String& texto) { return write(texto.c_str(), texto.length()); }
 size_t Print::print(char c) { return write(static_cast<uint8_t>(c)); }
 size_t Print::print(unsigned char n, int base) { return print(static_cast<unsigned long long>(n), base); }
 size_t Print::print(int n, int base) { return imprimirConSigno(n, base, static_cast<unsigned int>(n)); }
@@ -25,6 +26,7 @@ size_t Print::print(double n, int digitos) { return imprimirDecimal(n, static_ca
 
 size_t Print::println(void) { return write("\r\n"); }
 size_t Print::println(const char texto[]) { return print(texto) + println(); }
+size_t Print::println(const String& texto) { return print(texto) + println(); }
 size_t Print::println(char c) { return print(c) + println(); }
 size_t Print::println(unsigned char n, int base) { return print(n, base) + println(); }
 size_t Print::println(int n, int base) { return print(n, base) + println(); }
