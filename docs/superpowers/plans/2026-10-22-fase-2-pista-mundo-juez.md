@@ -26,6 +26,10 @@
 5. **Indicador F2:** L1 es una barra de 120 mm que cruza la línea. Cada decisión es una barra de 60 mm hacia el lado del giro, separadas 60 mm. Caben hasta 3 decisiones.
 6. **El juez evalúa las decisiones** (cruce, T y F1) solo cuando el robot entra por la flecha de la baldosa (borde oeste local), que es como están definidas las marcas.
 7. **El juez evalúa cada 10 ms de tiempo virtual** (configurable).
+8. **Puntos de desafío (F) y punto de partida elegible** (lo pidió el usuario el 2026-10-22):
+   - en la pista se marca dónde está cada F con el objeto `desafio`, con su nombre (`F1`, `F2`, `F3`, `F4`…), una pose y el número del hito que viene después;
+   - una prueba puede empezar desde la partida, un hito o una F; lo anterior no suma y no hay puntaje de tiempo;
+   - durante la prueba, saltar una F que no se logra completar es un reinicio de las bases: −10, máximo 3, sin puntaje de tiempo.
 
 ## Global Constraints
 
@@ -56,7 +60,8 @@
 3. **Baldosas invertidas:** la cinta blanca sobre fondo negro sigue contando como línea para el juez, y las marcas conservan su color. Pruebas en las Tareas 2 y 3.
 4. **Reinicios:**
    - el reloj del juez sigue sumando aunque el simulador nuevo parta de `tUs = 0`;
-   - saltar exige haber intentado el hito, se permiten máximo 3 reinicios, y un hito saltado anula el puntaje de tiempo.
+   - saltar (a un hito o a una F) exige haber intentado el hito pendiente, se permiten máximo 3 reinicios, y cualquier salto anula el puntaje de tiempo;
+   - una prueba que empieza en una F o un hito marca lo anterior como saltado.
    
    Prueba en la Tarea 7.
 5. **Rayos raros:** dirección `(0,0,0)`, componentes en cero, origen dentro de un obstáculo o bajo el suelo, y el límite `max`. Deben dar `null` o distancia 0, nunca `NaN`. Prueba en la Tarea 5.
@@ -66,7 +71,7 @@
 ### Task 1: Modelo de pista y JSON
 
 **Files:**
-- Create: `src/pista/tipos.ts`, `src/pista/serializacion.ts`, `tests/ayuda/pistas.ts`
+- Create: `src/pista/tipos.ts`, `src/pista/serializacion.ts`, `src/pista/puntos.ts`, `tests/ayuda/pistas.ts`
 - Test: `tests/unidad/pista-serializacion.test.ts`
 
 **Interfaces:**
@@ -96,7 +101,9 @@ export type TipoBaldosa = Baldosa['tipo'];
 export type Obstaculo = { tipo: 'obstaculo'; x: number; y: number; rot: number; props: { ancho: number; largo: number; alto: number } };
 export type Bache = { tipo: 'bache'; x: number; y: number; rot: number; props: { largo: number; radio: number } };
 export type Hito = { tipo: 'hito'; x: number; y: number; rot: number; props: { numero: number; yaw: number } };
-export type ObjetoDePista = Obstaculo | Bache | Hito;
+/** Dónde empieza un desafío (F1, F2, F4…): punto de partida elegible. hitoSiguiente: el hito que viene después (n + 1 = la meta). */
+export type Desafio = { tipo: 'desafio'; x: number; y: number; rot: number; props: { nombre: string; yaw: number; hitoSiguiente: number } };
+export type ObjetoDePista = Obstaculo | Bache | Hito | Desafio;
 export interface Pista {
   version: 1; nombre: string; tamanoBaldosa: 300; columnas: number; filas: number;
   ambiente: { luz: Luz }; colorMarcas?: string;
@@ -111,6 +118,13 @@ export interface Pista {
   - `escribirPista(p: Pista): string`, que es `JSON.stringify(p, null, 2)`;
   - `pistaVacia(columnas = 8, filas = 6): Pista`;
   - `poseInicial(p: Pista): Pose`, que convierte `yaw` a radianes.
+- Produces (en `src/pista/puntos.ts`):
+  - `interface PuntoDePartida { id: string; nombre: string; pose: Pose; hitoSiguiente: number }`;
+  - `puntosDePartida(p: Pista): PuntoDePartida[]`, en el orden del recorrido:
+    - primero `{ id: 'partida', nombre: 'Partida', hitoSiguiente: 1 }`;
+    - después los hitos (`'hito-{n}'`, `'Hito {n}'`, `hitoSiguiente: n + 1`) y los desafíos (`'desafio-{nombre}'`, `'{nombre}'`), ordenados por `hitoSiguiente`;
+    - con el mismo `hitoSiguiente`, el hito va antes que los desafíos, y los desafíos se ordenan por nombre;
+    - la pose usa `yaw` en radianes.
 - Produces (en `tests/ayuda/pistas.ts`): `pistaDe(datos: Record<string, unknown>): Pista`. Completa `version: 1`, `nombre: 'prueba'`, `tamanoBaldosa: 300`, `ambiente`, `baldosas: []`, `objetos: []` e `inicio: { x: 150, y: 150, yaw: 0 }` si faltan, llama a `normalizarPista` y lanza un `Error` con los errores unidos si falla.
 
 **Valores por defecto** que completa `normalizarPista`:
@@ -127,6 +141,7 @@ export interface Pista {
 | `obstaculo` | `100 × 100 × 100` |
 | `bache` | `largo: 300`, `radio: 6` |
 | `hito` | `yaw: 0` (`numero` es obligatorio) |
+| `desafio` | `yaw: 0` (`nombre` y `hitoSiguiente` son obligatorios) |
 | pista | `ambiente: { luz: 'normal' }`, `objetos: []` |
 
 - [ ] **Step 1: Escribir las pruebas que fallan** en `tests/unidad/pista-serializacion.test.ts`:
@@ -165,6 +180,20 @@ it('informa todos los problemas sin lanzar', () => {
   expect(normalizarPista({ version: 1, nombre: 'a', tamanoBaldosa: 300, columnas: 8, filas: 6, inicio: { x: 0, y: 0, yaw: 0 }, baldosas: [{ c: 9, r: 0, tipo: 'recta' }] }))
     .toMatchObject({ ok: false, errores: ['La baldosa en (9, 0) queda fuera de la grilla de 8 × 6.'] });
 });
+it('los puntos de desafío necesitan nombre y hito siguiente', () => {
+  const r = normalizarPista({ version: 1, nombre: 'a', tamanoBaldosa: 300, columnas: 1, filas: 1, inicio: { x: 0, y: 0, yaw: 0 },
+    objetos: [{ tipo: 'desafio', x: 600, y: 150, rot: 0, props: { nombre: 'F1', hitoSiguiente: 2 } }, { tipo: 'desafio', x: 0, y: 0, rot: 0, props: {} }] });
+  expect(r).toEqual({ ok: false, errores: ['El objeto 2 (desafío) no tiene nombre.', 'El objeto 2 (desafío) no dice cuál es el hito siguiente.'] });
+});
+it('puntos de partida en el orden del recorrido', () => {
+  const p = pistaDe({ columnas: 4, filas: 1, objetos: [
+    { tipo: 'hito', x: 750, y: 150, rot: 0, props: { numero: 2 } },
+    { tipo: 'desafio', x: 600, y: 150, rot: 0, props: { nombre: 'F1', hitoSiguiente: 2, yaw: 90 } },
+    { tipo: 'hito', x: 450, y: 150, rot: 0, props: { numero: 1 } }] });
+  expect(puntosDePartida(p).map(q => [q.id, q.nombre, q.hitoSiguiente]))
+    .toEqual([['partida', 'Partida', 1], ['hito-1', 'Hito 1', 2], ['desafio-F1', 'F1', 2], ['hito-2', 'Hito 2', 3]]);
+  expect(puntosDePartida(p)[2].pose).toEqual({ x: 600, y: 150, yaw: Math.PI / 2 });
+});
 ```
 
 - [ ] **Step 2: Correrlas y verlas fallar**
@@ -187,7 +216,7 @@ Expected: PASS y el typecheck sin errores.
 
 ```bash
 git add src/pista tests/ayuda/pistas.ts tests/unidad/pista-serializacion.test.ts
-git commit -m "Modelo de pista FIRVI: tipos, lectura y escritura del JSON"
+git commit -m "Modelo de pista FIRVI: tipos, JSON y puntos de partida"
 ```
 
 ---
@@ -486,7 +515,7 @@ git commit -m "Relieve analítico de la pista: niveles, rampas rotadas y baches"
 - Produces (en `src/mundo/objetos.ts`): `crearObjetos(p: Pista, relieve): { colisiona; objetosCerca; raycast }`, con las firmas de `Mundo`.
   - El obstáculo es una caja: `largo` a lo largo de `rot`, `ancho` transversal. Se apoya en `relieve.altura` de su centro y mide `alto`.
   - El bache cuenta como el rectángulo `largo × 2·radio`, pero solo en `objetosCerca`.
-  - Los hitos no existen para los sensores ni para las colisiones.
+  - Los hitos y los puntos de desafío no existen para los sensores ni para las colisiones.
 - Produces (en `src/mundo/pista.ts`): `interface MundoPista extends Mundo { readonly pista: Pista; esLinea(x: number, y: number): boolean; baldosaEn(x: number, y: number): Baldosa | null }` y `crearMundo(p: Pista): MundoPista`.
 - **colisiona:** devuelve el obstáculo con mayor `penetracion` contra el polígono, o `null`.
 - **objetosCerca(x, y, radio):** obstáculos y baches cuya huella está a `≤ radio` del punto, del más cercano al más lejano.
@@ -534,7 +563,8 @@ it('rayos raros: sin dirección, desde adentro de una caja o bajo el suelo', () 
   expect(h.distancia).toBeCloseTo(600); expect(Number.isNaN(h.normal.x)).toBe(false);
 });
 it('colisiona: huella del robot contra el obstáculo, no contra baches ni hitos', () => {
-  const m = crearMundo(pistaDe({ columnas: 4, filas: 1, objetos: [caja, { tipo: 'bache', x: 200, y: 150, rot: 90 }, { tipo: 'hito', x: 900, y: 150, rot: 0, props: { numero: 1 } }] }));
+  const m = crearMundo(pistaDe({ columnas: 4, filas: 1, objetos: [caja, { tipo: 'bache', x: 200, y: 150, rot: 90 }, { tipo: 'hito', x: 900, y: 150, rot: 0, props: { numero: 1 } },
+    { tipo: 'desafio', x: 300, y: 150, rot: 0, props: { nombre: 'F1', hitoSiguiente: 1 } }] }));
   expect(m.colisiona(huellaRobot(400, 150, 0, ROBOT_POR_DEFECTO))).toEqual({ objeto: m.pista.objetos[0], penetracion: 46 });
   expect(m.colisiona(huellaRobot(200, 150, 0, ROBOT_POR_DEFECTO))).toBeNull();
   expect(m.colisiona(huellaRobot(900, 150, 0, ROBOT_POR_DEFECTO))).toBeNull();
@@ -594,6 +624,8 @@ git commit -m "Mundo de la pista: colisiones, objetos cercanos y raycast 3D"
 | Sin meta | `La pista necesita una baldosa de meta.` |
 | `inicio` fuera de la baldosa de partida | `El robot debe empezar dentro de la baldosa de partida.` |
 | La acción de una `unionT` pide un lado sin rama | `La marca pide girar a la {derecha\|izquierda}, pero esta unión en T no tiene camino a la {derecha\|izquierda}.` |
+| Dos desafíos con el mismo nombre | `Hay dos desafíos llamados {nombre}.` |
+| `hitoSiguiente` de un desafío fuera de `1…n + 1` | `{nombre} dice que después viene el hito {k}, pero la pista tiene {n} hitos.` |
 
 - [ ] **Step 1: Escribir las pruebas que fallan.** Usan un helper `base(extra)` que arma una pista válida de 4 × 2: partida en (0,0), recta en (1,0), recta en (2,0), meta en (3,0), inicio en (150, 150) y 8 hitos numerados del 1 al 8 en (450, 150). Cada prueba suma `extra` a esa pista.
 
@@ -626,6 +658,12 @@ it('partida, meta e inicio', () => {
   const p = pistaDe({ columnas: 2, filas: 1, baldosas: [{ c: 0, r: 0, tipo: 'recta' }], inicio: { x: 450, y: 150, yaw: 0 } });
   expect(mensajes(p)).toEqual(expect.arrayContaining(['La pista necesita una baldosa de partida.', 'La pista necesita una baldosa de meta.']));
   expect(mensajes(base({ inicio: { x: 450, y: 150, yaw: 0 } }))).toContain('El robot debe empezar dentro de la baldosa de partida.');
+});
+it('desafíos: nombres repetidos y un hito siguiente que no existe', () => {
+  const p = base({ objetos: [{ tipo: 'desafio', x: 600, y: 150, rot: 0, props: { nombre: 'F1', hitoSiguiente: 2 } },
+    { tipo: 'desafio', x: 650, y: 150, rot: 0, props: { nombre: 'F1', hitoSiguiente: 10 } }] });
+  expect(mensajes(p)).toEqual(expect.arrayContaining(['Hay dos desafíos llamados F1.', 'F1 dice que después viene el hito 10, pero la pista tiene 8 hitos.']));
+  expect(mensajes(base({ objetos: [{ tipo: 'desafio', x: 1000, y: 150, rot: 0, props: { nombre: 'F4', hitoSiguiente: 9 } }] }))).toEqual([]);
 });
 it('unión en T: la marca pide un lado sin camino', () => {
   const p = base({ baldosas: [{ c: 1, r: 0, tipo: 'unionT', props: { rama: 'izq', marcas: { ai: false, ad: true, di: false, dd: false } } }] });
@@ -663,7 +701,7 @@ git commit -m "Avisos de la pista según las bases FIRVI"
 - Test: `tests/unidad/juez.test.ts`
 
 **Interfaces:**
-- Consumes: `MundoPista` (Tarea 5), `ConfigRobot` y `huellaRobot`, `Pose`, `penetracion` y `puntoEnPoligono`, `BARRA_META` y `aMundo`.
+- Consumes: `MundoPista` (Tarea 5), `ConfigRobot` y `huellaRobot`, `Pose`, `penetracion` y `puntoEnPoligono`, `BARRA_META`, `aMundo`, y `puntosDePartida` y `PuntoDePartida` (Tarea 1).
 - Produces:
 
 ```ts
@@ -671,19 +709,26 @@ export const PUNTOS_HITO = [5, 10, 20, 20, 10, 15, 15, 20];
 export type EstadoHito = 'pendiente' | 'alcanzado' | 'saltado';
 export type TipoEvento = 'hito' | 'meta' | 'perdio-linea' | 'toco-obstaculo' | 'camino-equivocado' | 'reinicio' | 'fin-tiempo';
 export interface EventoJuez { t: number; tipo: TipoEvento; mensaje: string; baldosa?: { c: number; r: number } }
-export interface EstadoJuez { hitos: EstadoHito[]; meta: boolean; tiempo: number | null; reinicios: number; eventos: EventoJuez[]; puntaje: number; terminado: boolean }
-export interface OpcionesJuez { perdidaLineaS?: number /* 0.5 */; radioObstaculoMm?: number /* 300 */; pasoUs?: number /* 10_000 */ }
+export interface EstadoJuez { desde: string; hitos: EstadoHito[]; meta: boolean; tiempo: number | null; reinicios: number; eventos: EventoJuez[]; puntaje: number; terminado: boolean }
+export interface OpcionesJuez { perdidaLineaS?: number /* 0.5 */; radioObstaculoMm?: number /* 300 */; pasoUs?: number /* 10_000 */; desde?: string /* id de un PuntoDePartida; 'partida' */ }
 export class Juez {
+  /** Lanza Error('No existe el punto de partida "{id}".') si `desde` no está en puntosDePartida. */
   constructor(mundo: MundoPista, robot: ConfigRobot, opciones?: OpcionesJuez);
   /** tUs: reloj del simulador actual (vuelve a 0 después de reiniciar). */
   actualizar(tUs: number, pose: Pose): void;
-  reiniciar(modo: 'ultimo' | 'siguiente'): { ok: true; pose: Pose } | { ok: false; mensaje: string };
+  /** Destinos de reinicio permitidos ahora, en el orden del recorrido. */
+  puntosDeReinicio(): PuntoDePartida[];
+  /** 'ultimo', 'siguiente' (el hito pendiente) o el id de un punto de puntosDeReinicio(). */
+  reiniciar(destino: string): { ok: true; pose: Pose } | { ok: false; mensaje: string };
   get estado(): EstadoJuez;   // copia
 }
 ```
 
 **Reglas:**
 - **Reloj del juez:** en cada `actualizar` suma `max(0, tUs − tPrevio)`; `reiniciar` vuelve `tPrevio` a 0. Evalúa cuando pasaron `pasoUs` desde la evaluación anterior (la primera llamada siempre evalúa). Si `terminado`, no hace nada.
+- **Punto de partida (`desde`):**
+  - los hitos con `numero < punto.hitoSiguiente` empiezan como `'saltado'`;
+  - si `desde` no es `'partida'`, la prueba es de práctica y no tiene puntaje de tiempo.
 - **Hitos:**
   - se ordenan por `numero` y `estado.hitos[i]` corresponde al i-ésimo;
   - el siguiente pendiente se alcanza cuando la huella contiene su punto (los demás no cuentan);
@@ -699,23 +744,35 @@ export class Juez {
   - con reloj − `paradaDesde` ≥ 1 s: `meta = true`, `terminado = true`, `tiempo = paradaDesde − inicio` y el evento `Llegaste a la meta y te detuviste (+15).`
 - **Puntaje:**
   - Σ de los hitos alcanzados + 15 por la meta;
-  - más `(300 − tiempo)/4`, solo con meta y ningún hito saltado;
+  - más `(300 − tiempo)/4`, solo si se cumplen tres cosas: hay meta, `desde` es `'partida'` y no hubo saltos (ni a un hito ni a una F);
   - menos 10 por reinicio;
   - menos 20 por cada cm que sobra en cada medida (`ceil((medida − 200)/10)`).
-- **`reiniciar`:**
+- **Reinicios:**
+  - `ultimoPunto` empieza en el punto `desde`. Cambia al punto de un hito cuando se alcanza ese hito, y al destino después de cada reinicio;
+  - `puntosDeReinicio()` es el tramo de `puntosDePartida` desde `ultimoPunto` hasta el punto del hito pendiente, ambos incluidos (sin hitos pendientes, hasta el final);
+  - `'ultimo'` es `ultimoPunto` y `'siguiente'` es el punto del hito pendiente;
+  - un destino posterior a `ultimoPunto` es un **salto**:
+    - los hitos pendientes con `numero < destino.hitoSiguiente` quedan `'saltado'`;
+    - se pierde el puntaje de tiempo.
+  
+  En los mensajes, el punto se nombra "a la partida", "al hito {n}" o "a {nombre}" (`F1`):
 
-| Situación | Resultado |
+| Situación (se revisa en este orden) | Resultado |
 |---|---|
 | Prueba terminada | `La prueba ya terminó.` |
 | `reinicios = 3` | `Ya usaste los 3 reinicios.` |
-| `'ultimo'` | Pose del último hito no pendiente, o del `inicio`. Evento `Volviste al hito {n} (−10).` o `Volviste a la partida (−10).` |
-| `'siguiente'` sin pendientes | `No quedan hitos para saltar.` |
-| `'siguiente'` sin intentar | `Para saltar el hito {n} primero tienes que intentarlo.` |
-| `'siguiente'` | El hito queda `saltado` y la pose es la suya. Evento `Saltaste al hito {n}: no suma puntos ni puntaje de tiempo (−10).` |
+| `'siguiente'` sin hitos pendientes | `No quedan hitos para saltar.` |
+| `id` que no existe | `No existe el punto de partida "{id}".` |
+| Destino fuera de `puntosDeReinicio()` | `No puedes reiniciar en {nombre} ahora.` |
+| Salto sin haber intentado el hito pendiente | `Para saltar {al punto} primero tienes que intentarlo.` |
+| Volver a `ultimoPunto` | Evento `Volviste {al punto} (−10).` |
+| Salto | Evento `Saltaste {al punto}: ya no hay puntaje de tiempo (−10).` |
 
-  Si el reinicio procede: `reinicios++`, `tPrevio = 0` y se borra lo que depende de la pose anterior. La pose de un hito es `(x, y, yaw·π/180)`.
+  Si el reinicio procede: `reinicios++`, `tPrevio = 0`, `ultimoPunto = destino`, y se borra lo que depende de la pose anterior. Devuelve la pose del destino.
 
-- [ ] **Step 1: Escribir las pruebas que fallan.** La pista J es de 4 × 1: partida, recta, recta y meta. Tiene los hitos 1 en (450, 150) y 2 en (750, 150), y el inicio en (150, 150). El helper `pasar(juez, desde, hasta, x: (t) => number, paso = 0.001)` llama a `actualizar(t·1e6, { x: x(t), y: 150, yaw: 0 })` en `t = desde + i·paso`, para `i = 0…round((hasta − desde)/paso)`.
+- [ ] **Step 1: Escribir las pruebas que fallan.**
+  - **La pista J** es de 4 × 1: partida, recta, recta y meta. Tiene los hitos 1 en (450, 150) y 2 en (750, 150), el desafío `F1` en (600, 150) con `hitoSiguiente: 2`, y el inicio en (150, 150).
+  - **El helper `pasar(juez, desde, hasta, x: (t) => number, paso = 0.001)`** llama a `actualizar(t·1e6, { x: x(t), y: 150, yaw: 0 })` en `t = desde + i·paso`, para `i = 0…round((hasta − desde)/paso)`.
 
 ```ts
 it('cuenta los hitos en orden', () => {
@@ -739,22 +796,38 @@ it('la meta exige detenerse 1 s sobre la línea y suma el tiempo', () => {
 });
 it('reinicios: volver, saltar solo lo intentado, máximo 3 y el tiempo sigue sumando', () => {
   const j = new Juez(crearMundo(J), ROBOT_POR_DEFECTO);
-  expect(j.reiniciar('siguiente')).toEqual({ ok: false, mensaje: 'Para saltar el hito 1 primero tienes que intentarlo.' });
-  pasar(j, 0, 1, () => 450); pasar(j, 1, 1.1, () => 600);
+  expect(j.reiniciar('siguiente')).toEqual({ ok: false, mensaje: 'Para saltar al hito 1 primero tienes que intentarlo.' });
+  pasar(j, 0, 1, () => 450); pasar(j, 1, 1.1, () => 520);
+  expect(j.puntosDeReinicio().map(p => p.id)).toEqual(['hito-1', 'desafio-F1', 'hito-2']);
   expect(j.reiniciar('siguiente')).toEqual({ ok: true, pose: { x: 750, y: 150, yaw: 0 } });
   expect(j.estado).toMatchObject({ hitos: ['alcanzado', 'saltado'], reinicios: 1, puntaje: -5 });
+  expect(j.estado.eventos.at(-1)!.mensaje).toBe('Saltaste al hito 2: ya no hay puntaje de tiempo (−10).');
   expect(j.reiniciar('siguiente')).toEqual({ ok: false, mensaje: 'No quedan hitos para saltar.' });
   const antes = j.estado.tiempo!;
   pasar(j, 0, 0.5, () => 750); expect(j.estado.tiempo).toBeCloseTo(antes + 0.5, 1);
   expect(j.reiniciar('ultimo')).toEqual({ ok: true, pose: { x: 750, y: 150, yaw: 0 } });
+  expect(j.estado.eventos.at(-1)!.mensaje).toBe('Volviste al hito 2 (−10).');
   expect(j.reiniciar('ultimo').ok).toBe(true);
   expect(j.reiniciar('ultimo')).toEqual({ ok: false, mensaje: 'Ya usaste los 3 reinicios.' });
 });
-it('un hito saltado anula el puntaje de tiempo', () => {
+it('saltar una F que no se logra completar cuenta como reinicio y quita el puntaje de tiempo', () => {
   const j = new Juez(crearMundo(J), ROBOT_POR_DEFECTO);
-  pasar(j, 0, 0.1, () => 450); pasar(j, 0.1, 0.2, () => 600); j.reiniciar('siguiente');
-  pasar(j, 0, 2, t => Math.min(750 + 600 * t, 1050));
-  expect(j.estado).toMatchObject({ meta: true, puntaje: 5 + 15 - 10 });
+  pasar(j, 0, 0.1, () => 450); pasar(j, 0.1, 0.2, () => 560);
+  expect(j.reiniciar('desafio-F1')).toEqual({ ok: true, pose: { x: 600, y: 150, yaw: 0 } });
+  expect(j.estado).toMatchObject({ hitos: ['alcanzado', 'pendiente'], reinicios: 1, puntaje: -5 });
+  expect(j.estado.eventos.at(-1)!.mensaje).toBe('Saltaste a F1: ya no hay puntaje de tiempo (−10).');
+  expect(j.puntosDeReinicio().map(p => p.id)).toEqual(['desafio-F1', 'hito-2']);
+  expect(j.reiniciar('hito-1')).toEqual({ ok: false, mensaje: 'No puedes reiniciar en Hito 1 ahora.' });
+  pasar(j, 0, 2, t => Math.min(600 + 600 * t, 1050));
+  expect(j.estado).toMatchObject({ hitos: ['alcanzado', 'alcanzado'], meta: true, puntaje: 5 + 10 + 15 - 10 });
+});
+it('empezar desde una F o un hito: lo anterior no suma y no hay puntaje de tiempo', () => {
+  const j = new Juez(crearMundo(J), ROBOT_POR_DEFECTO, { desde: 'desafio-F1' });
+  expect(j.estado).toMatchObject({ desde: 'desafio-F1', hitos: ['saltado', 'pendiente'], puntaje: 0 });
+  pasar(j, 0, 2, t => Math.min(600 + 600 * t, 1050));
+  expect(j.estado).toMatchObject({ hitos: ['saltado', 'alcanzado'], meta: true, puntaje: 10 + 15 });
+  expect(new Juez(crearMundo(J), ROBOT_POR_DEFECTO, { desde: 'hito-2' }).estado.hitos).toEqual(['saltado', 'saltado']);
+  expect(() => new Juez(crearMundo(J), ROBOT_POR_DEFECTO, { desde: 'F9' })).toThrow('No existe el punto de partida "F9".');
 });
 it('descuenta 20 puntos por cm de más', () =>
   expect(new Juez(crearMundo(J), { ...ROBOT_POR_DEFECTO, chasis: { ...ROBOT_POR_DEFECTO.chasis, largo: 215 } }).estado.puntaje).toBe(-40));
@@ -781,7 +854,7 @@ Expected: PASS.
 
 ```bash
 git add src/juez/juez.ts tests/unidad/juez.test.ts
-git commit -m "Juez virtual: hitos, meta, tiempo, reinicios y puntaje de las bases"
+git commit -m "Juez virtual: hitos, meta, tiempo, reinicios, saltos de F y puntaje"
 ```
 
 ---
@@ -808,7 +881,7 @@ git commit -m "Juez virtual: hitos, meta, tiempo, reinicios y puntaje de las bas
   - si entró por el oeste, al salir se compara el lado de salida con el esperado: `recto → este`, `izq → norte`, `der → sur`, `vuelta → oeste`;
   - si no coincide: `Tomaste el camino equivocado en el cruce.` o `… en la unión en T.`, con `baldosa`;
   - en `cuadradoF1` entrando por el oeste, la primera evaluación con `u ≥ 150` decide el lado (`v ≥ 150` es izquierda). Si difiere de `correcto`: `Tomaste el camino equivocado en el cuadrado F1.`;
-  - después de un reinicio no hay posición anterior, así que la baldosa donde parte no se evalúa.
+  - después de un reinicio, o al empezar desde un hito o una F, no hay posición anterior, así que la baldosa donde parte no se evalúa.
 
 - [ ] **Step 1: Escribir las pruebas que fallan.** El helper `recorrer(juez, puntos: [t, x, y][], paso = 0.001)` interpola linealmente entre los puntos y llama a `actualizar` cada `paso`. Usa `yaw` en la dirección del movimiento: si el robot no se mueve conserva el anterior, y al principio vale 0.
 
@@ -935,7 +1008,7 @@ Run: `npx vitest run tests/integracion/simulador.test.ts tests/integracion/pista
 Expected: PASS.
 
 - [ ] **Step 5: Documentación y spec.**
-  - **`src/modelos/README.md`:** agregar la sección "El mundo de la pista". Explica qué devuelve cada primitiva y la convención de inclinación: `pitch < 0` con la nariz arriba y `roll > 0` con el lado izquierdo arriba, según REP-103. También que `raycast` da `objeto: null` cuando choca con el suelo, que los hitos no los ven los sensores, y que fuera de la grilla hay fondo blanco a altura 0.
+  - **`src/modelos/README.md`:** agregar la sección "El mundo de la pista". Explica qué devuelve cada primitiva y la convención de inclinación: `pitch < 0` con la nariz arriba y `roll > 0` con el lado izquierdo arriba, según REP-103. También que `raycast` da `objeto: null` cuando choca con el suelo, que los sensores no ven los hitos ni los puntos de desafío, y que fuera de la grilla hay fondo blanco a altura 0.
   - **`README.md`:**
     - el estado pasa a "fase 2 de 7 — pista, mundo y juez";
     - la estructura suma `pista/` y `juez/`.
@@ -944,7 +1017,10 @@ Expected: PASS.
     - §9, Convenciones: agregar la regla de inclinación (decisión 3);
     - §10.2: agregar que los ángulos del JSON van en grados, que `r` cuenta las filas desde abajo y que `tamanoBaldosa` es 300 (decisión 2);
     - §10.3: en la Unión en T, agregar `rama` (decisión 4); en el Indicador F2, "hasta 3 decisiones" (decisión 5);
-    - §10.6, fila Decisiones: "se evalúa cuando el robot entra por la flecha de la baldosa" (decisión 6).
+    - §10.6, fila Decisiones: "se evalúa cuando el robot entra por la flecha de la baldosa" (decisión 6);
+    - §10.2 y §10.3, objetos: agregar el **punto de desafío** `desafio` (`nombre`, `yaw`, `hitoSiguiente`). Marca dónde está cada F, no lo ven los sensores y es un punto de partida elegible (decisión 8);
+    - §10.6, fila Reinicios: agregar "o en el punto de una F que no se logra completar, con las mismas reglas"; y una fila nueva **Empezar desde**: "partida, un hito o una F; lo anterior no suma y no hay puntaje de tiempo";
+    - §20, Confirmado: agregar la decisión del usuario del 2026-10-22 (punto de partida elegible y saltos de F como reinicio).
 
 - [ ] **Step 6: Suite completa y typecheck**
 
