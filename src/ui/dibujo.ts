@@ -6,6 +6,7 @@ import { rectanguloGirado } from '../mundo/geometria';
 import { gradosARadianes, pistaVacia, poseInicial } from '../pista/serializacion';
 import { agregarObjeto, colocarBaldosa } from '../pista/edicion';
 import type { Pieza } from './paleta';
+import type { Ubicacion } from '../pista/baldosas';
 import { TAMANO_BALDOSA as T, type Baldosa, type ObjetoDePista, type Pista } from '../pista/tipos';
 import { poseVL53 } from '../simulacion/sensores';
 import type { EstadoRobot, Pose } from '../simulacion/simulador';
@@ -159,6 +160,66 @@ export function dibujarPista(ctx: CanvasRenderingContext2D, v: Vista, pista: Pis
   ctx.stroke();
   for (const o of pista.objetos) objeto(ctx, o);
   flechaInicio(ctx, poseInicial(pista));
+}
+
+/** Lo que el editor de pista dibuja encima de la pista. */
+export interface MarcasEditor {
+  /** Celdas con avisos de la revisión de las bases (borde rosado). */
+  conAvisos: { c: number; r: number }[];
+  /** La pieza que se colocaría bajo el cursor, semitransparente. */
+  fantasma: Baldosa | null;
+  /** Baldosas con la flecha rosada que muestra por dónde entra el robot. */
+  flechas: Ubicacion[];
+  /** La celda elegida (borde azul). */
+  elegida: { c: number; r: number } | null;
+  /** El objeto o el inicio elegido: un anillo azul alrededor. */
+  anillo: { x: number; y: number; radio: number } | null;
+  /** La celda con el foco del teclado (borde punteado). */
+  foco: { c: number; r: number } | null;
+}
+
+/** Las marcas del editor sobre la pista ya dibujada con la misma vista. */
+export function dibujarMarcasEditor(ctx: CanvasRenderingContext2D, v: Vista, m: MarcasEditor): void {
+  enMundo(ctx, v);
+  const px = (n: number) => (n * (globalThis.devicePixelRatio || 1)) / v.escala;
+  const borde = (c: number, r: number, color: string, ancho: number, guiones: number[] = []) => {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = px(ancho);
+    ctx.setLineDash(guiones.map(px));
+    const dentro = px(ancho / 2 + 2);
+    ctx.strokeRect(c * T + dentro, r * T + dentro, T - 2 * dentro, T - 2 * dentro);
+    ctx.setLineDash([]);
+  };
+  if (m.fantasma) {
+    ctx.save();
+    ctx.globalAlpha = 0.55;
+    baldosa(ctx, m.fantasma);
+    ctx.restore();
+  }
+  for (const { c, r } of m.conAvisos) borde(c, r, C.rosa, 3);
+  for (const b of m.flechas) {
+    ctx.save();
+    ctx.translate(b.c * T + T / 2, b.r * T + T / 2);
+    ctx.rotate(gradosARadianes(b.rot));
+    ctx.translate(-T / 2, -T / 2);
+    ctx.fillStyle = C.rosa;
+    ctx.beginPath();
+    ctx.moveTo(6, 108);
+    ctx.lineTo(52, 150);
+    ctx.lineTo(6, 192);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+  if (m.elegida) borde(m.elegida.c, m.elegida.r, C.azul, 4);
+  if (m.anillo) {
+    ctx.strokeStyle = C.azul;
+    ctx.lineWidth = px(4);
+    ctx.beginPath();
+    ctx.arc(m.anillo.x, m.anillo.y, m.anillo.radio, 0, 2 * Math.PI);
+    ctx.stroke();
+  }
+  if (m.foco) borde(m.foco.c, m.foco.r, C.tinta, 2, [6, 5]);
 }
 
 /** La miniatura de una pieza de la paleta: su baldosa, o el objeto o el inicio sobre una recta. */

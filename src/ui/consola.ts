@@ -7,7 +7,7 @@ const TOLERANCIA_PX = 4;
  * "Mensajes del robot" (spec §12): dibuja una vez por cuadro, se queda pegada al final mientras el
  * usuario mira el final y, si subió a leer, no lo mueve y muestra "Mensajes nuevos ↓".
  */
-export function crearConsola(caja: HTMLElement, pildora: HTMLElement, botonLimpiar: HTMLElement, bitacora: Bitacora): { refrescar(): void } {
+export function crearConsola(caja: HTMLElement, pildora: HTMLElement, botonLimpiar: HTMLElement, bitacora: Bitacora): { refrescar(): void; irAlFinal(): void } {
   const doc = caja.ownerDocument;
   let dibujada = -1;
   let pendiente = false;
@@ -71,5 +71,5 @@ export function crearConsola(caja: HTMLElement, pildora: HTMLElement, botonLimpi
     bitacora.limpiar();
     refrescar();
   });
-  return { refrescar };
+  return { refrescar, irAlFinal: bajar };
 }

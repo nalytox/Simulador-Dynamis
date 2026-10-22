@@ -4,7 +4,7 @@ test('la página carga aislada, con la banda y la vista Programar', async ({ pag
   await page.goto('/');
   await expect(page.locator('#tab-programar')).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator('#btn-probar')).toHaveText(/Probar mi robot/);
-  await expect(page.locator('#tab-pista')).toBeDisabled();
+  await expect(page.locator('#tab-pista')).toBeEnabled();
   expect(await page.evaluate(() => crossOriginIsolated)).toBe(true);
   await expect(page.locator('#aviso-global')).toBeHidden();
 });

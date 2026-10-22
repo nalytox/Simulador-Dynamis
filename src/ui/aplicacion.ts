@@ -8,6 +8,8 @@ import { crearTarjetaJuez } from './juez';
 import { crearAcciones, type EstadoApp } from './acciones';
 import { crearBurbuja } from './burbuja';
 import { crearAvisos } from './avisos';
+import { crearVistas } from './vistas';
+import { crearEditorPista } from './editor-pista';
 import { ClienteCompilador } from '../compilador/cliente';
 import { primerError } from '../compilador/amigables';
 import { ClienteSimulacion } from '../simulacion/cliente';
@@ -48,7 +50,7 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
   const $ = (id: string) => raiz.getElementById(id)!;
   const almacen = await abrirAlmacen();
   const proyectoGuardado = await leer(almacen, 'proyecto');
-  const pista = (await leer(almacen, 'pista')) ?? PISTA_INICIAL;
+  let pista = (await leer(almacen, 'pista')) ?? PISTA_INICIAL;
   const preferencias: Preferencias = (await leer(almacen, 'preferencias')) ?? { velocidad: 100 };
   const guardar = <K extends keyof DatosGuardados>(clave: K) => conRetardo((valor: DatosGuardados[K]) => { void almacen?.guardar(clave, valor).catch(() => {}); });
   const guardarProyecto = guardar('proyecto');
@@ -73,6 +75,14 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
     mensajeSistema,
     mostrarError: (titulo, mensaje) => burbuja.mostrar({ titulo, mensaje }),
   });
+
+  // Las dos vistas: al volver a Programar, los mensajes se muestran desde el final.
+  crearVistas(raiz, { alCambiar: v => { if (v === 'programar') consola.irAlFinal(); } });
+  const editorPista = crearEditorPista(raiz, {
+    alCambiar: p => { pista = p; },
+    alElegir: () => {},
+  });
+  editorPista.mostrar(pista);
 
   // Pista, tarjetas y juez.
   const lienzo = crearLienzo($('lienzo-sim') as HTMLCanvasElement, ROBOT_POR_DEFECTO);
