@@ -8,5 +8,8 @@ import '@fontsource/jetbrains-mono/400.css';
 import '@fontsource/jetbrains-mono/600.css';
 import './ui/tema.css';
 import { iniciarAplicacion } from './ui/aplicacion';
+import { ClienteCompilador } from './compilador/cliente';
+import { registrarPrueba } from './ui/pruebas';
 
+registrarPrueba('compilador', new ClienteCompilador());
 void iniciarAplicacion(document);
