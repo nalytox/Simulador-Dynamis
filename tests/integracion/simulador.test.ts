@@ -116,4 +116,10 @@ describe('Simulador', { timeout: 120_000 }, () => {
     const sim = await crearSim('void setup() { while (true) { delay(0); } }\nvoid loop() {}');
     expect(sim.ejecutar(1_000)).toEqual({ motivo: 'tiempo', tiempoUs: 1_000 });
   });
+  it('alPasoFisica ve cada paso de física, también dentro de un delay', async () => {
+    const pasos: number[] = [];
+    const sim = await crearSim('void setup() { delay(10); }\nvoid loop() {}', { alPasoFisica: t => pasos.push(t) });
+    sim.ejecutar(10_000);
+    expect(pasos).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(ms => ms * 1000));
+  });
 });

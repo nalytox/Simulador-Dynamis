@@ -282,6 +282,7 @@ La configuración del robot describe el **robot físico de Dynamis**. Es la "ver
 - **Unidades:** mm, s, rad (la UI muestra grados).
 - **Marco del mundo:** origen en la esquina inferior izquierda de la pista; `x` hacia la derecha, `y` hacia arriba, `z` hacia arriba; `yaw` antihorario desde `+x`. La pantalla invierte `y` al dibujar.
 - **Marco del robot:** `x` hacia adelante, `y` hacia la izquierda, `z` hacia arriba (convención REP-103).
+- **Inclinación** (regla de la mano derecha, REP-103): `pitch < 0` cuando la nariz sube y `roll > 0` cuando el lado izquierdo queda más alto.
 
 ### Primitivas del mundo (las implementa este proyecto)
 
@@ -294,7 +295,7 @@ mundo.colisiona(poligono2D)      → { objeto, penetracion } | null  // huella d
 mundo.objetosCerca(x, y, radio)  → Objeto[]
 ```
 
-- **`muestrear`** lee un mapa de superficie a 1 px = 1 mm, dibujado en un `OffscreenCanvas` con **las mismas funciones** que dibujan la pista en pantalla: lo que se ve es lo que siente el robot. El relieve de las rampas (degradado y flechas) **solo** se dibuja en pantalla, no en ese mapa.
+- **`muestrear`** evalúa **la misma lista de figuras** (rectángulos y arcos de cinta, marcas de color) con la que la pantalla dibuja cada baldosa: lo que se ve es lo que siente el robot. No usa un raster, así funciona igual en Node, en el worker y en el pool de entrenamiento, sin ocupar un mapa de 17 MB por worker. Las decoraciones de la rampa (degradado y flechas) existen **solo** en la pantalla.
 - **`altura`** e **`inclinacion`** son analíticas: salen del relieve de cada tipo de baldosa (§10), no de un raster.
 - **`raycast`** recorre el rayo contra los objetos (huella extruida hasta su altura) y contra el suelo (marcha de 2 mm sobre el mapa de alturas). Así el VL53L0X puede "ver" la subida de una rampa.
 
@@ -370,6 +371,9 @@ Fuente: *Bases Generales Rescue Line – FIRVI 2026* (Fundación Mustakis y UTFS
 ```
 
 - `rot` toma los valores 0, 90, 180 o 270.
+- Los ángulos del JSON (`rot`, `yaw`, `angulo`) van en **grados**; el simulador los usa en radianes.
+- `r` cuenta las filas desde abajo: la baldosa `(c, r)` ocupa `x ∈ [300c, 300c + 300)`, `y ∈ [300r, 300r + 300)`.
+- Por ahora `tamanoBaldosa` es siempre 300.
 - `nivel` es la altura base de la baldosa en mm (para plataformas y para lo que queda arriba de una rampa).
 - Todas las baldosas aceptan `props.invertida`.
 
@@ -387,9 +391,9 @@ Fuente: *Bases Generales Rescue Line – FIRVI 2026* (Fundación Mustakis y UTFS
 | Giro en L | Esquina de 90° en el centro | — | 90° ± 1° |
 | Línea con cortes (*gap*) | Trazos y espacios: "– – –" | `guion` (2–8 cm, por defecto 5), `espacio` (1–4 cm, por defecto 4) | Espacio máximo de 4 cm |
 | Cruce + | Cruce de dos líneas, con marcas de color opcionales | `marcas {ai, ad, di, dd}`, `colorMarca` (verde por defecto; puede ser otro color), `accion` (ver abajo) | Caso del usuario / RCJ |
-| Unión en T | Línea con una rama | `marcas`, `colorMarca`, `accion` | RCJ |
+| Unión en T | Línea con una rama | `marcas`, `colorMarca`, `accion`, `rama` (`'izq'` o `'der'` de la flecha, por defecto `'izq'`) | RCJ |
 | Rampa | Recta que sube a lo largo de la pieza | `angulo` (5–35°, por defecto 20°) | Máximo 35° de subida y de bajada; zona de seguridad ≥ 10 cm a cada lado de la línea |
-| Indicador F2 | Línea **L1** completa que avisa, seguida de una línea corta por cada decisión, hacia el lado del giro | `decisiones: ['izq' \| 'der', …]` | Avisa qué camino tomar en el cuadrado F1 |
+| Indicador F2 | Línea **L1** completa que avisa, seguida de una línea corta por cada decisión, hacia el lado del giro | `decisiones: ['izq' \| 'der', …]` (hasta 3) | Avisa qué camino tomar en el cuadrado F1 |
 | Cuadrado F1 | Cuadrado de 21 cm con entrada y salida centradas: dos caminos (por arriba o por abajo) | `correcto: 'izq' \| 'der'` | Solo uno de los dos caminos es correcto |
 | Partida | Recta con línea perpendicular | — | Delimita la zona de inicio |
 | Meta | Fin de línea con línea perpendicular | — | El robot debe detenerse en ella |
@@ -417,6 +421,7 @@ Las marcas **después** del cruce no cuentan. Por eso "4 puntas" equivale a "amb
 | Bache | Medio cilindro sobre el suelo, del mismo color de lo que tiene debajo | `largo` (≤ 30 cm), `radio` (≤ 6 mm), `rot` (atajos de 90° y 45° respecto de la línea) | Recto o diagonal respecto de la línea |
 | Hito | Punto de control numerado y pose de reinicio. No lo ven los sensores | `numero`, `yaw` | 8 hitos en orden |
 | Inicio del robot | Pose inicial | `yaw` | Dentro de la zona de partida |
+| Punto de desafío (F) | Marca dónde está cada F (F1, F2, F3, F4…) y es un punto de partida elegible. No lo ven los sensores | `nombre`, `yaw`, `hitoSiguiente` (el hito que viene después; n + 1 = la meta) | Pedido del usuario: se elige dónde está cada F |
 
 ### 10.4 Relieve, superficie y validaciones
 
@@ -457,10 +462,11 @@ El simulador evalúa cada ejecución como lo haría un juez, para que los estudi
 | **Hitos** 1–8 en orden: 5, 10, 20, 20, 10, 15, 15 y 20 puntos | Un hito se alcanza cuando la huella del robot pasa sobre él, en orden. |
 | **Meta:** 15 puntos | El robot se detiene (velocidad < 5 mm/s durante ≥ 1 s) con su huella sobre la línea de meta. |
 | **Tiempo:** (300 − t)/4 | Solo si llegó a la meta y se detuvo. `t` corre desde que la huella sale de la baldosa de partida, así que la calibración inicial no cuenta. Límite: 300 s. |
-| **Reinicios:** máximo 3, −10 cada uno | Botones "Volver al último hito" y "Saltar al siguiente hito". Saltar solo se permite si ya se intentó el hito actual, y el hito saltado no da puntos ni deja sumar el puntaje de tiempo. Reiniciar es como reencender el robot: el programa se instancia de nuevo y queda en la pose del hito. |
+| **Reinicios:** máximo 3, −10 cada uno | Botones "Volver al último hito" y "Saltar al siguiente hito", o saltar al punto de una F que no se logra completar, con las mismas reglas. Saltar solo se permite si ya se intentó el hito actual, y cualquier salto anula el puntaje de tiempo; el hito saltado no da puntos. Reiniciar es como reencender el robot: el programa se instancia de nuevo y queda en la pose del punto elegido. |
+| **Empezar desde** | La prueba puede partir desde la partida, un hito o una F. Lo que queda antes de ese punto no suma, y no hay puntaje de tiempo. |
 | **Proyección sobre la línea** | Evento "perdió la línea" si no hay línea bajo la huella durante más de 0,5 s (configurable). Excepción: alrededor del obstáculo, hasta que el robot vuelve a la línea. |
 | **Obstáculo** | Evento "tocó el obstáculo" si la huella del robot lo toca. |
-| **Decisiones** (marcas y F1) | Evento "camino equivocado" si el robot sale del cruce o recorre el cuadrado F1 por un lado distinto del esperado. |
+| **Decisiones** (marcas y F1) | Evento "camino equivocado" si el robot sale del cruce o recorre el cuadrado F1 por un lado distinto del esperado. Se evalúa cuando el robot entra por la flecha de la baldosa. |
 | **Tamaño del robot:** ≤ 20 × 20 × 20 cm | −20 puntos por cada centímetro de más, según `robot/config.ts`. Se muestra en la tarjeta del robot. |
 
 - En la UI, la tarjeta **"Juez virtual"** muestra los hitos 1–8 y la meta (se encienden en amarillo `#FFD166` al alcanzarlos), el puntaje, el tiempo restante y los reinicios usados.
@@ -710,6 +716,11 @@ El catálogo FIRVI (§10.3) se implementa en la fase 2 (dibujo, relieve y superf
 - **Los circuitos pueden cambiar:**
   - las pistas cambian entre rondas, y se editan, importan y exportan libremente (§10.5);
   - el robot se configura desde la app (§8).
+
+**Confirmado por el usuario (2026-10-22):**
+- **Cada F tiene su punto** en la pista, que se elige libremente (objeto `desafio`, §10.3).
+- **Punto de partida elegible:** una prueba puede empezar desde la partida, un hito o una F; lo anterior no suma y no hay puntaje de tiempo.
+- **Saltar una F** que no se logra completar es un reinicio de las bases: −10, máximo 3 y sin puntaje de tiempo (§10.6).
 
 **Pendiente (no bloquea la implementación):**
 1. Medidas, pines y montaje reales del robot. El usuario los medirá más adelante; mientras tanto se usan los valores provisionales de §8, editables desde la app.

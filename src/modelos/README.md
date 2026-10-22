@@ -38,6 +38,27 @@ export function pasoDinamica(estado, motores, dt, mundo, robot, azar) → nuevo 
 - `z`, `pitch` y `roll` salen del mundo;
 - si el robot choca, no avanza.
 
+## El mundo de la pista
+
+El `mundo` que reciben tus modelos sale de la pista FIRVI (ver `src/mundo/pista.ts`). Todo es
+analítico, sin imágenes:
+
+| Primitiva | Qué devuelve |
+|---|---|
+| `muestrear(x, y)` | `{ r, g, b }` de 0 a 255: fondo blanco, cinta negra (al revés en baldosas invertidas) y marcas de color. Fuera de la pista, blanco. |
+| `altura(x, y)` | mm: nivel de la baldosa, subida de la rampa y baches (medio cilindro). Fuera de la pista, 0. |
+| `inclinacion(x, y, yaw)` | `{ pitch, roll }` en rad para un robot con ese rumbo. |
+| `raycast(origen, dir, max)` | `{ distancia, objeto, normal }` o `null`. Ve los obstáculos y el suelo (por ejemplo, la subida de una rampa); `objeto` es `null` si choca con el suelo. |
+| `colisiona(poligono)` | `{ objeto, penetracion }` si la huella toca un obstáculo, o `null`. |
+| `objetosCerca(x, y, radio)` | Obstáculos y baches a menos de `radio` mm, del más cercano al más lejano. |
+
+**Signos de la inclinación** (regla de la mano derecha, REP-103): `pitch` es **negativo** cuando la
+nariz sube (subir una rampa de 20° da `pitch ≈ −0,349`) y `roll` es positivo cuando el lado
+izquierdo queda más alto.
+
+Los sensores no ven los hitos ni los puntos de desafío (F): solo sirven para el juez y para elegir
+desde dónde parte el robot.
+
 ## Modelos de sensores
 
 Los modelos del QTR-MX-8A, VL53L0X, MPU6050 y TCS34725 llegan en la fase 3, con sus firmas

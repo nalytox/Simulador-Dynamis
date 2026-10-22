@@ -5,9 +5,11 @@ Los estudiantes escriben el código **Arduino real** del robot (ESP32, QTR-MX-8A
 TCS34725) y lo prueban en una pista virtual que sigue las bases de Rescue Line FIRVI 2026, antes de
 subirlo al robot físico.
 
-> **Estado: fase 1 de 7 — base de ejecución.** Todavía no hay interfaz. El simulador ya compila
-> proyectos Arduino de varios archivos a WebAssembly y los ejecuta con tiempo virtual: un sketch
-> que mueve los motores desplaza al robot. Las fases siguientes se describen en la
+> **Estado: fase 2 de 7 — pista, mundo y juez.** Todavía no hay interfaz. El simulador ya compila
+> proyectos Arduino de varios archivos a WebAssembly y los ejecuta con tiempo virtual sobre una
+> pista FIRVI descrita en JSON (rectas, giros, cortes, cruces con marcas de color, rampas, baches,
+> F1, F2 y obstáculo), y un juez virtual le pone puntaje a cada prueba como lo dicen las bases.
+> Las fases siguientes se describen en la
 > [spec](docs/superpowers/specs/2026-10-17-simulador-dynamis-design.md#19-fases-sugeridas-para-el-plan).
 
 ## Requisitos
@@ -33,7 +35,9 @@ src/
   nucleo/       el Arduino core del ESP32 simulado, en C++ (Arduino.h, Serial, pines, tiempo)
   simulacion/   puente wasm ↔ simulador, reloj virtual, pines, driver de motores y Simulador
   robot/        configuración del robot (medidas, sensores, pines) y validaciones
-  mundo/        contrato del mundo (primitivas geométricas) y un mundo plano provisorio
+  pista/        modelo de la pista FIRVI (JSON), catálogo de piezas, puntos de partida y avisos de las bases
+  mundo/        el mundo que leen los modelos: color del suelo, relieve, colisiones y raycast 3D
+  juez/         juez virtual: hitos, meta, tiempo, reinicios, saltos de F y eventos
   modelos/      ← modelos matemáticos del profesor (dinámica; sensores en la fase 3)
 scripts/        construcción del núcleo
 tests/          unidad/, integracion/, medicion/
@@ -66,4 +70,5 @@ evaluar una cabecera precompilada. Falta medir en un Chromebook escolar dentro d
 
 - [Spec del diseño](docs/superpowers/specs/2026-10-17-simulador-dynamis-design.md)
 - [Plan de la fase 1](docs/superpowers/plans/2026-10-21-fase-1-base-de-ejecucion.md)
+- [Plan de la fase 2](docs/superpowers/plans/2026-10-22-fase-2-pista-mundo-juez.md)
 - [Maqueta de la interfaz](docs/maqueta/simulador-dynamis.html) (ábrela en el navegador)

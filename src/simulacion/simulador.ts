@@ -30,6 +30,8 @@ export interface OpcionesSimulador {
   semilla?: number;
   dtFisicaUs?: number;
   alAvanzar?: (sim: Simulador) => void;
+  /** Se llama después de cada paso de física con su tiempo (µs), también dentro de un delay largo. */
+  alPasoFisica?: (tUs: number, estado: EstadoRobot) => void;
   /** ADC crudo de 12 bits para un pin; por defecto 0 (la fase 3 conecta el QTR). */
   lectorAnalogico?: (pin: number, sim: Simulador) => number;
 }
@@ -82,6 +84,7 @@ export class Simulador {
   private readonly azarPrograma: Azar;
   private readonly azarModelos: Azar;
   private readonly alAvanzar?: (sim: Simulador) => void;
+  private readonly alPasoFisica?: (tUs: number, estado: EstadoRobot) => void;
   private readonly lectorAnalogico: (pin: number, sim: Simulador) => number;
 
   private bitsAdc = BITS_ADC_POR_DEFECTO;
@@ -103,6 +106,7 @@ export class Simulador {
     this.azarPrograma = crearAzar(semilla);
     this.azarModelos = crearAzar(semilla ^ 0x9e3779b9);
     this.alAvanzar = o.alAvanzar;
+    this.alPasoFisica = o.alPasoFisica;
     this.lectorAnalogico = o.lectorAnalogico ?? (() => 0);
     this.estadoActual = this.dinamica.estadoInicial(o.poseInicial ?? { x: 0, y: 0, yaw: 0 }, this.robot, this.mundo);
   }
@@ -162,6 +166,8 @@ export class Simulador {
       this.estadoActual = protegido('el modelo de dinámica', () => this.dinamica.pasoDinamica(
         this.estadoActual, motores, this.dtFisicaUs / 1e6, this.mundo, this.robot, this.azarModelos));
       this.tFisica += this.dtFisicaUs;
+      const alPasoFisica = this.alPasoFisica;
+      if (alPasoFisica) protegido('alPasoFisica', () => alPasoFisica(this.tFisica, this.estadoActual));
     }
     const alAvanzar = this.alAvanzar;
     if (alAvanzar) protegido('alAvanzar', () => alAvanzar(this));
