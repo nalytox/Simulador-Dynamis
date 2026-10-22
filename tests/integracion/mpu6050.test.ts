@@ -32,4 +32,13 @@ describe('MPU6050', { timeout: 120_000 }, () => {
       { duracionUs: 300_000 });
     expect(texto).toBe(`1\r\n0 0 16384 0\n24576\r\n32767\r\n${Math.round(1200 / 140 * 180 / Math.PI * 32.8)}\r\n`);
   });
+
+  it('leer el MPU6050 sin begin() o initialize() avisa y lee el chip dormido (ceros)', async () => {
+    const ada = await correrSketch(`#include <Adafruit_MPU6050.h>\nAdafruit_MPU6050 mpu;\nsensors_event_t a, g, t;\nvoid setup() { Serial.begin(115200); mpu.getEvent(&a, &g, &t); Serial.printf("%.2f\\n", a.acceleration.z); }\nvoid loop() {}`);
+    expect(ada.texto).toBe('0.00\n');
+    expect(ada.sim.avisos).toContain('Llama a begin() del MPU6050 antes de leerlo.');
+    const i2c = await correrSketch(`#include "MPU6050.h"\nMPU6050 mpu;\nint16_t ax, ay, az, gx, gy, gz;\nvoid setup() { Serial.begin(115200); mpu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz); Serial.println(az); }\nvoid loop() {}`);
+    expect(i2c.texto).toBe('0\r\n');
+    expect(i2c.sim.avisos).toContain('Llama a initialize() del MPU6050 antes de leerlo.');
+  });
 });

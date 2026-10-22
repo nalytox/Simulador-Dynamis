@@ -29,6 +29,7 @@ public:
   bool getEvent(sensors_event_t* accel, sensors_event_t* gyro, sensors_event_t* temp);
 
 private:
+  bool iniciado = false;
   int32_t idSensor = 0;
   mpu6050_accel_range_t rangoAcel = MPU6050_RANGE_2_G;
   mpu6050_gyro_range_t rangoGiro = MPU6050_RANGE_250_DEG;

@@ -15,10 +15,12 @@ public:
   size_t write(uint8_t dato);
   size_t write(const uint8_t* datos, size_t cuanto);
   uint8_t endTransmission(bool detener = true);
-  uint8_t requestFrom(uint8_t direccion, uint8_t cuanto);
-  uint8_t requestFrom(int direccion, int cuanto) { return requestFrom(static_cast<uint8_t>(direccion), static_cast<uint8_t>(cuanto)); }
-  int available() { return 0; }
+  // Una sola firma con enteros: acepta requestFrom(dir, n) y requestFrom(dir, n, true/false) con
+  // cualquier tipo entero, sin ambigüedades entre sobrecargas.
+  uint8_t requestFrom(int direccion, int cuanto, int detener = 1);
+  int available();
   int read();
+  int peek();
 };
 
 extern TwoWire Wire;

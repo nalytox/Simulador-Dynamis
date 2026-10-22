@@ -32,4 +32,11 @@ describe('Adafruit_TCS34725', { timeout: 120_000 }, () => {
       { modelos: { leerTCS34725: e => { leds.push(e.ledEncendido); return { r: 0, g: 0, b: 0, c: 0 }; } } });
     expect(leds.slice(-2)).toEqual([true, false]);
   });
+
+  it('los tiempos de integración de 600 y 614 ms son los de Adafruit', async () => {
+    const { texto } = await correrSketch(`${INICIO}Adafruit_TCS34725 tcs(TCS34725_INTEGRATIONTIME_600MS);\nuint16_t r, g, b, c;\nvoid setup() { Serial.begin(115200); tcs.begin();
+      tcs.getRawData(&r, &g, &b, &c); Serial.println(r); tcs.setIntegrationTime(TCS34725_INTEGRATIONTIME_614MS); tcs.getRawData(&r, &g, &b, &c); Serial.println(r); }\nvoid loop() {}`,
+      { duracionUs: 2_000_000 });
+    expect(texto).toBe('6000\r\n6144\r\n');
+  });
 });

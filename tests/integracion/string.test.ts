@@ -19,4 +19,15 @@ describe('String', { timeout: 120_000 }, () => {
       void loop() { String t = String(millis()) + " ms"; if (t.length() == 0) Serial.println("vacío"); }`, { duracionUs: 200_000 });
     expect(texto).toBe('2000\r\n'); expect(resultado.motivo).toBe('tiempo');
   });
+
+  it('la memoria tiene un tope como la del ESP32: concatenar sin fin deja de crecer sin romper', { timeout: 60_000 }, async () => {
+    const { texto, resultado } = await correrSketch(`String s; unsigned long n = 0;
+      void setup() { Serial.begin(115200); }
+      void loop() { s += "abcdefghij"; if (++n % 20000 == 0) Serial.println(s.length()); }`, { duracionUs: 500_000 });
+    expect(resultado.motivo).toBe('tiempo');
+    const largos = texto.trim().split('\r\n').map(Number);
+    expect(largos.at(-1)).toBe(largos.at(-2));
+    expect(largos.at(-1)).toBeGreaterThan(100_000);
+    expect(largos.at(-1)).toBeLessThan(512 * 1024);
+  });
 });

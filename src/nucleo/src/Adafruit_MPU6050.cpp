@@ -1,6 +1,7 @@
 #include "Adafruit_MPU6050.h"
 
 #include <string.h>
+#include "dynamis_host.h"
 #include "dynamis_mpu.h"
 
 namespace {
@@ -16,6 +17,7 @@ void preparar(sensors_event_t* e, int32_t id, int32_t tipo, int32_t ahora) {
 }  // namespace
 
 bool Adafruit_MPU6050::begin(uint8_t, TwoWire*, int32_t sensorID) {
+  iniciado = true;
   idSensor = sensorID;
   rangoAcel = MPU6050_RANGE_2_G;
   rangoGiro = MPU6050_RANGE_500_DEG;
@@ -24,7 +26,12 @@ bool Adafruit_MPU6050::begin(uint8_t, TwoWire*, int32_t sensorID) {
 }
 
 bool Adafruit_MPU6050::getEvent(sensors_event_t* accel, sensors_event_t* gyro, sensors_event_t* temp) {
-  const MpuCrudo c = dynLeerMpu(rangoAcel, rangoGiro, SIN_OFFSETS);
+  MpuCrudo c = dynLeerMpu(rangoAcel, rangoGiro, SIN_OFFSETS);
+  if (!iniciado) {
+    // Sin begin el chip sigue dormido y sus registros están en cero.
+    dynAvisar("Llama a begin() del MPU6050 antes de leerlo.");
+    c = MpuCrudo();
+  }
   const int32_t ahora = (int32_t)millis();
   const float lsbG = MPU_LSB_G[rangoAcel];
   const float lsbDps = MPU_LSB_DPS[rangoGiro];

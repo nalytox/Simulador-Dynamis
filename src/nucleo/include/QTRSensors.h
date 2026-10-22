@@ -5,7 +5,7 @@
 #include <Arduino.h>
 
 enum class QTRType : uint8_t { Undefined, RC, Analog };
-enum class QTRReadMode : uint8_t { Off, On, OnAndOff, Odd, Even, OddAndEven, Manual };
+enum class QTRReadMode : uint8_t { Off, On, OnAndOff, OddEven, OddEvenAndOff, Manual };
 
 const uint8_t QTRNoEmitterPin = 255;
 const uint8_t QTRMaxSensors = 31;

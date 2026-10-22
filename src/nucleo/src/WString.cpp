@@ -77,10 +77,8 @@ bool String::reservar(unsigned int tamano) {
   // Crece al doble para que concatenar en un ciclo no copie la cadena en cada carácter.
   unsigned int nueva = capacidad * 2 > tamano ? capacidad * 2 : tamano;
   char* ampliado = static_cast<char*>(realloc(datos, nueva + 1));
-  if (!ampliado) {
-    invalidar();
-    return false;
-  }
+  // Sin memoria la cadena queda como estaba, como en el core del ESP32: concat devuelve false.
+  if (!ampliado) return false;
   if (!datos) ampliado[0] = 0;
   datos = ampliado;
   capacidad = nueva;
@@ -88,7 +86,10 @@ bool String::reservar(unsigned int tamano) {
 }
 
 void String::copiar(const char* texto, unsigned int cuanto) {
-  if (!reservar(cuanto)) return;
+  if (!reservar(cuanto)) {
+    invalidar();
+    return;
+  }
   memmove(datos, texto, cuanto);
   datos[cuanto] = 0;
   largo = cuanto;

@@ -30,4 +30,28 @@ describe('QTRSensors', { timeout: 120_000 }, () => {
     expect(sim.avisos).toEqual(expect.arrayContaining(['Llama a setTypeAnalog() del QTR antes de leerlo.', 'Llama a setSensorPins() del QTR antes de leerlo.',
       'Calibra el QTR con calibrate() antes de usar readCalibrated o readLine.']));
   });
+
+  it('readCalibrated usa los tipos de Pololu: rango uint16 y valor int16', async () => {
+    const { texto } = await correrSketch(`${INICIO}void setup() { Serial.begin(115200); qtr.setTypeAnalog(); qtr.setSensorPins(PINES, 8); qtr.calibrate();
+      for (int i = 0; i < 8; i++) { qtr.calibrationOn.minimum[i] = 181; qtr.calibrationOn.maximum[i] = 180; } qtr.readCalibrated(v); ${imprimir}
+      for (int i = 0; i < 8; i++) { qtr.calibrationOn.minimum[i] = 180; qtr.calibrationOn.maximum[i] = 200; } qtr.readCalibrated(v); ${imprimir} }\nvoid loop() {}`,
+      { pose: { x: 150, y: 150, yaw: 0 } });
+    // Rango 180 − 181 → 65535: blanco da 0 y la cinta (3980) da 3799000 / 65535 = 57. Rango 20: la cinta se desborda en int16 y da 0.
+    expect(texto).toBe('0 0 0 57 57 0 0 0\n0 0 0 0 0 0 0 0\n');
+  });
+
+  it('OnAndOff se acota a 1023, las muestras se suman en uint16 y OddEven existe como en Pololu', async () => {
+    const robot = { ...ROBOT_POR_DEFECTO, qtr: { ...ROBOT_POR_DEFECTO.qtr, emisor: 27 } };
+    const { texto } = await correrSketch(`${INICIO}void setup() { Serial.begin(115200); qtr.setTypeAnalog(); qtr.setSensorPins(PINES, 8); qtr.setEmitterPin(27);
+      qtr.read(v, QTRReadMode::OnAndOff); Serial.println(v[0]); qtr.read(v, QTRReadMode::OddEven); Serial.println(v[0]);
+      qtr.read(v, QTRReadMode::OddEvenAndOff); Serial.println(v[0]); qtr.setSamplesPerSensor(20); qtr.read(v, QTRReadMode::Off); Serial.println(v[0]); }\nvoid loop() {}`,
+      { robot, modelos: { leerQTR: e => e.sensores.map(() => (e.emisoresEncendidos ? 100 : 4095)) } });
+    expect(texto).toBe(['1023', '100', '1023', '818', ''].join('\r\n'));
+  });
+
+  it('un ciclo que lee el QTR sin configurarlo no congela el tiempo', { timeout: 20_000 }, async () => {
+    const { sim, resultado } = await correrSketch(`${INICIO}void setup() {}\nvoid loop() { while (true) { qtr.read(v); if (v[0] > 2000) break; } }`, { duracionUs: 50_000 });
+    expect(resultado.motivo).toBe('tiempo');
+    expect(sim.avisos).toContain('Llama a setTypeAnalog() del QTR antes de leerlo.');
+  });
 });

@@ -201,7 +201,9 @@ Errores durante la ejecución:
 | `Serial.print*` | 10 bits por carácter a la velocidad configurada, solo si se llena el búfer de 128 bytes |
 | `Serial.available()`, `read()`, `peek()` | 1 µs (esperar datos no congela el tiempo) |
 | `delay(ms)` / `delayMicroseconds(us)` | exactamente lo pedido, con un mínimo de 1 µs (`delay(0)` también cede) |
+| Aviso de una librería mal usada (VL53L0X sin `init`, QTR sin configurar, `Wire` directo…) | 1 µs (un ciclo que la llama sin parar no congela el tiempo) |
 
+- **Memoria:** el programa tiene un tope de 512 KB, como la SRAM del ESP32. Si se acaba, `malloc` falla como en el robot (por ejemplo, un `String` que crece sin fin deja de crecer) en vez de comerse la memoria del computador.
 - **Determinismo:** cada ejecución tiene una **semilla**. Los modelos reciben un generador aleatorio con esa semilla (`ctx.azar()`), así una prueba se puede repetir exactamente (por ejemplo, "Ver esta prueba en la pista").
 - **Instantáneas a la UI** (~60 Hz): pose, motores, lecturas, eventos y mensajes de `Serial` acumulados desde la instantánea anterior.
 
@@ -218,7 +220,7 @@ Son reimplementaciones **compatibles con la API pública** de cada librería, es
 - **Buses de un pin:** como en el core 3.x, un pin está en GPIO (`pinMode`) o en PWM (`analogWrite`, `ledcAttach`); `digitalWrite` sobre un pin en PWM no tiene efecto y produce un aviso.
 - **`Serial`:** `begin`, `print`, `println`, `printf`, `write`, `flush`. `available()` y `read()` devuelven 0 y -1 (no hay entrada desde la UI en la v1) y avisan que nadie escribe por el Serial.
 - **`String`** (subconjunto de `WString`): construcción desde números, concatenación, `length`, `toInt`, `toFloat`, `indexOf`, `substring`, `c_str`.
-- **`Wire`:** `begin([sda, scl])` y `setClock` no hacen nada. Los dispositivos se simulan a nivel de librería. El acceso directo a registros (`beginTransmission`, `write`, `endTransmission`, `requestFrom`, `read`) no está soportado en la v1: avisa una vez y responde como un bus sin dispositivos (`endTransmission` da 2, `requestFrom` da 0 y `read` da −1).
+- **`Wire`:** `begin([sda, scl])` y `setClock` no hacen nada. Los dispositivos se simulan a nivel de librería. El acceso directo a registros (`beginTransmission`, `write`, `endTransmission`, `requestFrom`, `available`, `read`, `peek`) no está soportado en la v1: compila, avisa una vez y responde como un bus sin dispositivos (`endTransmission` da 2, `requestFrom` y `available` dan 0, y `read` da −1).
 
 **Pololu `VL53L0X`:** `init`, `setTimeout`, `getTimeout`, `timeoutOccurred`, `setAddress`, `getAddress`, `startContinuous(period)`, `stopContinuous`, `readRangeContinuousMillimeters`, `readRangeSingleMillimeters`, `setMeasurementTimingBudget`, `getMeasurementTimingBudget`, `setSignalRateLimit` y `setVcselPulsePeriod` (estas dos se aceptan y no tienen efecto en la v1). En modo continuo, la medida que se entrega se calcula con la pose del momento de la lectura, no con la del instante en que el chip la terminó: si la lectura llega tarde, el robot pudo haberse movido un poco.
 
@@ -226,11 +228,12 @@ Son reimplementaciones **compatibles con la API pública** de cada librería, es
 - `setTypeAnalog`, `setSensorPins`, `setEmitterPin`, `setSamplesPerSensor`, `emittersOn/Off`, `read`, `calibrate`, `resetCalibration`, `readCalibrated`, `readLineBlack`, `readLineWhite`, y los miembros `calibrationOn.minimum/maximum`.
 - Está construida sobre `analogRead` de los pines simulados, así que leer el QTR con `analogRead` directo también funciona.
 - Conserva una rareza real: su `maxValue` analógico es 1023 (pensado para Arduino AVR), así que con el ADC de 12 bits del ESP32 el mínimo de calibración arranca en 1023, igual que en el robot.
-- Modos de lectura: `Off`, `On`, `OnAndOff` y `Manual`. `Odd`, `Even` y `OddAndEven` se tratan como `On`, porque el QTR-MX-8A tiene un solo pin de emisores.
+- Modos de lectura (`QTRReadMode`, los mismos nombres de Pololu): `Off`, `On`, `OnAndOff` y `Manual`. `OddEven` y `OddEvenAndOff` se tratan como `On` y `OnAndOff`, porque el QTR-MX-8A tiene un solo pin de emisores.
+- Usa los mismos tipos enteros que la librería: las muestras se suman en 16 bits y `readCalibrated` calcula el rango en `uint16` y el valor en `int16`, así que una calibración mala (mínimo sobre el máximo o un rango muy angosto) da las mismas lecturas raras que en el robot.
 
-**Adafruit `Adafruit_MPU6050`** (+ `Adafruit_Sensor`): `begin`, `setAccelerometerRange`, `getAccelerometerRange`, `setGyroRange`, `getGyroRange`, `setFilterBandwidth`, `getEvent(&a, &g, &temp)` con `sensors_event_t`. Unidades: m/s² y rad/s.
+**Adafruit `Adafruit_MPU6050`** (+ `Adafruit_Sensor`): `begin`, `setAccelerometerRange`, `getAccelerometerRange`, `setGyroRange`, `getGyroRange`, `setFilterBandwidth`, `getEvent(&a, &g, &temp)` con `sensors_event_t`. Unidades: m/s² y rad/s. Leer sin `begin()` avisa y entrega ceros, porque el chip sigue dormido (en el robot, la librería se cuelga).
 
-**i2cdevlib / Electronic Cats `MPU6050`:** `initialize`, `testConnection`, `getMotion6`, `getAcceleration`, `getRotation`, `getRotationX/Y/Z`, `setFullScaleAccelRange`, `setFullScaleGyroRange` y `set{X,Y,Z}{Accel,Gyro}Offset`. Devuelven `int16` escalados según el rango (por ejemplo ±2 g → 16384 LSB/g, ±250 °/s → 131 LSB/(°/s)). Los offsets van en las unidades de los registros del chip: `set*AccelOffset` en las del rango ±16 g (2048 LSB/g) y `set*GyroOffset` en las del rango ±1000 °/s (32,8 LSB/(°/s)). Se suman al valor crudo, escalados al rango actual.
+**i2cdevlib / Electronic Cats `MPU6050`:** `initialize`, `testConnection`, `getMotion6`, `getAcceleration`, `getRotation`, `getRotationX/Y/Z`, `setFullScaleAccelRange`, `setFullScaleGyroRange` y `set{X,Y,Z}{Accel,Gyro}Offset`. Devuelven `int16` escalados según el rango (por ejemplo ±2 g → 16384 LSB/g, ±250 °/s → 131 LSB/(°/s)). Los offsets van en las unidades de los registros del chip: `set*AccelOffset` en las del rango ±16 g (2048 LSB/g) y `set*GyroOffset` en las del rango ±1000 °/s (32,8 LSB/(°/s)). Se suman al valor crudo, escalados al rango actual. Leer sin `initialize()` avisa y entrega ceros, porque el chip sigue dormido.
 
 **Adafruit `Adafruit_TCS34725`:** constructor `(tiempoIntegración, ganancia)`, `begin`, `setIntegrationTime`, `setGain`, `getRawData`, `getRawDataOneShot`, `getRGB`, `calculateColorTemperature_dn40`, `calculateLux`, `setInterrupt`. LED: si `robot.tcs34725.led` tiene un pin, el LED sigue a ese pin; si no, está encendido salvo después de `setInterrupt(true)`, como en la placa típica (el LED está conectado al pin INT).
 

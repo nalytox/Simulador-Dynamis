@@ -3,6 +3,7 @@
 #pragma once
 
 #include "I2Cdev.h"
+#include "dynamis_mpu.h"
 
 #define MPU6050_ADDRESS_AD0_LOW 0x68
 #define MPU6050_ADDRESS_AD0_HIGH 0x69
@@ -45,7 +46,10 @@ public:
 
 private:
   uint8_t direccion;
+  bool iniciado = false;
   uint8_t rangoAcel = MPU6050_ACCEL_FS_2;
   uint8_t rangoGiro = MPU6050_GYRO_FS_250;
   int16_t offsets[6] = {0, 0, 0, 0, 0, 0};
+
+  MpuCrudo leer();
 };

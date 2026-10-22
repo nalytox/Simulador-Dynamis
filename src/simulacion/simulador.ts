@@ -255,7 +255,7 @@ export class Simulador {
         this.tUltimoSerial = this.t;
       },
       serialWrite: bytes => this.escribirSerial(bytes),
-      aviso: texto => this.avisar(texto),
+      aviso: texto => { this.avisar(texto); this.avanzar(COSTOS_US.aviso); },
       vl53Medir: () => {
         const mm = protegido('el modelo del VL53L0X', () => this.modelos.leerVL53L0X({
           t: this.t / 1e6, estado: this.estadoActual, sensor: poseVL53(this.estadoActual, this.robot), mundo: this.mundo, azar: this.azarModelos }));

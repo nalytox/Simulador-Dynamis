@@ -4,6 +4,8 @@ export const COSTOS_US = {
   analogRead: 10, analogWrite: 2, ledcWrite: 2, serialAvailable: 1, llamadaLoop: 1, yield: 1,
   /** Una lectura del MPU6050 por I2C (14 bytes a 400 kHz), en cualquier función de lectura. */
   lecturaMpu: 400,
+  /** Un aviso de una librería mal usada: así un ciclo que la llama sin parar no congela el tiempo. */
+  aviso: 1,
 } as const;
 
 /** Búfer de transmisión del UART del ESP32. */

@@ -31,4 +31,27 @@ describe('VL53L0X y Wire', { timeout: 120_000 }, () => {
     expect(sim.avisos).toEqual(expect.arrayContaining(['Llama a init() del VL53L0X antes de leerlo.',
       'El simulador no tiene un bus I2C directo: usa las librerías de los sensores en vez de Wire.beginTransmission o Wire.requestFrom.']));
   });
+
+  it('un ciclo que espera al VL53L0X sin init no congela el tiempo', { timeout: 20_000 }, async () => {
+    const { sim, resultado } = await correrSketch(`${INICIO}void setup() { sensor.setTimeout(500); while (sensor.readRangeSingleMillimeters() > 100) {} }\nvoid loop() {}`,
+      { duracionUs: 50_000 });
+    expect(resultado.motivo).toBe('tiempo');
+    expect(sim.avisos).toContain('Llama a init() del VL53L0X antes de leerlo.');
+  });
+
+  it('el sketch clásico del MPU6050 por I2C directo compila, avisa y no congela el tiempo', { timeout: 20_000 }, async () => {
+    const { sim, resultado } = await correrSketch(`#include <Wire.h>
+const int MPU_addr = 0x68;
+int16_t AcX, AcY, AcZ, Tmp, GyX, GyY, GyZ;
+void setup() { Wire.begin(); Wire.beginTransmission(MPU_addr); Wire.write(0x6B); Wire.write(0); Wire.endTransmission(true); Serial.begin(9600); }
+void loop() {
+  Wire.beginTransmission(MPU_addr); Wire.write(0x3B); Wire.endTransmission(false); Wire.requestFrom(MPU_addr, 14, true);
+  while (Wire.available() < 14) {}
+  AcX = Wire.read() << 8 | Wire.read(); AcY = Wire.read() << 8 | Wire.read(); AcZ = Wire.read() << 8 | Wire.read();
+  Tmp = Wire.read() << 8 | Wire.read(); GyX = Wire.read() << 8 | Wire.read(); GyY = Wire.read() << 8 | Wire.read(); GyZ = Wire.read() << 8 | Wire.read();
+  Serial.print("AcX = "); Serial.println(AcX); delay(333);
+}`, { duracionUs: 50_000 });
+    expect(resultado.motivo).toBe('tiempo');
+    expect(sim.avisos).toContain('El simulador no tiene un bus I2C directo: usa las librerías de los sensores en vez de Wire.beginTransmission o Wire.requestFrom.');
+  });
 });

@@ -5,9 +5,11 @@ const uint8_t LECTURAS_POR_CALIBRACION = 10;
 const uint32_t ESPERA_ENCENDER_US = 300;
 const uint32_t ESPERA_APAGAR_US = 1200;
 
-/** Los modos Odd, Even y OddAndEven se leen como On: el QTR-MX-8A tiene un solo pin de emisores. */
-bool conEmisores(QTRReadMode modo) {
-  return modo == QTRReadMode::On || modo == QTRReadMode::Odd || modo == QTRReadMode::Even || modo == QTRReadMode::OddAndEven;
+/** OddEven y OddEvenAndOff se leen como On y OnAndOff: el QTR-MX-8A tiene un solo pin de emisores. */
+QTRReadMode conUnSoloPin(QTRReadMode modo) {
+  if (modo == QTRReadMode::OddEven) return QTRReadMode::On;
+  if (modo == QTRReadMode::OddEvenAndOff) return QTRReadMode::OnAndOff;
+  return modo;
 }
 
 void liberar(QTRSensors::CalibrationData& calibracion) {
@@ -74,15 +76,17 @@ bool QTRSensors::configurado() {
 }
 
 void QTRSensors::leerSensores(uint16_t* valores) {
-  uint32_t sumas[QTRMaxSensors] = {};
+  // Suma en 16 bits como la librería: con el ADC de 12 bits, 17 muestras o más se desbordan igual que en el robot.
+  for (uint8_t i = 0; i < cantidad; i++) valores[i] = 0;
   for (uint8_t j = 0; j < muestras; j++) {
-    for (uint8_t i = 0; i < cantidad; i++) sumas[i] += analogRead(pines[i]);
+    for (uint8_t i = 0; i < cantidad; i++) valores[i] += analogRead(pines[i]);
   }
-  for (uint8_t i = 0; i < cantidad; i++) valores[i] = static_cast<uint16_t>((sumas[i] + (muestras >> 1)) / muestras);
+  for (uint8_t i = 0; i < cantidad; i++) valores[i] = (valores[i] + (muestras >> 1)) / muestras;
 }
 
 void QTRSensors::read(uint16_t* sensorValues, QTRReadMode mode) {
   if (!configurado()) return;
+  mode = conUnSoloPin(mode);
   if (mode == QTRReadMode::Manual) {
     leerSensores(sensorValues);
   } else if (mode == QTRReadMode::Off) {
@@ -94,7 +98,11 @@ void QTRSensors::read(uint16_t* sensorValues, QTRReadMode mode) {
     leerSensores(sensorValues);
     emittersOff();
     leerSensores(apagados);
-    for (uint8_t i = 0; i < cantidad; i++) sensorValues[i] = sensorValues[i] + maximo - apagados[i];
+    for (uint8_t i = 0; i < cantidad; i++) {
+      sensorValues[i] += maximo - apagados[i];
+      // Normalmente la lectura sube al apagar los emisores; si no, la librería se queda en el máximo.
+      if (sensorValues[i] > maximo) sensorValues[i] = maximo;
+    }
   } else {
     emittersOn();
     leerSensores(sensorValues);
@@ -140,6 +148,7 @@ void QTRSensors::calibrarCon(CalibrationData& calibracion, QTRReadMode modo) {
 }
 
 void QTRSensors::calibrate(QTRReadMode mode) {
+  mode = conUnSoloPin(mode);
   if (mode == QTRReadMode::Manual || !configurado()) return;
   if (mode == QTRReadMode::OnAndOff) {
     calibrarCon(calibrationOn, QTRReadMode::On);
@@ -152,6 +161,7 @@ void QTRSensors::calibrate(QTRReadMode mode) {
 }
 
 void QTRSensors::readCalibrated(uint16_t* sensorValues, QTRReadMode mode) {
+  mode = conUnSoloPin(mode);
   bool listo = mode == QTRReadMode::Off ? calibrationOff.initialized
     : mode == QTRReadMode::OnAndOff ? calibrationOn.initialized && calibrationOff.initialized
     : calibrationOn.initialized;
@@ -161,8 +171,8 @@ void QTRSensors::readCalibrated(uint16_t* sensorValues, QTRReadMode mode) {
   }
   read(sensorValues, mode);
   for (uint8_t i = 0; i < cantidad; i++) {
-    int32_t minimo;
-    int32_t maximoCal;
+    uint16_t minimo;
+    uint16_t maximoCal;
     if (mode == QTRReadMode::Off) {
       minimo = calibrationOff.minimum[i];
       maximoCal = calibrationOff.maximum[i];
@@ -173,13 +183,16 @@ void QTRSensors::readCalibrated(uint16_t* sensorValues, QTRReadMode mode) {
       minimo = calibrationOn.minimum[i];
       maximoCal = calibrationOn.maximum[i];
     }
-    int32_t rango = maximoCal - minimo;
-    int32_t x = rango != 0 ? (static_cast<int32_t>(sensorValues[i]) - minimo) * 1000 / rango : 0;
+    // Los mismos tipos que la librería: si el mínimo quedó sobre el máximo el rango da la vuelta a
+    // 65535, y con un rango angosto el valor se desborda en 16 bits, igual que en el robot.
+    uint16_t rango = maximoCal - minimo;
+    int16_t x = rango != 0 ? static_cast<int16_t>((static_cast<int32_t>(sensorValues[i]) - minimo) * 1000 / rango) : 0;
     sensorValues[i] = static_cast<uint16_t>(x < 0 ? 0 : x > 1000 ? 1000 : x);
   }
 }
 
 uint16_t QTRSensors::leerLinea(uint16_t* valores, QTRReadMode modo, bool lineaBlanca) {
+  modo = conUnSoloPin(modo);
   bool listo = modo == QTRReadMode::Off ? calibrationOff.initialized : calibrationOn.initialized;
   readCalibrated(valores, modo);
   if (!listo || cantidad == 0) return ultimaPosicion;

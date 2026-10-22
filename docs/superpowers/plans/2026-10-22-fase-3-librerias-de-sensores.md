@@ -22,7 +22,7 @@
 5. **Cada lectura del MPU6050 cuesta 0,4 ms** (`COSTOS_US.lecturaMpu`), sea `getEvent`, `getMotion6`, `getAcceleration` o `getRotationZ`.
 6. **Offsets de i2cdevlib:** `set*AccelOffset` está en unidades del rango ±16 g (2048 LSB/g) y `set*GyroOffset` en las del rango ±1000 °/s (32,8 LSB/(°/s)). Se suman al valor crudo escalados al rango actual.
 7. **QTRSensors conserva una rareza real:** su `maxValue` analógico es 1023 (pensado para Arduino AVR), así que con el ADC de 12 bits del ESP32 el mínimo de calibración arranca en 1023, igual que en el robot.
-8. **Modos de lectura del QTR:** `Off`, `On`, `OnAndOff` y `Manual`. `Odd`, `Even` y `OddAndEven` se tratan como `On`, porque el QTR-MX-8A tiene un solo pin de emisores.
+8. **Modos de lectura del QTR:** `Off`, `On`, `OnAndOff` y `Manual`. `OddEven` y `OddEvenAndOff` se tratan como `On` y `OnAndOff`, porque el QTR-MX-8A tiene un solo pin de emisores. (Corregido en la revisión final: Pololu v4 no tiene `Odd`, `Even` ni `OddAndEven` en `QTRReadMode`.)
 9. **LED del TCS34725:** si `robot.tcs34725.led` tiene un pin, el LED sigue ese pin. Si no, el LED está encendido salvo después de `setInterrupt(true)`, como en la placa típica.
 10. **I2C directo** (`Wire.beginTransmission`, `write`, `endTransmission`, `requestFrom`, `read`): avisa una vez y responde como un bus sin dispositivos (`endTransmission` da 2, `requestFrom` da 0, `read` da −1).
 
@@ -586,7 +586,7 @@ git commit -m "MPU6050: Adafruit_MPU6050 e i2cdevlib sobre un MPU simulado comú
 **Interfaces:**
 - Consumes: `dyn_tcs_leer` y `delay`.
 - **`Adafruit_TCS34725.h`:**
-  - **Tiempos de integración:** las constantes `TCS34725_INTEGRATIONTIME_{2_4MS 0xFF, 24MS 0xF6, 50MS 0xEB, 60MS 0xE7, 101MS 0xD6, 120MS 0xCE, 154MS 0xC0, 180MS 0xB5, 199MS 0xAD, 240MS 0x9C, 300MS 0x83, 360MS 0x6A, 401MS 0x59, 420MS 0x51, 480MS 0x38, 499MS 0x30, 540MS 0x1F, 600MS 0x00}`.
+  - **Tiempos de integración:** las constantes `TCS34725_INTEGRATIONTIME_{2_4MS 0xFF, 24MS 0xF6, 50MS 0xEB, 60MS 0xE7, 101MS 0xD6, 120MS 0xCE, 154MS 0xC0, 180MS 0xB5, 199MS 0xAD, 240MS 0x9C, 300MS 0x83, 360MS 0x6A, 401MS 0x59, 420MS 0x51, 480MS 0x38, 499MS 0x30, 540MS 0x1F, 600MS 0x06, 614MS 0x00}` (corregido en la revisión final: 600MS es 0x06 en Adafruit y faltaba 614MS).
   - **Ganancia:** `enum tcs34725Gain_t { TCS34725_GAIN_1X = 0, TCS34725_GAIN_4X, TCS34725_GAIN_16X, TCS34725_GAIN_60X }` (factores 1, 4, 16 y 60).
   - **`class Adafruit_TCS34725`:**
     - `Adafruit_TCS34725(uint8_t it = TCS34725_INTEGRATIONTIME_2_4MS, tcs34725Gain_t gain = TCS34725_GAIN_1X)`;

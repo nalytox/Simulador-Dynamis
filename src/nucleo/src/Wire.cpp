@@ -25,12 +25,24 @@ uint8_t TwoWire::endTransmission(bool) {
   return 2;
 }
 
-uint8_t TwoWire::requestFrom(uint8_t, uint8_t) {
+uint8_t TwoWire::requestFrom(int, int, int) {
+  avisarBusDirecto();
+  return 0;
+}
+
+// Fuera de línea y con aviso: así `while (Wire.available() < 14) {}` gasta tiempo virtual en vez de
+// quedar como un ciclo vacío que el compilador elimina.
+int TwoWire::available() {
   avisarBusDirecto();
   return 0;
 }
 
 int TwoWire::read() {
+  avisarBusDirecto();
+  return -1;
+}
+
+int TwoWire::peek() {
   avisarBusDirecto();
   return -1;
 }
