@@ -7,6 +7,7 @@ import { crearAzar, type Azar } from './azar';
 import { ROBOT_POR_DEFECTO, type ConfigRobot } from '../robot/config';
 import { mundoPlano } from '../mundo/plano';
 import type { Mundo } from '../mundo/tipos';
+import { MODELOS_POR_DEFECTO, poseVL53, puntosQTR, puntoTCS, type Ambiente, type ModelosSensores } from './sensores';
 import * as dinamicaPlaceholder from '../modelos/dinamica.js';
 
 export interface Pose { x: number; y: number; yaw: number }
@@ -32,8 +33,11 @@ export interface OpcionesSimulador {
   alAvanzar?: (sim: Simulador) => void;
   /** Se llama después de cada paso de física con su tiempo (µs), también dentro de un delay largo. */
   alPasoFisica?: (tUs: number, estado: EstadoRobot) => void;
-  /** ADC crudo de 12 bits para un pin; por defecto 0 (la fase 3 conecta el QTR). */
+  /** ADC crudo de 12 bits para un pin. Por defecto, los pines del QTR salen de su modelo y el resto da 0. */
   lectorAnalogico?: (pin: number, sim: Simulador) => number;
+  /** Modelos de sensores del profesor; los que falten usan los placeholders de src/modelos. */
+  modelos?: Partial<ModelosSensores>;
+  ambiente?: Ambiente;
 }
 
 export interface ResultadoEjecucion { motivo: 'tiempo' | 'error'; tiempoUs: number; error?: ErrorEjecucion }
@@ -62,6 +66,7 @@ const AVISO_SERIAL_SIN_ENTRADA = 'En el simulador nadie escribe por el Serial: S
 const BITS_ADC_POR_DEFECTO = 12;
 const MAXIMO_ADC_CRUDO = 4095;
 const BAUDIOS_POR_DEFECTO = 115200;
+const SIN_OBJETIVO_VL53_MM = 8190;
 
 /**
  * Ejecuta un programa Arduino compilado con tiempo virtual: cada llamada al núcleo avanza
@@ -74,6 +79,8 @@ export class Simulador {
   private ejecutado = false;
   private errorInicial: unknown = null;
   private estadoActual: EstadoRobot;
+  /** Estado antes del último paso de física (para el MPU6050). */
+  private estadoAnterior: EstadoRobot;
   private exports!: ExportsPrograma;
 
   private readonly pinesSim = new Pines();
@@ -85,7 +92,9 @@ export class Simulador {
   private readonly azarModelos: Azar;
   private readonly alAvanzar?: (sim: Simulador) => void;
   private readonly alPasoFisica?: (tUs: number, estado: EstadoRobot) => void;
-  private readonly lectorAnalogico: (pin: number, sim: Simulador) => number;
+  private readonly lectorAnalogico: ((pin: number, sim: Simulador) => number) | null;
+  private readonly modelos: ModelosSensores;
+  private readonly ambiente: Ambiente;
 
   private bitsAdc = BITS_ADC_POR_DEFECTO;
   private serialActivo = false;
@@ -107,8 +116,11 @@ export class Simulador {
     this.azarModelos = crearAzar(semilla ^ 0x9e3779b9);
     this.alAvanzar = o.alAvanzar;
     this.alPasoFisica = o.alPasoFisica;
-    this.lectorAnalogico = o.lectorAnalogico ?? (() => 0);
+    this.lectorAnalogico = o.lectorAnalogico ?? null;
+    this.modelos = { ...MODELOS_POR_DEFECTO, ...o.modelos };
+    this.ambiente = o.ambiente ?? { luz: 'normal' };
     this.estadoActual = this.dinamica.estadoInicial(o.poseInicial ?? { x: 0, y: 0, yaw: 0 }, this.robot, this.mundo);
+    this.estadoAnterior = this.estadoActual;
   }
 
   /** Instancia el programa y ejecuta sus constructores globales (_initialize). */
@@ -163,6 +175,7 @@ export class Simulador {
     this.t = Math.min(this.t + us, this.limite);
     while (this.tFisica + this.dtFisicaUs <= this.t) {
       const motores = pinesAMotores(this.pinesSim, this.robot.motores);
+      this.estadoAnterior = this.estadoActual;
       this.estadoActual = protegido('el modelo de dinámica', () => this.dinamica.pasoDinamica(
         this.estadoActual, motores, this.dtFisicaUs / 1e6, this.mundo, this.robot, this.azarModelos));
       this.tFisica += this.dtFisicaUs;
@@ -172,6 +185,18 @@ export class Simulador {
     const alAvanzar = this.alAvanzar;
     if (alAvanzar) protegido('alAvanzar', () => alAvanzar(this));
     if (this.t >= this.limite) throw new FinDeTiempo();
+  }
+
+  /** ADC crudo de un pin: los pines del QTR salen de su modelo (el sensor i es robot.qtr.pines[i]); el resto da 0. */
+  private leerPinQTR(pin: number): number {
+    const indice = this.robot.qtr.pines.indexOf(pin);
+    if (indice < 0) return 0;
+    const emisor = this.robot.qtr.emisor;
+    const valores = protegido('el modelo del QTR', () => this.modelos.leerQTR({
+      t: this.t / 1e6, estado: this.estadoActual, sensores: puntosQTR(this.estadoActual, this.robot),
+      emisoresEncendidos: emisor === null || this.pinesSim.nivel(emisor) > 0.5,
+      mundo: this.mundo, ambiente: this.ambiente, azar: this.azarModelos }));
+    return valores[indice] ?? 0;
   }
 
   private avisar(mensaje: string): void {
@@ -212,7 +237,8 @@ export class Simulador {
       digitalRead: pin => { this.avanzar(COSTOS_US.digitalRead); return p.digitalRead(pin); },
       analogRead: pin => {
         this.avanzar(COSTOS_US.analogRead);
-        const lectura = protegido('el lector analógico', () => this.lectorAnalogico(pin, this));
+        const lector = this.lectorAnalogico;
+        const lectura = lector ? protegido('el lector analógico', () => lector(pin, this)) : this.leerPinQTR(pin);
         const crudo = Math.min(MAXIMO_ADC_CRUDO, Math.max(0, Math.round(lectura)));
         return Math.round(crudo * (2 ** this.bitsAdc - 1) / MAXIMO_ADC_CRUDO);
       },
@@ -229,6 +255,27 @@ export class Simulador {
         this.tUltimoSerial = this.t;
       },
       serialWrite: bytes => this.escribirSerial(bytes),
+      aviso: texto => this.avisar(texto),
+      vl53Medir: () => {
+        const mm = protegido('el modelo del VL53L0X', () => this.modelos.leerVL53L0X({
+          t: this.t / 1e6, estado: this.estadoActual, sensor: poseVL53(this.estadoActual, this.robot), mundo: this.mundo, azar: this.azarModelos }));
+        return Math.min(SIN_OBJETIVO_VL53_MM, Math.max(0, Math.round(mm)));
+      },
+      mpuLeer: () => {
+        this.avanzar(COSTOS_US.lecturaMpu);
+        const l = protegido('el modelo del MPU6050', () => this.modelos.leerMPU6050({
+          t: this.t / 1e6, dt: this.dtFisicaUs / 1e6, estado: this.estadoActual, estadoAnterior: this.estadoAnterior,
+          montaje: this.robot.mpu6050, mundo: this.mundo, azar: this.azarModelos }));
+        return [l.ax, l.ay, l.az, l.gx, l.gy, l.gz, l.temp];
+      },
+      tcsLeer: (integracionUs, ganancia, led) => {
+        const pinLed = this.robot.tcs34725.led;
+        const l = protegido('el modelo del TCS34725', () => this.modelos.leerTCS34725({
+          t: this.t / 1e6, estado: this.estadoActual, sensor: puntoTCS(this.estadoActual, this.robot),
+          tiempoIntegracionMs: integracionUs / 1000, ganancia, ledEncendido: pinLed === null ? led : p.nivel(pinLed) > 0.5,
+          mundo: this.mundo, ambiente: this.ambiente, azar: this.azarModelos }));
+        return [l.r, l.g, l.b, l.c];
+      },
       serialAvailable: () => {
         this.avisar(AVISO_SERIAL_SIN_ENTRADA);
         this.avanzar(COSTOS_US.serialAvailable);

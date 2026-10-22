@@ -3,6 +3,7 @@
 #pragma once
 #include <stdint.h>
 #include <stddef.h>
+#include <string.h>
 
 #define DYN_IMPORTAR(nombre) __attribute__((import_module("dynamis"), import_name(nombre)))
 
@@ -28,6 +29,18 @@ DYN_IMPORTAR("ledc_detach") int dyn_ledc_detach(uint8_t pin);
 DYN_IMPORTAR("serial_begin") void dyn_serial_begin(uint32_t baudios);
 DYN_IMPORTAR("serial_write") void dyn_serial_write(const uint8_t* datos, size_t largo);
 DYN_IMPORTAR("serial_available") int dyn_serial_available(void);
+
+// Sensores: el simulador entrega la magnitud física en el instante actual; las librerías del
+// núcleo esperan lo que espera la librería real y convierten unidades.
+DYN_IMPORTAR("aviso") void dyn_aviso(const char* texto, size_t largo);
+/** mm, acotado a 8190 (sin objetivo). */
+DYN_IMPORTAR("vl53_medir") uint16_t dyn_vl53_medir(void);
+/** ax ay az (m/s²), gx gy gz (rad/s), temp (°C), en el marco del sensor. Cuesta COSTOS_US.lecturaMpu. */
+DYN_IMPORTAR("mpu_leer") void dyn_mpu_leer(float* datos7);
+/** Cuentas crudas r, g, b, c; led: 1 si el LED de la placa está encendido. */
+DYN_IMPORTAR("tcs_leer") void dyn_tcs_leer(uint32_t integracion_us, uint32_t ganancia, int led, uint16_t* rgbc);
+
+static inline void dynAvisar(const char* texto) { dyn_aviso(texto, strlen(texto)); }
 DYN_IMPORTAR("azar_u32") uint32_t dyn_azar_u32(void);
 
 #ifdef __cplusplus

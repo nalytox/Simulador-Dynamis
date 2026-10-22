@@ -23,6 +23,14 @@ export interface Anfitrion {
   serialWrite(bytes: Uint8Array): void;
   /** Bytes recibidos por el Serial que el programa todavía no lee. */
   serialAvailable(): number;
+  /** Aviso amigable desde una librería del núcleo. */
+  aviso(texto: string): void;
+  /** Distancia del VL53L0X en mm (0…8190). */
+  vl53Medir(): number;
+  /** ax, ay, az (m/s²), gx, gy, gz (rad/s) y temp (°C) del MPU6050. */
+  mpuLeer(): number[];
+  /** Cuentas crudas r, g, b, c del TCS34725. */
+  tcsLeer(integracionUs: number, ganancia: number, led: boolean): number[];
   azarU32(): number;
   /** printf y la salida estándar de C (en el ESP32 salen por el mismo UART que Serial). */
   salidaEstandar(bytes: Uint8Array): void;
@@ -64,6 +72,16 @@ const DYNAMIS: Record<string, FabricaImport> = {
   serial_write: (a, memoria) => (ptr: number, largo: number) =>
     a.serialWrite(new Uint8Array(memoria().buffer, u32(ptr), u32(largo)).slice()),
   serial_available: a => () => a.serialAvailable(),
+  aviso: (a, memoria) => (ptr: number, largo: number) =>
+    a.aviso(new TextDecoder().decode(new Uint8Array(memoria().buffer, u32(ptr), u32(largo)))),
+  vl53_medir: a => () => a.vl53Medir(),
+  mpu_leer: (a, memoria) => (ptr: number) => {
+    new Float32Array(memoria().buffer, u32(ptr), 7).set(a.mpuLeer());
+  },
+  tcs_leer: (a, memoria) => (integracionUs: number, ganancia: number, led: number, ptr: number) => {
+    const cuentas = a.tcsLeer(u32(integracionUs), u32(ganancia), led !== 0).map(c => Math.min(65535, Math.max(0, Math.round(c))));
+    new Uint16Array(memoria().buffer, u32(ptr), 4).set(cuentas);
+  },
   azar_u32: a => () => a.azarU32(),
 };
 

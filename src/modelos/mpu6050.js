@@ -17,7 +17,7 @@ export function leerMPU6050({ dt, estado, estadoAnterior }) {
   const dYaw = estado.yaw - estadoAnterior.yaw;
   const giro = dYaw - 2 * Math.PI * Math.round(dYaw / (2 * Math.PI));
   return {
-    ax: -G * Math.sin(pitch),
+    ax: 0 - G * Math.sin(pitch), // 0 − 0 da 0, no −0
     ay: G * Math.sin(roll) * Math.cos(pitch),
     az: G * Math.cos(roll) * Math.cos(pitch),
     gx: 0,
