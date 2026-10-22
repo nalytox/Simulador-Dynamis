@@ -7,7 +7,7 @@ import { crearAzar, type Azar } from './azar';
 import { ROBOT_POR_DEFECTO, type ConfigRobot } from '../robot/config';
 import { mundoPlano } from '../mundo/plano';
 import type { Mundo } from '../mundo/tipos';
-import { MODELOS_POR_DEFECTO, poseVL53, puntosQTR, puntoTCS, type Ambiente, type ModelosSensores } from './sensores';
+import { MODELOS_POR_DEFECTO, poseVL53, puntosQTR, puntoTCS, type Ambiente, type LecturaMPU, type LecturaTCS, type ModelosSensores } from './sensores';
 import * as dinamicaPlaceholder from '../modelos/dinamica.js';
 
 export interface Pose { x: number; y: number; yaw: number }
@@ -40,7 +40,10 @@ export interface OpcionesSimulador {
   ambiente?: Ambiente;
 }
 
-export interface ResultadoEjecucion { motivo: 'tiempo' | 'error'; tiempoUs: number; error?: ErrorEjecucion }
+export interface ResultadoEjecucion { motivo: 'tiempo' | 'error' | 'detenido'; tiempoUs: number; error?: ErrorEjecucion }
+
+/** Lo que miden los sensores en un instante, para las tarjetas de la UI (no lo que leyó el programa). */
+export interface LecturasVista { qtr: number[]; distanciaMm: number; color: LecturaTCS; mpu: LecturaMPU }
 
 interface ExportsPrograma {
   memory: WebAssembly.Memory;
@@ -67,6 +70,10 @@ const BITS_ADC_POR_DEFECTO = 12;
 const MAXIMO_ADC_CRUDO = 4095;
 const BAUDIOS_POR_DEFECTO = 115200;
 const SIN_OBJETIVO_VL53_MM = 8190;
+const MAXIMO_CUENTAS_TCS = 65535;
+/** Integración y ganancia con que la vista mira el TCS34725 (no cambian lo que configure el programa). */
+const VISTA_TCS = { integracionMs: 24, ganancia: 4 };
+const acotar = (v: number, max: number) => Math.min(max, Math.max(0, Math.round(v)));
 
 /**
  * Ejecuta un programa Arduino compilado con tiempo virtual: cada llamada al núcleo avanza
@@ -77,6 +84,7 @@ export class Simulador {
   private tFisica = 0;
   private limite = Infinity;
   private ejecutado = false;
+  private detenidoAPedido = false;
   private errorInicial: unknown = null;
   private estadoActual: EstadoRobot;
   /** Estado antes del último paso de física (para el MPU6050). */
@@ -153,6 +161,29 @@ export class Simulador {
     return texto;
   }
 
+  /**
+   * Termina la corrida en el punto de sincronización actual (motivo 'detenido'). Sirve llamarla desde
+   * alPasoFisica, que corta incluso dentro de un delay largo, o desde alAvanzar.
+   */
+  detener(): void {
+    this.detenidoAPedido = true;
+  }
+
+  /**
+   * Evalúa los 4 modelos en el estado actual con `azar`, no con el de los modelos: lo que se muestra
+   * no cambia lo que lee el programa y la prueba sigue siendo reproducible.
+   */
+  medirParaVista(azar: Azar): LecturasVista {
+    const pinLed = this.robot.tcs34725.led;
+    const color = this.leerTCS(VISTA_TCS.integracionMs, VISTA_TCS.ganancia, pinLed === null || this.pinesSim.nivel(pinLed) > 0.5, azar);
+    return {
+      qtr: this.leerQTR(azar).map(v => acotar(v, MAXIMO_ADC_CRUDO)),
+      distanciaMm: acotar(this.leerVL53(azar), SIN_OBJETIVO_VL53_MM),
+      color: { r: acotar(color.r, MAXIMO_CUENTAS_TCS), g: acotar(color.g, MAXIMO_CUENTAS_TCS), b: acotar(color.b, MAXIMO_CUENTAS_TCS), c: acotar(color.c, MAXIMO_CUENTAS_TCS) },
+      mpu: this.leerMPU(azar),
+    };
+  }
+
   /** Corre setup() y luego loop() hasta que pasen `duracionUs` de tiempo virtual o haya un error. */
   ejecutar(duracionUs: number): ResultadoEjecucion {
     if (this.ejecutado) throw new Error('ejecutar solo se puede llamar una vez por simulador');
@@ -166,7 +197,7 @@ export class Simulador {
         this.exports.dyn_loop();
       }
     } catch (e) {
-      if (e instanceof FinDeTiempo) return { motivo: 'tiempo', tiempoUs: this.t };
+      if (e instanceof FinDeTiempo) return { motivo: this.detenidoAPedido ? 'detenido' : 'tiempo', tiempoUs: this.t };
       return { motivo: 'error', tiempoUs: this.t, error: clasificarErrorEjecucion(e) };
     }
   }
@@ -181,22 +212,47 @@ export class Simulador {
       this.tFisica += this.dtFisicaUs;
       const alPasoFisica = this.alPasoFisica;
       if (alPasoFisica) protegido('alPasoFisica', () => alPasoFisica(this.tFisica, this.estadoActual));
+      if (this.detenidoAPedido) {
+        this.t = this.tFisica;
+        throw new FinDeTiempo();
+      }
     }
     const alAvanzar = this.alAvanzar;
     if (alAvanzar) protegido('alAvanzar', () => alAvanzar(this));
-    if (this.t >= this.limite) throw new FinDeTiempo();
+    if (this.detenidoAPedido || this.t >= this.limite) throw new FinDeTiempo();
   }
 
   /** ADC crudo de un pin: los pines del QTR salen de su modelo (el sensor i es robot.qtr.pines[i]); el resto da 0. */
   private leerPinQTR(pin: number): number {
     const indice = this.robot.qtr.pines.indexOf(pin);
     if (indice < 0) return 0;
+    return this.leerQTR(this.azarModelos)[indice] ?? 0;
+  }
+
+  // Cada modelo de sensor se evalúa en el estado actual; el azar decide si es para el programa o para la vista.
+  private leerQTR(azar: Azar): number[] {
     const emisor = this.robot.qtr.emisor;
-    const valores = protegido('el modelo del QTR', () => this.modelos.leerQTR({
+    return protegido('el modelo del QTR', () => this.modelos.leerQTR({
       t: this.t / 1e6, estado: this.estadoActual, sensores: puntosQTR(this.estadoActual, this.robot),
       emisoresEncendidos: emisor === null || this.pinesSim.nivel(emisor) > 0.5,
-      mundo: this.mundo, ambiente: this.ambiente, azar: this.azarModelos }));
-    return valores[indice] ?? 0;
+      mundo: this.mundo, ambiente: this.ambiente, azar }));
+  }
+
+  private leerVL53(azar: Azar): number {
+    return protegido('el modelo del VL53L0X', () => this.modelos.leerVL53L0X({
+      t: this.t / 1e6, estado: this.estadoActual, sensor: poseVL53(this.estadoActual, this.robot), mundo: this.mundo, azar }));
+  }
+
+  private leerMPU(azar: Azar): LecturaMPU {
+    return protegido('el modelo del MPU6050', () => this.modelos.leerMPU6050({
+      t: this.t / 1e6, dt: this.dtFisicaUs / 1e6, estado: this.estadoActual, estadoAnterior: this.estadoAnterior,
+      montaje: this.robot.mpu6050, mundo: this.mundo, azar }));
+  }
+
+  private leerTCS(integracionMs: number, ganancia: number, ledEncendido: boolean, azar: Azar): LecturaTCS {
+    return protegido('el modelo del TCS34725', () => this.modelos.leerTCS34725({
+      t: this.t / 1e6, estado: this.estadoActual, sensor: puntoTCS(this.estadoActual, this.robot),
+      tiempoIntegracionMs: integracionMs, ganancia, ledEncendido, mundo: this.mundo, ambiente: this.ambiente, azar }));
   }
 
   private avisar(mensaje: string): void {
@@ -256,24 +312,15 @@ export class Simulador {
       },
       serialWrite: bytes => this.escribirSerial(bytes),
       aviso: texto => { this.avisar(texto); this.avanzar(COSTOS_US.aviso); },
-      vl53Medir: () => {
-        const mm = protegido('el modelo del VL53L0X', () => this.modelos.leerVL53L0X({
-          t: this.t / 1e6, estado: this.estadoActual, sensor: poseVL53(this.estadoActual, this.robot), mundo: this.mundo, azar: this.azarModelos }));
-        return Math.min(SIN_OBJETIVO_VL53_MM, Math.max(0, Math.round(mm)));
-      },
+      vl53Medir: () => acotar(this.leerVL53(this.azarModelos), SIN_OBJETIVO_VL53_MM),
       mpuLeer: () => {
         this.avanzar(COSTOS_US.lecturaMpu);
-        const l = protegido('el modelo del MPU6050', () => this.modelos.leerMPU6050({
-          t: this.t / 1e6, dt: this.dtFisicaUs / 1e6, estado: this.estadoActual, estadoAnterior: this.estadoAnterior,
-          montaje: this.robot.mpu6050, mundo: this.mundo, azar: this.azarModelos }));
+        const l = this.leerMPU(this.azarModelos);
         return [l.ax, l.ay, l.az, l.gx, l.gy, l.gz, l.temp];
       },
       tcsLeer: (integracionUs, ganancia, led) => {
         const pinLed = this.robot.tcs34725.led;
-        const l = protegido('el modelo del TCS34725', () => this.modelos.leerTCS34725({
-          t: this.t / 1e6, estado: this.estadoActual, sensor: puntoTCS(this.estadoActual, this.robot),
-          tiempoIntegracionMs: integracionUs / 1000, ganancia, ledEncendido: pinLed === null ? led : p.nivel(pinLed) > 0.5,
-          mundo: this.mundo, ambiente: this.ambiente, azar: this.azarModelos }));
+        const l = this.leerTCS(integracionUs / 1000, ganancia, pinLed === null ? led : p.nivel(pinLed) > 0.5, this.azarModelos);
         return [l.r, l.g, l.b, l.c];
       },
       serialAvailable: () => {

@@ -158,6 +158,9 @@ export class Juez {
     };
   }
 
+  /** Igual que estado.terminado, sin copiar el estado (se consulta en cada paso de física). */
+  get termino(): boolean { return this.terminado; }
+
   private get reloj(): number { return this.relojUs / 1e6; }
 
   private get tiempo(): number | null {
