@@ -27,7 +27,12 @@ export interface Instantanea {
   mensaje: string | null;
 }
 
-export interface FinEjecucion { motivo: 'terminado' | 'error'; error?: ErrorEjecucion; juez: EstadoJuez }
+export interface FinEjecucion {
+  motivo: 'terminado' | 'error';
+  error?: ErrorEjecucion;
+  /** null si la prueba no alcanzó a empezar (por ejemplo, el worker falló al instanciar el programa). */
+  juez: EstadoJuez | null;
+}
 
 export interface OpcionesPrueba {
   modulo: WebAssembly.Module;

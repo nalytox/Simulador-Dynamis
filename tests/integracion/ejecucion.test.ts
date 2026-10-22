@@ -50,7 +50,7 @@ describe('la prueba completa', { timeout: 120_000 }, () => {
     const { fin, instantaneas } = await correr(IR_Y_PARAR);
     expect(instantaneas.map(i => i.serial).join('')).toBe('setup\r\n');
     expect(fin.motivo).toBe('terminado');
-    expect(fin.juez.meta).toBe(true);
+    expect(fin.juez?.meta).toBe(true);
   });
 
   it('durante un delay largo se publican instantáneas con el robot avanzando', async () => {
@@ -62,10 +62,10 @@ describe('la prueba completa', { timeout: 120_000 }, () => {
   it('"Volver al último hito" reinicia el programa desde setup en la partida y descuenta 10', async () => {
     const { fin, instantaneas } = await correr(IR_Y_PARAR, (i, todas, control) => { if (todas.length === 1) pedir(control, 'ultimo'); });
     expect(instantaneas.map(i => i.serial).join('').match(/setup/g)).toHaveLength(2);
-    expect(fin.juez.reinicios).toBe(1);
+    expect(fin.juez?.reinicios).toBe(1);
     const primera = instantaneas.find(i => i.reinicio === 1)!;
     expect(Math.abs(primera.estado.x - 150)).toBeLessThan(5);
-    expect(fin.juez.meta).toBe(true);
+    expect(fin.juez?.meta).toBe(true);
   });
 
   it('un pedido rechazado llega como mensaje y la prueba sigue', async () => {
@@ -74,7 +74,7 @@ describe('la prueba completa', { timeout: 120_000 }, () => {
       if (!pedidos.has(i.reinicio)) { pedidos.add(i.reinicio); pedir(control, 'ultimo'); }
     });
     expect(instantaneas.some(i => i.mensaje === 'Ya usaste los 3 reinicios.')).toBe(true);
-    expect(fin.juez.reinicios).toBe(3);
+    expect(fin.juez?.reinicios).toBe(3);
     expect(fin).toMatchObject({ motivo: 'terminado', juez: { meta: true } });
   });
 
