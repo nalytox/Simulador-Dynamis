@@ -11,6 +11,7 @@ export interface ConfigRobot {
   ruedas: { diametro: number; trocha: number; x: number };
   motores: { driver: 'TB6612'; izq: PinesMotor; der: PinesMotor; stby: number | null };
   qtr: { pines: number[]; emisor: number | null; x: number; separacion: number; altura: number };
+  /** yaw y pitch del montaje en grados (pitch > 0 apunta hacia abajo, REP-103). */
   vl53l0x: { x: number; y: number; z: number; yaw: number; pitch: number };
   tcs34725: { x: number; y: number; z: number; led: number | null };
   mpu6050: { x: number; y: number; z: number; orientacion: 'z-arriba-x-adelante' };
