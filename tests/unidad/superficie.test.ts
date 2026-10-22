@@ -54,3 +54,38 @@ it('fuera de la grilla y celdas sin baldosa: fondo blanco', () => {
   expect([s.color(-5, 150), s.color(450, 150), s.color(700, 150)]).toEqual([BLANCO, BLANCO, BLANCO]);
   expect(s.esLinea(-5, 150)).toBe(false);
 });
+
+const VERDE = { r: 0, g: 166, b: 81 };
+
+it('cruce: las 4 marcas pegadas a la esquina, en su color', () => {
+  const s = sup('cruce', { marcas: { ai: true, ad: true, di: true, dd: true } });
+  expect([[128, 172], [128, 128], [172, 172], [172, 128]].map(([u, v]) => s.color(u, v))).toEqual([VERDE, VERDE, VERDE, VERDE]);
+  expect(s.esLinea(150, 20)).toBe(true); expect(s.esLinea(128, 172)).toBe(false); expect(s.color(100, 200)).toEqual(BLANCO);
+});
+
+it('cruce rotado 90°: "antes a la izquierda" queda al suroeste', () => {
+  const s = sup('cruce', { marcas: { ai: true, ad: false, di: false, dd: false } }, 90);
+  expect(s.color(128, 128)).toEqual(VERDE); expect(s.color(172, 128)).toEqual(BLANCO);
+});
+
+it('marcas de otro color, también en una baldosa invertida', () => {
+  expect(sup('cruce', { marcas: { ai: true, ad: false, di: false, dd: false }, colorMarca: '#FF0000', invertida: true }).color(128, 172))
+    .toEqual({ r: 255, g: 0, b: 0 });
+});
+
+it('unión en T con la rama a la derecha', () => {
+  const s = sup('unionT', { rama: 'der' });
+  expect(s.esLinea(150, 40)).toBe(true); expect(s.esLinea(150, 260)).toBe(false);
+});
+
+it('indicador F2: L1 cruza y cada decisión va hacia su lado', () => {
+  const s = sup('indicadorF2', { decisiones: ['izq', 'der'] });
+  expect([s.esLinea(60, 100), s.esLinea(60, 200), s.esLinea(120, 190), s.esLinea(120, 110), s.esLinea(180, 110), s.esLinea(180, 190)])
+    .toEqual([true, true, true, false, true, false]);
+});
+
+it('cuadrado F1 de 21 cm con entrada y salida centradas', () => {
+  const s = sup('cuadradoF1');
+  expect([[20, 150], [150, 255], [150, 45], [45, 100], [280, 150]].every(([u, v]) => s.esLinea(u, v))).toBe(true);
+  expect(s.esLinea(150, 150)).toBe(false);
+});

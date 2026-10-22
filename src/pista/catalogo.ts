@@ -1,4 +1,4 @@
-import { ANCHO_CINTA, TAMANO_BALDOSA, type Baldosa, type Lado } from './tipos';
+import { ANCHO_CINTA, COLOR_MARCA, TAMANO_BALDOSA, type Accion, type Baldosa, type Lado, type Marcas } from './tipos';
 
 /**
  * Catálogo de piezas (spec §10.3) como listas de figuras en el marco local de la baldosa.
@@ -23,6 +23,36 @@ const rect = (u0: number, v0: number, u1: number, v1: number): Figura => ({ form
 /** Tramo de la línea principal, que va de oeste a este por el centro. */
 const tramo = (u0: number, u1: number): Figura => rect(u0, V0, u1, V1);
 
+/** Marcas de color de 25 × 25 mm pegadas a la esquina de la intersección (antes/después, izquierda/derecha). */
+const POSICION_MARCAS: Record<keyof Marcas, [number, number]> = {
+  ai: [V0 - 25, V1], ad: [V0 - 25, V0 - 25], di: [V1, V1], dd: [V1, V0 - 25],
+};
+
+function marcas(m: Marcas, color: string): Figura[] {
+  return (Object.keys(POSICION_MARCAS) as (keyof Marcas)[])
+    .filter(clave => m[clave])
+    .map(clave => {
+      const [u0, v0] = POSICION_MARCAS[clave];
+      return { forma: 'rect', u0, v0, u1: u0 + 25, v1: v0 + 25, rol: 'marca', color };
+    });
+}
+
+/** F2: L1 cruza la línea y después una barra corta por decisión, hacia el lado del giro (máximo 3). */
+function indicadorF2(decisiones: ('izq' | 'der')[]): Figura[] {
+  const figuras = [tramo(0, T), rect(50.5, 90, 69.5, 210)];
+  decisiones.slice(0, 3).forEach((lado, i) => {
+    const u = 60 + 60 * (i + 1);
+    figuras.push(lado === 'izq' ? rect(u - 9.5, CENTRO, u + 9.5, 210) : rect(u - 9.5, 90, u + 9.5, CENTRO));
+  });
+  return figuras;
+}
+
+/** F1: cuadrado de 210 mm (al centro de la cinta) con entrada y salida centradas. */
+function cuadradoF1(): Figura[] {
+  const a = 35.5, b = 54.5, c = 245.5, d = 264.5;
+  return [tramo(0, 45), tramo(255, T), rect(a, a, d, b), rect(a, c, d, d), rect(a, a, b, d), rect(c, a, d, d)];
+}
+
 function guiones(guion: number, espacio: number): Figura[] {
   const figuras: Figura[] = [];
   if (guion <= 0) return figuras;
@@ -32,7 +62,7 @@ function guiones(guion: number, espacio: number): Figura[] {
 }
 
 /** Figuras de una pieza, en orden de pintado (la última que contiene un punto es la que se ve). */
-export function figurasDe(b: Baldosa, _colorMarcas?: string): Figura[] {
+export function figurasDe(b: Baldosa, colorMarcas?: string): Figura[] {
   switch (b.tipo) {
     case 'recta':
     case 'rampa':
@@ -47,8 +77,17 @@ export function figurasDe(b: Baldosa, _colorMarcas?: string): Figura[] {
       return [tramo(0, T), rect(281, 90, T, 210)];
     case 'meta':
       return [tramo(0, CENTRO), rect(BARRA_META.u0, BARRA_META.v0, BARRA_META.u1, BARRA_META.v1)];
-    default:
-      // TODO(Tarea 3): cruce, unionT, indicadorF2 y cuadradoF1.
+    case 'cruce':
+      return [tramo(0, T), rect(V0, 0, V1, T), ...marcas(b.props.marcas, b.props.colorMarca ?? colorMarcas ?? COLOR_MARCA)];
+    case 'unionT': {
+      const rama = b.props.rama === 'izq' ? rect(V0, V0, V1, T) : rect(V0, 0, V1, V1);
+      return [tramo(0, T), rama, ...marcas(b.props.marcas, b.props.colorMarca ?? colorMarcas ?? COLOR_MARCA)];
+    }
+    case 'indicadorF2':
+      return indicadorF2(b.props.decisiones);
+    case 'cuadradoF1':
+      return cuadradoF1();
+    case 'vacia':
       return [];
   }
 }
@@ -60,14 +99,33 @@ export function bocasDe(b: Baldosa): Lado[] {
     case 'rampa':
     case 'cortes':
     case 'partida':
+    case 'indicadorF2':
+    case 'cuadradoF1':
       return ['oeste', 'este'];
+    case 'cruce':
+      return ['oeste', 'este', 'norte', 'sur'];
+    case 'unionT':
+      return ['oeste', 'este', b.props.rama === 'izq' ? 'norte' : 'sur'];
     case 'giroSuave':
     case 'giroL':
       return ['oeste', 'norte'];
     case 'meta':
       return ['oeste'];
-    default:
-      // TODO(Tarea 3): cruce, unionT, indicadorF2 y cuadradoF1.
+    case 'vacia':
       return [];
   }
+}
+
+/**
+ * Qué debe hacer el robot al entrar por la flecha de un cruce o unión en T (convención RoboCup):
+ * solo cuentan las marcas de antes del cruce. null si la pieza no pide una decisión.
+ */
+export function accionEsperada(b: Baldosa): Accion | null {
+  if (b.tipo !== 'cruce' && b.tipo !== 'unionT') return null;
+  if (b.props.accion) return b.props.accion;
+  const { ai, ad } = b.props.marcas;
+  if (ai && ad) return 'vuelta';
+  if (ai) return 'izq';
+  if (ad) return 'der';
+  return 'recto';
 }
