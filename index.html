@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Simulador Dynamis</title>
+</head>
+<body style="margin:0">
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="mascota" viewBox="0 0 64 64">
+      <line x1="32" y1="4" x2="32" y2="13" stroke="#0B0F98" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="32" cy="5" r="4.5" fill="#FFD166" stroke="#0B0F98" stroke-width="2"/>
+      <rect x="8" y="13" width="48" height="40" rx="15" fill="#DDF4FF" stroke="#0B0F98" stroke-width="3"/>
+      <rect x="15" y="21" width="34" height="20" rx="9" fill="#0B0F98"/>
+      <circle cx="25" cy="31" r="4.2" fill="#65C7F7"/>
+      <circle cx="39" cy="31" r="4.2" fill="#65C7F7"/>
+      <circle cx="26.3" cy="29.6" r="1.4" fill="#FFFFFF"/>
+      <circle cx="40.3" cy="29.6" r="1.4" fill="#FFFFFF"/>
+      <circle cx="14.5" cy="46" r="3.6" fill="#FF9FAD"/>
+      <circle cx="49.5" cy="46" r="3.6" fill="#FF9FAD"/>
+      <path d="M27 46.5q5 3.5 10 0" fill="none" stroke="#0B0F98" stroke-width="2.4" stroke-linecap="round"/>
+      <rect x="2" y="27" width="6" height="12" rx="3" fill="#FF9FAD" stroke="#0B0F98" stroke-width="2"/>
+      <rect x="56" y="27" width="6" height="12" rx="3" fill="#FF9FAD" stroke="#0B0F98" stroke-width="2"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="banda">
+  <div class="gutter">
+    <div class="marca">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><use href="#mascota"/></svg>
+      <div><b>Dynamis</b><small>Simulador de robots</small></div>
+    </div>
+    <div class="modos" role="tablist" aria-label="Modo">
+      <button class="modo" role="tab" id="tab-programar" aria-selected="true" aria-controls="vista-programar">
+        <svg class="ico" viewBox="0 0 24 24"><path d="M8 6l-6 6 6 6M16 6l6 6-6 6"/></svg>Programar
+      </button>
+      <button class="modo" role="tab" id="tab-pista" aria-selected="false" disabled title="Llega pronto">
+        <svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>Construir pista
+      </button>
+    </div>
+    <div class="extra">
+      <button class="btn-banda" id="btn-ejemplos" disabled title="Llega pronto"><svg class="ico" viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5"/></svg><span>Ejemplos</span></button>
+      <button class="btn-banda" id="btn-ayuda" disabled title="Llega pronto"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.2a2.5 2.5 0 1 1 3.4 2.3c-.7.3-1 .9-1 1.7"/><circle cx="12" cy="16.8" r=".6"/></svg><span>Ayuda</span></button>
+    </div>
+  </div>
+</div>
+
+<main class="gutter">
+
+  <!-- ================= PROGRAMAR ================= -->
+  <section class="vista" id="vista-programar" role="tabpanel" aria-labelledby="tab-programar">
+    <div class="acciones">
+      <button class="btn-probar" id="btn-probar">
+        <svg class="ico relleno" viewBox="0 0 24 24" id="ico-probar"><path d="M7 4.5v15l12.5-7.5z"/></svg>
+        <span id="txt-probar">Probar mi robot</span>
+      </button>
+      <button class="btn-sec" id="btn-pausa"><svg class="ico relleno" viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1.2"/><rect x="14" y="5" width="4" height="14" rx="1.2"/></svg><span id="txt-pausa">Pausa</span></button>
+      <button class="btn-sec" id="btn-inicio"><svg class="ico" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>Volver al inicio</button>
+      <button class="btn-sec btn-ajustar" id="btn-ajustar" disabled title="Llega pronto"><svg class="ico" viewBox="0 0 24 24"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg>Ajustar parámetros</button>
+      <span class="chip-estado" id="estado"><i></i><span id="txt-estado">Listo para probar</span></span>
+      <label class="velocidad" for="vel">Lento
+        <input type="range" id="vel" min="0" max="4" step="1" value="2" aria-label="Velocidad de la simulación">
+        Rápido <output id="vel-out" for="vel">×1</output>
+      </label>
+    </div>
+
+    <div class="grid-programar">
+      <div class="col">
+        <article class="card">
+          <header>
+            <h2><svg class="ico" viewBox="0 0 24 24"><path d="M8 6l-6 6 6 6M16 6l6 6-6 6"/></svg>Mi programa</h2>
+            <span class="chip" id="chip-carpeta">Carpeta</span>
+            <div class="header-der">
+              <button class="btn-mini" id="btn-carpeta"><svg class="ico" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Abrir carpeta</button>
+              <button class="btn-mini" id="btn-zip">Abrir .zip</button>
+              <button class="btn-mini" id="btn-descargar">Descargar mi proyecto</button>
+              <button class="btn-mini" id="btn-guardar-carpeta" hidden>Guardar en la carpeta</button>
+            </div>
+            <input type="file" id="in-carpeta" webkitdirectory multiple hidden>
+            <input type="file" id="in-zip" accept=".zip" hidden>
+          </header>
+          <div class="barra-pestanas" id="pestanas" role="tablist" aria-label="Archivos del proyecto"></div>
+          <div class="editor" id="editor" aria-label="Código del programa"></div>
+          <div class="burbuja" id="burbuja" hidden>
+            <svg class="mascota" viewBox="0 0 64 64" aria-hidden="true"><use href="#mascota"/></svg>
+            <div>
+              <h3 id="burbuja-titulo"></h3>
+              <p id="burbuja-mensaje"></p>
+              <div class="fila-botones">
+                <button class="btn-mini" id="btn-ir-linea">Ir a esa línea</button>
+                <button class="btn-mini" id="btn-burbuja-accion" hidden></button>
+                <button class="btn-mini" id="btn-tecnico">Ver mensaje técnico</button>
+              </div>
+              <pre id="burbuja-tecnico" hidden></pre>
+            </div>
+          </div>
+        </article>
+
+        <article class="card">
+          <header>
+            <h2><svg class="ico" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg>Mensajes del robot</h2>
+            <span class="chip">Serial · 115200</span>
+            <div class="header-der"><button class="btn-mini" id="btn-limpiar">Limpiar</button></div>
+          </header>
+          <div class="consola-caja">
+            <div class="consola" id="consola" aria-live="off"></div>
+            <button class="pildora-nuevos" id="pildora-nuevos" hidden>Mensajes nuevos ↓</button>
+          </div>
+          <div class="logro" id="logro" hidden>
+            <svg class="ico relleno" viewBox="0 0 24 24"><path d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.3 6.5 20.2l1-6.2L3 9.6l6.2-.9z"/></svg>
+            <span id="txt-logro"></span>
+          </div>
+        </article>
+      </div>
+
+      <div class="col">
+        <article class="card">
+          <header>
+            <h2><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>Pista</h2>
+            <span class="chip">8 × 6 baldosas de 30 cm</span>
+            <span class="chip" id="chip-tiempo">t = 0,0 s</span>
+          </header>
+          <div class="lienzo-caja"><canvas class="lienzo" id="lienzo-sim" aria-label="Vista de la pista con el robot"></canvas></div>
+          <div class="pista-pie">
+            <span><i style="background:#FFD166"></i>Sensor de línea detectando</span>
+            <span><i style="background:rgba(101,199,247,.55)"></i>Rayo del sensor de distancia</span>
+            <span><i style="background:#FF9FAD"></i>Camino recorrido</span>
+            <span><i style="background:linear-gradient(90deg,#DDF4FF,#65C7F7)"></i>Rampa: las flechas apuntan hacia arriba</span>
+          </div>
+        </article>
+
+        <article class="card">
+          <header>
+            <h2><svg class="ico" viewBox="0 0 24 24"><path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M9 20h6"/></svg>Juez virtual</h2>
+            <span class="chip">Bases Rescue Line FIRVI 2026</span>
+            <div class="header-der"><span class="chip" id="juez-tiempo">Quedan 5:00</span></div>
+            <label class="desde" for="sel-desde">Partir desde <select id="sel-desde"></select></label>
+          </header>
+          <div class="juez-cuerpo">
+            <div class="hitos" id="hitos" aria-label="Hitos alcanzados"></div>
+            <div class="juez-datos">
+              <div><span class="etq">Puntaje</span><b id="juez-pts">0</b></div>
+              <div><span class="etq">Reinicios</span><b id="juez-rein">0 de 3</b></div>
+              <button class="btn-mini" id="btn-ultimo-hito">Volver al último hito (−10)</button>
+              <button class="btn-mini" id="btn-saltar-hito">Saltar al siguiente hito</button>
+            </div>
+          </div>
+        </article>
+
+        <div class="sensores" aria-label="Lo que siente el robot">
+          <section class="sensor ancho">
+            <div class="fila-qtr">
+              <h3>Sensor de línea <small>QTR-MX-8A · 8 sensores</small></h3>
+              <span class="sub">Línea en: <b id="qtr-pos-num">3500</b> <span>(0 a 7000)</span></span>
+            </div>
+            <div class="qtr" id="qtr"></div>
+            <div class="qtr-num" id="qtr-num"></div>
+            <div class="qtr-pos"><b id="qtr-pos" style="left:50%"></b></div>
+            <button class="como" data-snip="s-qtr">¿Cómo lo uso?</button>
+            <pre id="s-qtr" hidden>uint16_t valores[8];
+int pos = qtr.readLineBlack(valores);  // 0 a 7000</pre>
+          </section>
+
+          <section class="sensor">
+            <h3>Distancia <small>VL53L0X</small></h3>
+            <div class="valor" id="tof-val">— <small>mm</small></div>
+            <div class="medidor"><b id="tof-bar" style="width:0%"></b></div>
+            <div class="sub" id="tof-sub">Alcance hasta 1200 mm</div>
+            <button class="como" data-snip="s-tof">¿Cómo lo uso?</button>
+            <pre id="s-tof" hidden>int mm = distancia.readRangeContinuousMillimeters();</pre>
+          </section>
+
+          <section class="sensor">
+            <h3>Color <small>TCS34725</small></h3>
+            <div class="muestra"><i id="color-muestra" style="background:#fff"></i>
+              <div><div class="valor" id="color-nombre" style="font-size:24px">Blanco</div>
+                <div class="rgbc" id="color-rgbc"></div></div>
+            </div>
+            <button class="como" data-snip="s-tcs">¿Cómo lo uso?</button>
+            <pre id="s-tcs" hidden>uint16_t r, g, b, c;
+tcs.getRawData(&amp;r, &amp;g, &amp;b, &amp;c);</pre>
+          </section>
+
+          <section class="sensor">
+            <h3>Giro e inclinación <small>MPU6050</small></h3>
+            <div class="brujula">
+              <svg viewBox="0 0 64 64" aria-hidden="true">
+                <circle cx="32" cy="32" r="29" fill="#FFFFFF" stroke="#BFE3F8" stroke-width="3"/>
+                <g id="aguja"><path d="M32 8l6 24h-12z" fill="#0B0F98"/><path d="M32 56l6-24h-12z" fill="#FF9FAD"/></g>
+                <circle cx="32" cy="32" r="4" fill="#FFD166" stroke="#0B0F98" stroke-width="2"/>
+              </svg>
+              <div><div class="valor" id="mpu-rumbo" style="font-size:24px">0°</div>
+                <div class="sub" id="mpu-sub">gz 0 °/s · inclinación 0°</div></div>
+            </div>
+            <button class="como" data-snip="s-mpu">¿Cómo lo uso?</button>
+            <pre id="s-mpu" hidden>sensors_event_t a, g, temp;
+mpu.getEvent(&amp;a, &amp;g, &amp;temp);</pre>
+          </section>
+
+          <section class="sensor">
+            <h3>Motores <small>ESP32 · PWM</small></h3>
+            <div class="motores">
+              <span>Izq.</span><div class="motor"><b id="m-izq"></b></div><span id="m-izq-n">0%</span>
+              <span>Der.</span><div class="motor"><b id="m-der"></b></div><span id="m-der-n">0%</span>
+            </div>
+            <div class="sub">Hacia atrás ← 0 → hacia adelante</div>
+            <button class="como" data-snip="s-mot">¿Cómo lo uso?</button>
+            <pre id="s-mot" hidden>analogWrite(PWM_IZQ, 150);  // 0 a 255</pre>
+          </section>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="toast" id="toast" hidden><i></i><span id="toast-txt"></span></div>
+<div class="aviso-global" id="aviso-global" role="alert" hidden><div id="aviso-global-txt"></div></div>
+
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>

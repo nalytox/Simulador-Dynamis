@@ -1,0 +1,22 @@
+import { existsSync } from 'node:fs';
+import { defineConfig } from '@playwright/test';
+
+const PUERTO = 5179;
+// En el contenedor de desarrollo Chromium ya viene instalado; en otro computador Playwright usa el suyo.
+const CHROMIUM_LOCAL = '/opt/pw-browsers/chromium';
+
+export default defineConfig({
+  testDir: 'tests/e2e',
+  timeout: 180_000,
+  use: {
+    baseURL: `http://localhost:${PUERTO}`,
+    launchOptions: { executablePath: existsSync(CHROMIUM_LOCAL) ? CHROMIUM_LOCAL : undefined },
+  },
+  projects: [{ name: 'chromium', use: { browserName: 'chromium' } }],
+  webServer: {
+    command: `npm run dev -- --port ${PUERTO} --strictPort`,
+    url: `http://localhost:${PUERTO}`,
+    reuseExistingServer: !process.env.CI,
+    timeout: 180_000,
+  },
+});
