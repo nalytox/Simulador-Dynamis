@@ -33,8 +33,7 @@ export function crearConsola(caja: HTMLElement, pildora: HTMLElement, botonLimpi
     if (bitacora.version === dibujada) return;
     dibujada = bitacora.version;
     const pegada = alFinal();
-    const abierta = bitacora.abierta;
-    caja.replaceChildren(...bitacora.lineas.map(fila), ...(abierta ? [fila(abierta)] : []));
+    caja.replaceChildren(...bitacora.visibles().map(fila));
     if (pegada || caja.childElementCount === 0) bajar();
     else pildora.hidden = false;
   };

@@ -34,6 +34,12 @@ export class Bitacora {
   }
 
   get lineas(): LineaConsola[] { return this.cerradas; }
+
+  /** Lo que se dibuja: las últimas `maximo` líneas, contando la que está a medio escribir. */
+  visibles(): LineaConsola[] {
+    const abierta = this.abierta;
+    return abierta ? [...this.cerradas.slice(-(this.maximo - 1)), abierta] : this.cerradas;
+  }
   get abierta(): LineaConsola | null { return this.enCurso && { ...this.enCurso }; }
   /** Sube con cada cambio: la consola redibuja solo si cambió. */
   get version(): number { return this.cambios; }

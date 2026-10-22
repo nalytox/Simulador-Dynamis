@@ -40,6 +40,16 @@ describe('bitácora de mensajes', () => {
     expect(b.abierta).toBeNull();
   });
 
+  it('visibles cuenta la línea abierta dentro de las 500', () => {
+    const b = new Bitacora();
+    for (let i = 0; i < 600; i++) b.agregarSerial(i, `${i}\n`);
+    b.agregarSerial(600, 'a medias');
+    const visibles = b.visibles();
+    expect(visibles).toHaveLength(500);
+    expect(visibles.at(-1)).toEqual({ t: 600, texto: 'a medias', tipo: 'serial' });
+    expect(visibles[0].texto).toBe('101');
+  });
+
   it('formatoTiempo usa una decimal con coma', () => {
     expect(formatoTiempo(12.345)).toBe('12,3 s');
     expect(formatoTiempo(0)).toBe('0,0 s');
