@@ -7,6 +7,8 @@ import type { ConfigRobot } from '../robot/config';
 
 export interface Lienzo {
   mostrarPista(p: Pista): void;
+  /** Dibuja otro robot (medidas y sensores) desde el próximo cuadro. */
+  cambiarRobot(r: ConfigRobot): void;
   mostrarInstantanea(i: Instantanea): void;
   /** Deja al robot quieto en `pose`, sin lecturas ni rastro. */
   reiniciar(pose: Pose): void;
@@ -116,6 +118,10 @@ export function crearLienzo(canvas: HTMLCanvasElement, robot: ConfigRobot): Lien
       pista = p;
       ajustada = true;
       ajustar();
+      pedirDibujo();
+    },
+    cambiarRobot(r) {
+      robot = r;
       pedirDibujo();
     },
     mostrarInstantanea(i) {

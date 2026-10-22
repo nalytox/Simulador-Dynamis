@@ -341,3 +341,29 @@ export function dibujarRobot(ctx: CanvasRenderingContext2D, v: Vista, i: Instant
   ctx.fill();
   ctx.restore();
 }
+
+/**
+ * El robot solo, visto desde arriba y mirando hacia arriba, para la ventana "Mi robot": el mismo
+ * dibujo de la pista, el contorno del chasis y un punto para el MPU6050.
+ */
+export function dibujarFichaRobot(ctx: CanvasRenderingContext2D, v: Vista, robot: ConfigRobot): void {
+  const pose: Pose = { x: 0, y: 0, yaw: Math.PI / 2 };
+  dibujarRobot(ctx, v, null, pose, robot, []);
+  enMundo(ctx, v);
+  ctx.save();
+  ctx.rotate(pose.yaw);
+  const px = (globalThis.devicePixelRatio || 1) / v.escala;
+  ctx.strokeStyle = C.rosa;
+  ctx.lineWidth = 2 * px;
+  ctx.setLineDash([6 * px, 4 * px]);
+  ctx.strokeRect(robot.chasis.xDelantero - robot.chasis.largo, -robot.chasis.ancho / 2, robot.chasis.largo, robot.chasis.ancho);
+  ctx.setLineDash([]);
+  ctx.fillStyle = C.sol;
+  ctx.strokeStyle = C.tinta;
+  ctx.lineWidth = 1.5 * px;
+  ctx.beginPath();
+  ctx.arc(robot.mpu6050.x, robot.mpu6050.y, 6, 0, 2 * Math.PI);
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+}

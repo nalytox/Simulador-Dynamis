@@ -257,6 +257,11 @@ La configuración del robot describe el **robot físico de Dynamis**. Es la "ver
 - **Se guarda** en el navegador junto al proyecto. Se puede **exportar e importar** como `robot.json`, para que el profesor reparta la misma configuración a todo el curso.
 - **Valores por defecto** en `src/robot/config.ts` (provisionales, abajo). El botón "Volver a los valores del profe" los restaura.
 - **Validaciones amigables:** pines que no existen en el ESP32, pines repetidos, sensores fuera del chasis, tamaño mayor a 20 × 20 × 20 cm.
+- **Decisiones de la fase 5:**
+  - Por ahora "Mi robot" se abre con un botón de la banda (la Ayuda llega en la fase 7). Es una ventana modal; se cierra con "Listo" o `Esc`.
+  - Los cambios se aplican al tiro y se autoguardan. El robot editado se usa en la **próxima** prueba: una prueba que ya corre sigue con el suyo.
+  - Cada campo tiene su rango (un pin, de 0 a 39); un valor escrito a mano fuera del rango se acota, y un pin opcional vacío queda "sin conectar" (`null`). Los avisos de `validarRobot` aparecen junto al campo y en una lista.
+  - Al importar un `robot.json`, los campos que faltan toman los valores del profe y se informa cuáles. Un archivo con un campo inválido, o sin ninguna parte del robot (por ejemplo, un `package.json`), muestra el error y no cambia nada.
 
 ```ts
 {
@@ -442,7 +447,7 @@ Las marcas **después** del cruce no cuentan. Por eso "4 puntas" equivale a "amb
 - **Superficie (lo que ven los sensores):** se dibuja con las mismas funciones de la pantalla. Los objetos **no** cambian el color del suelo: el bache es del mismo color que lo que tiene debajo, y el obstáculo y los hitos no están en el suelo.
 - **Altura** = `nivel` de la baldosa + la subida de la rampa (`30 cm · tan(ángulo) · u / 30 cm`) + los baches (perfil de medio cilindro). Todo es analítico, así que `altura`, `inclinacion` y `raycast` ven rampas y baches.
 - **Continuidad:**
-  - al colocar o editar una rampa, el editor ajusta el `nivel` de la baldosa siguiente en la dirección de subida;
+  - al colocar o editar una rampa (ángulo o altura), el editor ajusta el `nivel` de la baldosa siguiente en la dirección de subida, y sigue si esa también es una rampa; una pieza nueva puesta al final de una rampa queda a la altura de su parte alta, y una pieza puesta sobre otra conserva su `nivel` y su rotación;
   - si dos baldosas vecinas no coinciden en altura, avisa: "Hay un escalón de 11 cm entre estas baldosas".
 - **Validaciones amigables** (avisan, no bloquean):
   - cortes de más de 4 cm;
@@ -460,6 +465,16 @@ Las marcas **después** del cruce no cuentan. Por eso "4 puntas" equivale a "amb
   - **propiedades según el tipo:** casillas de las 4 marcas con la acción esperada, control de la inclinación de la rampa (con "sube 10,9 cm"), controles de largo y espacio de los cortes, selector del camino correcto de F1 o del lado de F2, e "invertir colores".
 - **Tamaño de la grilla** editable. La **posición de inicio** se arrastra.
 - **Guardar y abrir** `.json`, y autoguardado.
+- **Decisiones de la fase 5:**
+  - **Herramientas:** la herramienta por defecto es **Elegir** (un clic elige una baldosa, un objeto o el inicio, y arrastrar mueve un objeto o el inicio). Con una baldosa de la paleta, cada clic la coloca y la elige; con un objeto o el inicio, el clic lo pone y vuelve a Elegir. `Esc` y el botón "Elegir" vuelven a Elegir.
+  - **Teclado:** con la pista enfocada, las flechas mueven una celda con foco, `Enter` aplica la herramienta (con Elegir, recorre la baldosa, los objetos y el inicio de esa celda), `R` gira 90° (Mayús+R al revés; 45° un bache) y `Supr` quita.
+  - **"Dejar vacía"** quita la baldosa. La pieza **Vacía** sí pone una baldosa, que se puede invertir (cuadro negro).
+  - **Baches:** "Bache recto" queda perpendicular a la línea de la baldosa donde se pone y "Bache diagonal", a 45°.
+  - **Numeración:** un hito nuevo toma el número mayor + 1 y la dirección de la baldosa de abajo; un desafío se llama F + (cantidad de desafíos + 1) y su hito siguiente es el mayor + 1. Al borrar no se renumera: los números se editan en el panel y la revisión avisa si quedan fuera de orden.
+  - **Objetos** se ubican en pasos de 1 cm.
+  - **Tamaño:** de 2 a 16 columnas y de 2 a 12 filas. Al achicar se confirma si se quitan piezas, y el inicio se mueve adentro si queda fuera.
+  - **Pista nueva:** 8 × 6 vacía, después de confirmar. El nombre de la pista se edita y da el nombre del `.json` (sin tildes).
+  - **Números escritos a mano** (ángulo, altura, cortes, medidas) se acotan a su rango al confirmarlos.
 - **Pistas de ejemplo:**
   - **Práctica FIRVI:** inspirada en la figura 1 de las bases (partida, curvas en S, línea con cortes, F2 y F1, obstáculo entre H4 y H5, meta y 8 hitos).
   - **Cruces con marcas:** todas las variantes de marcas.
@@ -580,7 +595,8 @@ Referencia visual: la maqueta en `docs/maqueta/`. Todo en **español (Chile)**, 
     - **Partir desde:** la tarjeta del juez tiene un selector con la partida, los hitos y las F de la pista.
     - **Eventos del juez:** un hito o la meta muestran el aviso de logro; los demás ("perdió la línea", "camino equivocado", "tocó el obstáculo", reinicios) un aviso breve. La tarjeta muestra los últimos 3.
   - **Velocidad:** 5 pasos (×0,25, ×0,5, ×1, ×2 y ×4; ×1 por defecto). La velocidad "máxima" del bloque de control queda para Ajustar parámetros.
-- **Construir pista:** paleta agrupada de piezas, la pista con la flecha de entrada en la baldosa elegida, el panel "Baldosa elegida" con propiedades según el tipo (§10.5), y los botones Guardar, Abrir y Pista nueva.
+- **Construir pista:** paleta agrupada de piezas, la pista con la flecha de entrada en la baldosa elegida, el panel "Baldosa elegida" con propiedades según el tipo (§10.5), la lista "Revisión de las bases", y los botones Guardar, Abrir y Pista nueva.
+  - La pista editada se usa en la **próxima** prueba: si no corre una prueba, Programar la muestra al tiro; si corre, la prueba sigue con la suya y Programar cambia al volver al inicio o al probar de nuevo.
 - **Ajustar parámetros:** ventana superpuesta (§11.4).
 - **Ejemplos:**
   - Proyectos: mover motores, leer la línea, seguidor de línea con PID, cruzar cortes, leer marcas de color en cruces, esquivar el obstáculo, subir la rampa (leer la inclinación) y leer el giroscopio.
@@ -608,9 +624,10 @@ Referencia visual: la maqueta en `docs/maqueta/`. Todo en **español (Chile)**, 
 
 | Qué | Dónde |
 |---|---|
-| Proyecto (todos los archivos), pista, preferencias (vista, velocidad) | IndexedDB, autoguardado |
+| Proyecto (todos los archivos), pista, robot, preferencias (vista, velocidad) | IndexedDB, autoguardado |
 | Proyecto | `.zip` (descarga y carga), carpeta (abrir y, en Chromium, guardar de vuelta). El `.zip` lleva una carpeta con el nombre del `.ino` principal, porque el Arduino IDE lo exige. |
 | Pista | `.json` (descarga y carga) |
+| Robot | `robot.json` (exportar e importar desde "Mi robot") |
 | Compilador y la app completa | Cache Storage del service worker (se descarga una sola vez; luego funciona sin internet) |
 
 ---

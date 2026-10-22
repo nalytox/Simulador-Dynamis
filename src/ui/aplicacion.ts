@@ -12,12 +12,14 @@ import { crearVistas } from './vistas';
 import { crearEditorPista } from './editor-pista';
 import { crearPanelPista } from './panel-pista';
 import { crearArchivoPista } from './archivo-pista';
+import { crearVentanaRobot } from './mi-robot';
 import { ClienteCompilador } from '../compilador/cliente';
 import { primerError } from '../compilador/amigables';
 import { ClienteSimulacion } from '../simulacion/cliente';
 import type { FinEjecucion, Instantanea } from '../simulacion/ejecucion';
 import { puntosDePartida } from '../pista/puntos';
-import { ROBOT_POR_DEFECTO } from '../robot/config';
+import { ROBOT_POR_DEFECTO, type ConfigRobot } from '../robot/config';
+import { normalizarRobot } from '../robot/archivo';
 import { abrirAlmacen, conRetardo, type Almacen, type DatosGuardados, type Preferencias } from '../proyecto/almacen';
 import type { Proyecto } from '../proyecto/proyecto';
 import type { Pista } from '../pista/tipos';
@@ -56,11 +58,17 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
   /** La pista de Programar: la de la prueba en curso. La del editor pasa a Programar cuando no corre una prueba. */
   let pista = (await leer(almacen, 'pista')) ?? PISTA_INICIAL;
   let pistaEditada = pista;
+  // El robot de "Mi robot", con la misma regla: el editado pasa a Programar cuando no corre una prueba.
+  const robotGuardado = await leer(almacen, 'robot');
+  const robotLeido = robotGuardado ? normalizarRobot(robotGuardado) : null;
+  let robot: ConfigRobot = robotLeido?.ok ? robotLeido.robot : structuredClone(ROBOT_POR_DEFECTO);
+  let robotEditado = robot;
   const preferencias: Preferencias = (await leer(almacen, 'preferencias')) ?? { velocidad: 100 };
   const guardar = <K extends keyof DatosGuardados>(clave: K) => conRetardo((valor: DatosGuardados[K]) => { void almacen?.guardar(clave, valor).catch(() => {}); });
   const guardarProyecto = guardar('proyecto');
   const guardarPreferencias = guardar('preferencias');
   const guardarPista = guardar('pista');
+  const guardarRobot = guardar('robot');
 
   // Mensajes del robot.
   const bitacora = new Bitacora();
@@ -111,7 +119,16 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
   }
 
   // Pista, tarjetas y juez.
-  const lienzo = crearLienzo($('lienzo-sim') as HTMLCanvasElement, ROBOT_POR_DEFECTO);
+  const lienzo = crearLienzo($('lienzo-sim') as HTMLCanvasElement, robot);
+  const ventanaRobot = crearVentanaRobot(raiz, {
+    robot: () => robotEditado,
+    alCambiar: r => {
+      robotEditado = r;
+      guardarRobot(r);
+      if (!simulacion.corriendo) dejarListo();
+    },
+  });
+  $('btn-mi-robot').addEventListener('click', () => ventanaRobot.abrir());
   lienzo.mostrarPista(pista);
   const poseDe = (id: string) => (puntosDePartida(pista).find(p => p.id === id) ?? puntosDePartida(pista)[0]).pose;
   const tarjetas = crearTarjetas(raiz);
@@ -187,8 +204,12 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
     acciones.mostrar(e, progreso);
   }
 
-  /** Pasa a Programar la pista del editor, si cambió. */
-  function usarPistaEditada() {
+  /** Pasa a Programar la pista del editor y el robot de "Mi robot", si cambiaron. */
+  function usarLoEditado() {
+    if (robot !== robotEditado) {
+      robot = robotEditado;
+      lienzo.cambiarRobot(robot);
+    }
     if (pista === pistaEditada) return;
     pista = pistaEditada;
     lienzo.mostrarPista(pista);
@@ -197,7 +218,7 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
   }
 
   function dejarListo() {
-    usarPistaEditada();
+    usarLoEditado();
     ultima = null;
     eventosVistos = 0;
     tActual = 0;
@@ -238,7 +259,7 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
     }
     dejarListo();
     simulacion.iniciar({
-      modulo: r.modulo, pista, robot: ROBOT_POR_DEFECTO, desde: juez.desde(),
+      modulo: r.modulo, pista, robot, desde: juez.desde(),
       semilla: crypto.getRandomValues(new Uint32Array(1))[0], velocidad: preferencias.velocidad,
     });
     juez.habilitar(true);
