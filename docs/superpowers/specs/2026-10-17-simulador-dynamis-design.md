@@ -194,7 +194,7 @@ Errores durante la ejecución:
 | `digitalWrite`, `digitalRead`, `pinMode` | 1 µs |
 | `analogRead` | 10 µs |
 | `analogWrite`, `ledcWrite` | 2 µs |
-| Lectura I2C (MPU6050, 14 bytes a 400 kHz) | ~0,4 ms |
+| Lectura del MPU6050 (14 bytes por I2C a 400 kHz) | 0,4 ms (`COSTOS_US.lecturaMpu`), en cualquier función de lectura (`getEvent`, `getMotion6`, `getAcceleration`, `getRotationZ`…) |
 | `VL53L0X::readRangeSingleMillimeters` | presupuesto de medición (33 ms por defecto) |
 | `VL53L0X::readRangeContinuousMillimeters` | espera hasta la siguiente medición del período configurado |
 | `Adafruit_TCS34725::getRawData` | espera el tiempo de integración (como la librería real) |
@@ -218,19 +218,21 @@ Son reimplementaciones **compatibles con la API pública** de cada librería, es
 - **Buses de un pin:** como en el core 3.x, un pin está en GPIO (`pinMode`) o en PWM (`analogWrite`, `ledcAttach`); `digitalWrite` sobre un pin en PWM no tiene efecto y produce un aviso.
 - **`Serial`:** `begin`, `print`, `println`, `printf`, `write`, `flush`. `available()` y `read()` devuelven 0 y -1 (no hay entrada desde la UI en la v1) y avisan que nadie escribe por el Serial.
 - **`String`** (subconjunto de `WString`): construcción desde números, concatenación, `length`, `toInt`, `toFloat`, `indexOf`, `substring`, `c_str`.
-- **`Wire`:** `begin([sda, scl])` y `setClock` no hacen nada. Los dispositivos se simulan a nivel de librería. El acceso directo a registros (`beginTransmission`/`requestFrom`) no está soportado en la v1 y produce un aviso claro.
+- **`Wire`:** `begin([sda, scl])` y `setClock` no hacen nada. Los dispositivos se simulan a nivel de librería. El acceso directo a registros (`beginTransmission`, `write`, `endTransmission`, `requestFrom`, `read`) no está soportado en la v1: avisa una vez y responde como un bus sin dispositivos (`endTransmission` da 2, `requestFrom` da 0 y `read` da −1).
 
-**Pololu `VL53L0X`:** `init`, `setTimeout`, `getTimeout`, `timeoutOccurred`, `setAddress`, `getAddress`, `startContinuous(period)`, `stopContinuous`, `readRangeContinuousMillimeters`, `readRangeSingleMillimeters`, `setMeasurementTimingBudget`, `getMeasurementTimingBudget`, `setSignalRateLimit` y `setVcselPulsePeriod` (estas dos se aceptan y no tienen efecto en la v1).
+**Pololu `VL53L0X`:** `init`, `setTimeout`, `getTimeout`, `timeoutOccurred`, `setAddress`, `getAddress`, `startContinuous(period)`, `stopContinuous`, `readRangeContinuousMillimeters`, `readRangeSingleMillimeters`, `setMeasurementTimingBudget`, `getMeasurementTimingBudget`, `setSignalRateLimit` y `setVcselPulsePeriod` (estas dos se aceptan y no tienen efecto en la v1). En modo continuo, la medida que se entrega se calcula con la pose del momento de la lectura, no con la del instante en que el chip la terminó: si la lectura llega tarde, el robot pudo haberse movido un poco.
 
 **Pololu `QTRSensors` (v4)**
 - `setTypeAnalog`, `setSensorPins`, `setEmitterPin`, `setSamplesPerSensor`, `emittersOn/Off`, `read`, `calibrate`, `resetCalibration`, `readCalibrated`, `readLineBlack`, `readLineWhite`, y los miembros `calibrationOn.minimum/maximum`.
 - Está construida sobre `analogRead` de los pines simulados, así que leer el QTR con `analogRead` directo también funciona.
+- Conserva una rareza real: su `maxValue` analógico es 1023 (pensado para Arduino AVR), así que con el ADC de 12 bits del ESP32 el mínimo de calibración arranca en 1023, igual que en el robot.
+- Modos de lectura: `Off`, `On`, `OnAndOff` y `Manual`. `Odd`, `Even` y `OddAndEven` se tratan como `On`, porque el QTR-MX-8A tiene un solo pin de emisores.
 
 **Adafruit `Adafruit_MPU6050`** (+ `Adafruit_Sensor`): `begin`, `setAccelerometerRange`, `getAccelerometerRange`, `setGyroRange`, `getGyroRange`, `setFilterBandwidth`, `getEvent(&a, &g, &temp)` con `sensors_event_t`. Unidades: m/s² y rad/s.
 
-**i2cdevlib / Electronic Cats `MPU6050`:** `initialize`, `testConnection`, `getMotion6`, `getAcceleration`, `getRotation`, `getRotationX/Y/Z`, `setFullScaleAccelRange`, `setFullScaleGyroRange` y `set{X,Y,Z}{Accel,Gyro}Offset`. Devuelven `int16` escalados según el rango (por ejemplo ±2 g → 16384 LSB/g, ±250 °/s → 131 LSB/(°/s)).
+**i2cdevlib / Electronic Cats `MPU6050`:** `initialize`, `testConnection`, `getMotion6`, `getAcceleration`, `getRotation`, `getRotationX/Y/Z`, `setFullScaleAccelRange`, `setFullScaleGyroRange` y `set{X,Y,Z}{Accel,Gyro}Offset`. Devuelven `int16` escalados según el rango (por ejemplo ±2 g → 16384 LSB/g, ±250 °/s → 131 LSB/(°/s)). Los offsets van en las unidades de los registros del chip: `set*AccelOffset` en las del rango ±16 g (2048 LSB/g) y `set*GyroOffset` en las del rango ±1000 °/s (32,8 LSB/(°/s)). Se suman al valor crudo, escalados al rango actual.
 
-**Adafruit `Adafruit_TCS34725`:** constructor `(tiempoIntegración, ganancia)`, `begin`, `setIntegrationTime`, `setGain`, `getRawData`, `getRawDataOneShot`, `getRGB`, `calculateColorTemperature_dn40`, `calculateLux`, `setInterrupt` (que controla el LED en la placa típica).
+**Adafruit `Adafruit_TCS34725`:** constructor `(tiempoIntegración, ganancia)`, `begin`, `setIntegrationTime`, `setGain`, `getRawData`, `getRawDataOneShot`, `getRGB`, `calculateColorTemperature_dn40`, `calculateLux`, `setInterrupt`. LED: si `robot.tcs34725.led` tiene un pin, el LED sigue a ese pin; si no, está encendido salvo después de `setInterrupt(true)`, como en la placa típica (el LED está conectado al pin INT).
 
 **Conversión de unidades (la hace el núcleo, no los modelos):** los modelos entregan magnitudes físicas (§9) y el núcleo las convierte a lo que devuelve cada librería según su configuración (rango, ganancia, resolución).
 
@@ -283,6 +285,8 @@ La configuración del robot describe el **robot físico de Dynamis**. Es la "ver
 - **Marco del mundo:** origen en la esquina inferior izquierda de la pista; `x` hacia la derecha, `y` hacia arriba, `z` hacia arriba; `yaw` antihorario desde `+x`. La pantalla invierte `y` al dibujar.
 - **Marco del robot:** `x` hacia adelante, `y` hacia la izquierda, `z` hacia arriba (convención REP-103).
 - **Inclinación** (regla de la mano derecha, REP-103): `pitch < 0` cuando la nariz sube y `roll > 0` cuando el lado izquierdo queda más alto.
+- **Tiempo:** el `t` que reciben los modelos está en segundos (tiempo virtual).
+- **Montaje de los sensores (`ConfigRobot`):** el sensor 0 del QTR es el de la izquierda del robot (+y); el sensor `i` está en `y = (3,5 − i) · separacion`. Los ángulos de montaje (`vl53l0x.yaw`, `vl53l0x.pitch`) van en grados, como en el JSON de la pista; los modelos los reciben en radianes. El rumbo del VL53L0X es el del robot más el de su montaje, sin acoplar el roll.
 
 ### Primitivas del mundo (las implementa este proyecto)
 
@@ -309,7 +313,7 @@ export function pasoDinamica(estado, motores, dt, mundo, robot, azar) → Estado
 //   motores: { izq: { duty, modo }, der: { duty, modo } }
 
 // qtr.js
-export function leerQTR({ t, estado, sensores /* 8 × {x,y,z} en el mundo */, emisoresEncendidos, mundo, ambiente, azar })
+export function leerQTR({ t, estado, sensores /* 8 × {x,y,z} en el mundo; el 0 a la izquierda */, emisoresEncendidos, mundo, ambiente, azar })
   → number[8]                         // ADC crudo 0–4095
 
 // vl53l0x.js

@@ -5,12 +5,28 @@ Los estudiantes escriben el código **Arduino real** del robot (ESP32, QTR-MX-8A
 TCS34725) y lo prueban en una pista virtual que sigue las bases de Rescue Line FIRVI 2026, antes de
 subirlo al robot físico.
 
-> **Estado: fase 2 de 7 — pista, mundo y juez.** Todavía no hay interfaz. El simulador ya compila
-> proyectos Arduino de varios archivos a WebAssembly y los ejecuta con tiempo virtual sobre una
-> pista FIRVI descrita en JSON (rectas, giros, cortes, cruces con marcas de color, rampas, baches,
-> F1, F2 y obstáculo), y un juez virtual le pone puntaje a cada prueba como lo dicen las bases.
+> **Estado: fase 3 de 7 — librerías de sensores.** Todavía no hay interfaz. El simulador ya
+> compila proyectos Arduino de varios archivos a WebAssembly y los ejecuta con tiempo virtual sobre
+> una pista FIRVI descrita en JSON:
+> - rectas, giros, cortes, cruces con marcas de color, rampas, baches, F1, F2 y obstáculo;
+> - un juez virtual le pone puntaje a cada prueba como lo dicen las bases;
+> - el código usa las librerías de siempre del robot, y cada lectura sale de los modelos de
+>   sensores del profesor.
+>
 > Las fases siguientes se describen en la
 > [spec](docs/superpowers/specs/2026-10-17-simulador-dynamis-design.md#19-fases-sugeridas-para-el-plan).
+
+## Librerías soportadas
+
+Son reimplementaciones compatibles con la API pública de cada librería (el detalle está en la
+[spec, §7](docs/superpowers/specs/2026-10-17-simulador-dynamis-design.md#7-núcleo-simulado-api-soportada-en-la-v1)):
+
+- Arduino / ESP32 core 3.x: pines, tiempo, `Serial`, `String` y `Wire`;
+- `QTRSensors` de Pololu (v4);
+- `VL53L0X` de Pololu;
+- `Adafruit_MPU6050` (con `Adafruit_Sensor`);
+- `MPU6050` de i2cdevlib (con `I2Cdev.h`);
+- `Adafruit_TCS34725`.
 
 ## Requisitos
 
@@ -32,13 +48,13 @@ subirlo al robot físico.
 src/
   proyecto/     modelo de proyecto de varios archivos (.ino, .h, .cpp, .c)
   compilador/   preprocesado como el Arduino IDE, llamada a Clang y diagnósticos
-  nucleo/       el Arduino core del ESP32 simulado, en C++ (Arduino.h, Serial, pines, tiempo)
-  simulacion/   puente wasm ↔ simulador, reloj virtual, pines, driver de motores y Simulador
+  nucleo/       el Arduino core del ESP32 simulado y las librerías de sensores, en C++
+  simulacion/   puente wasm ↔ simulador, reloj virtual, pines, driver de motores, sensores y Simulador
   robot/        configuración del robot (medidas, sensores, pines) y validaciones
   pista/        modelo de la pista FIRVI (JSON), catálogo de piezas, puntos de partida y avisos de las bases
   mundo/        el mundo que leen los modelos: color del suelo, relieve, colisiones y raycast 3D
   juez/         juez virtual: hitos, meta, tiempo, reinicios, saltos de F y eventos
-  modelos/      ← modelos matemáticos del profesor (dinámica; sensores en la fase 3)
+  modelos/      ← modelos matemáticos del profesor (dinámica y sensores)
 scripts/        construcción del núcleo
 tests/          unidad/, integracion/, medicion/
 docs/           spec, planes y maqueta de la interfaz
@@ -71,4 +87,5 @@ evaluar una cabecera precompilada. Falta medir en un Chromebook escolar dentro d
 - [Spec del diseño](docs/superpowers/specs/2026-10-17-simulador-dynamis-design.md)
 - [Plan de la fase 1](docs/superpowers/plans/2026-10-21-fase-1-base-de-ejecucion.md)
 - [Plan de la fase 2](docs/superpowers/plans/2026-10-22-fase-2-pista-mundo-juez.md)
+- [Plan de la fase 3](docs/superpowers/plans/2026-10-22-fase-3-librerias-de-sensores.md)
 - [Maqueta de la interfaz](docs/maqueta/simulador-dynamis.html) (ábrela en el navegador)
