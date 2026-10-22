@@ -120,7 +120,7 @@
         <article class="card">
           <header>
             <h2><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>Pista</h2>
-            <span class="chip">8 × 6 baldosas de 30 cm</span>
+            <span class="chip" id="chip-pista">8 × 6 baldosas de 30 cm</span>
             <span class="chip" id="chip-tiempo">t = 0,0 s</span>
           </header>
           <div class="lienzo-caja"><canvas class="lienzo" id="lienzo-sim" aria-label="Vista de la pista con el robot"></canvas></div>
@@ -223,6 +223,13 @@ mpu.getEvent(&amp;a, &amp;g, &amp;temp);</pre>
       <button class="btn-sec" id="btn-nueva"><svg class="ico" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M12 8v8M8 12h8"/></svg>Pista nueva</button>
       <input type="file" id="in-pista" accept=".json,application/json" hidden>
       <span class="chip-estado"><i></i>Los cambios se guardan solos en este navegador</span>
+    </div>
+    <div class="error-pista" id="error-pista" role="alert" hidden>
+      <div>
+        <h3>No pudimos abrir esa pista</h3>
+        <ul id="error-pista-lista"></ul>
+      </div>
+      <button class="btn-mini" id="btn-cerrar-error-pista">Cerrar</button>
     </div>
     <div class="grid-pista">
       <article class="card">

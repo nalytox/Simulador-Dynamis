@@ -11,6 +11,7 @@ import { crearAvisos } from './avisos';
 import { crearVistas } from './vistas';
 import { crearEditorPista } from './editor-pista';
 import { crearPanelPista } from './panel-pista';
+import { crearArchivoPista } from './archivo-pista';
 import { ClienteCompilador } from '../compilador/cliente';
 import { primerError } from '../compilador/amigables';
 import { ClienteSimulacion } from '../simulacion/cliente';
@@ -19,6 +20,7 @@ import { puntosDePartida } from '../pista/puntos';
 import { ROBOT_POR_DEFECTO } from '../robot/config';
 import { abrirAlmacen, conRetardo, type Almacen, type DatosGuardados, type Preferencias } from '../proyecto/almacen';
 import type { Proyecto } from '../proyecto/proyecto';
+import type { Pista } from '../pista/tipos';
 import { PROYECTO_INICIAL, PISTA_INICIAL } from '../ejemplos';
 
 const SIN_AISLAMIENTO = 'Para usar el simulador, recarga la página o usa Chrome, Edge o Firefox recientes.';
@@ -51,11 +53,14 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
   const $ = (id: string) => raiz.getElementById(id)!;
   const almacen = await abrirAlmacen();
   const proyectoGuardado = await leer(almacen, 'proyecto');
+  /** La pista de Programar: la de la prueba en curso. La del editor pasa a Programar cuando no corre una prueba. */
   let pista = (await leer(almacen, 'pista')) ?? PISTA_INICIAL;
+  let pistaEditada = pista;
   const preferencias: Preferencias = (await leer(almacen, 'preferencias')) ?? { velocidad: 100 };
   const guardar = <K extends keyof DatosGuardados>(clave: K) => conRetardo((valor: DatosGuardados[K]) => { void almacen?.guardar(clave, valor).catch(() => {}); });
   const guardarProyecto = guardar('proyecto');
   const guardarPreferencias = guardar('preferencias');
+  const guardarPista = guardar('pista');
 
   // Mensajes del robot.
   const bitacora = new Bitacora();
@@ -85,12 +90,25 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
   });
   const editorPista = crearEditorPista(raiz, {
     alCambiar: p => {
-      pista = p;
+      alEditarPista(p);
       panelPista.mostrar(p, editorPista.seleccion());
     },
     alElegir: s => panelPista.mostrar(editorPista.pista(), s),
   });
   editorPista.mostrar(pista);
+  crearArchivoPista(raiz, {
+    pista: () => pistaEditada,
+    alAbrir: p => {
+      editorPista.mostrar(p);
+      alEditarPista(p);
+    },
+  });
+  /** La pista editada se guarda y, si no corre una prueba, se ve al tiro en Programar. */
+  function alEditarPista(p: Pista) {
+    pistaEditada = p;
+    guardarPista(p);
+    if (!simulacion.corriendo) dejarListo();
+  }
 
   // Pista, tarjetas y juez.
   const lienzo = crearLienzo($('lienzo-sim') as HTMLCanvasElement, ROBOT_POR_DEFECTO);
@@ -102,6 +120,8 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
     alElegirDesde: id => lienzo.reiniciar(poseDe(id)),
   });
   juez.mostrarPista(pista);
+  const textoTamano = (p: Pista) => `${p.columnas} × ${p.filas} baldosas de 30 cm`;
+  $('chip-pista').textContent = textoTamano(pista);
 
   // Simulación.
   let vivos = 0;
@@ -167,7 +187,17 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
     acciones.mostrar(e, progreso);
   }
 
+  /** Pasa a Programar la pista del editor, si cambió. */
+  function usarPistaEditada() {
+    if (pista === pistaEditada) return;
+    pista = pistaEditada;
+    lienzo.mostrarPista(pista);
+    juez.mostrarPista(pista);
+    $('chip-pista').textContent = textoTamano(pista);
+  }
+
   function dejarListo() {
+    usarPistaEditada();
     ultima = null;
     eventosVistos = 0;
     tActual = 0;
