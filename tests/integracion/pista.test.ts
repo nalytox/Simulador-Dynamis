@@ -35,6 +35,17 @@ describe('el robot en la pista', { timeout: 120_000 }, () => {
     expect(juez.estado.eventos.filter(e => e.tipo === 'perdio-linea')).toEqual([]);
   });
 
+  it('chocar con el obstáculo genera "Tocaste el obstáculo" aunque la dinámica no lo deje entrar', async () => {
+    const pista = pistaDe({ columnas: 4, filas: 1, baldosas: [0, 1, 2, 3].map(c => ({ c, r: 0, tipo: 'recta' })),
+      objetos: [{ tipo: 'obstaculo', x: 600, y: 150, rot: 0 }] });
+    const mundo = crearMundo(pista);
+    const juez = new Juez(mundo, ROBOT_POR_DEFECTO);
+    const sim = await Simulador.crear({ modulo: await compilarParaPrueba({ 'p.ino': IR_Y_PARAR }, nucleo, 'p'), mundo,
+      poseInicial: poseInicial(pista), alPasoFisica: (t, e) => juez.actualizar(t, e) });
+    sim.ejecutar(1_500_000);
+    expect(juez.estado.eventos.filter(e => e.tipo === 'toco-obstaculo').map(e => e.mensaje)).toEqual(['Tocaste el obstáculo.']);
+  });
+
   it('el robot sube la rampa: z y pitch salen del mundo', async () => {
     const alto = 300 * Math.tan(20 * Math.PI / 180);
     const pista = pistaDe({ columnas: 3, filas: 1,

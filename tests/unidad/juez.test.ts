@@ -88,3 +88,26 @@ it('se acaba a los 300 s', () => {
   expect(j.estado.terminado).toBe(true);
   expect(j.estado.eventos.at(-1)).toMatchObject({ tipo: 'fin-tiempo', mensaje: 'Se acabaron los 5 minutos.' });
 });
+
+it('se puede saltar a una F que está después del último hito', () => {
+  const conF4 = pistaDe({ columnas: 4, filas: 1,
+    baldosas: [{ c: 0, r: 0, tipo: 'partida' }, { c: 1, r: 0, tipo: 'recta' }, { c: 2, r: 0, tipo: 'recta' }, { c: 3, r: 0, tipo: 'meta' }],
+    objetos: [{ tipo: 'hito', x: 450, y: 150, rot: 0, props: { numero: 1 } },
+      { tipo: 'desafio', x: 750, y: 150, rot: 0, props: { nombre: 'F4', hitoSiguiente: 2 } }] });
+  const j = new Juez(crearMundo(conF4), ROBOT_POR_DEFECTO);
+  pasar(j, 0, 0.1, () => 450); pasar(j, 0.1, 0.3, () => 600);
+  expect(j.reiniciar('desafio-F4')).toEqual({ ok: true, pose: { x: 750, y: 150, yaw: 0 } });
+  const practica = new Juez(crearMundo(conF4), ROBOT_POR_DEFECTO, { desde: 'hito-1' });
+  pasar(practica, 0, 0.2, () => 600);
+  expect(practica.reiniciar('desafio-F4').ok).toBe(true);
+});
+
+it('el juez no se confunde si el modelo modifica el mismo objeto de estado en cada paso', () => {
+  const j = new Juez(crearMundo(J), ROBOT_POR_DEFECTO);
+  const estado = { x: 990, y: 150, yaw: 0 };
+  for (let i = 0; i <= 1300; i++) {
+    estado.x = 990 + 0.1 * i; // 100 mm/s sobre la barra de la meta, sin detenerse
+    j.actualizar(i * 1000, estado);
+  }
+  expect(j.estado.meta).toBe(false);
+});

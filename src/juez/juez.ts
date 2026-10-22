@@ -1,4 +1,4 @@
-import { distanciaAPoligono, penetracion, puntoEnPoligono, rectanguloGirado } from '../mundo/geometria';
+import { distanciaAPoligono, distanciaEntrePoligonos, penetracion, puntoEnPoligono, rectanguloGirado } from '../mundo/geometria';
 import type { MundoPista } from '../mundo/pista';
 import type { Punto2 } from '../mundo/tipos';
 import { aLocal, aMundo } from '../pista/baldosas';
@@ -52,6 +52,8 @@ const LIMITE_TAMANO_MM = 200;
 const VELOCIDAD_DETENIDO_MM_S = 5;
 const DETENIDO_EN_META_S = 1;
 const EPSILON_US = 1e-3;
+/** La dinámica detiene al robot antes de entrar al obstáculo: a esta distancia ya cuenta como tocarlo. */
+const CONTACTO_MM = 2;
 /** Separación de la grilla de puntos de la huella con que se busca la línea bajo el robot. */
 const PASO_HUELLA_MM = 5;
 /** Lado por donde debe salir el robot de un cruce, si entró por la flecha (oeste). */
@@ -192,11 +194,13 @@ export class Juez {
     const delta = Math.max(0, tUs - this.tPrevioUs);
     this.tPrevioUs = tUs;
     this.relojUs += delta;
-    if (delta > 0 && this.pendiente >= 0) this.intentado = true;
+    // Sin hitos pendientes, el tramo que se intenta es el que lleva a la meta.
+    if (delta > 0) this.intentado = true;
     if (this.ultimaEvalUs !== null && this.relojUs - this.ultimaEvalUs < this.pasoUs - EPSILON_US) return;
     this.evaluar(pose);
     this.ultimaEvalUs = this.relojUs;
-    this.posePrevia = pose;
+    // Copia: un modelo puede modificar su mismo objeto de estado en cada paso.
+    this.posePrevia = { x: pose.x, y: pose.y, yaw: pose.yaw };
   }
 
   private evaluar(pose: Pose): void {
@@ -268,7 +272,7 @@ export class Juez {
   }
 
   private revisarObstaculo(huella: Punto2[]): void {
-    const toca = this.mundo.colisiona(huella)?.objeto.tipo === 'obstaculo';
+    const toca = this.obstaculos.some(o => distanciaEntrePoligonos(huella, o) <= CONTACTO_MM);
     if (toca && !this.tocando) this.anotar('toco-obstaculo', 'Tocaste el obstáculo.');
     this.tocando = toca;
   }

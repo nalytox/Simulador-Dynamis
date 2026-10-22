@@ -11,6 +11,7 @@ import type { Colision, ImpactoRayo, Mundo, ObjetoPista, Punto2, Punto3 } from '
 export type Objetos = Pick<Mundo, 'colisiona' | 'objetosCerca' | 'raycast'>;
 
 const PASO_SUELO = 2;
+const T = 300;
 const ITERACIONES_BISECCION = 12;
 const sinMenosCero = (x: number) => (x === 0 ? 0 : x);
 
@@ -19,6 +20,23 @@ interface Caja {
   huella: Punto2[];
   cx: number; cy: number; cos: number; sin: number;
   medioLargo: number; medioAncho: number; base: number; tope: number;
+}
+
+/** Tramo [entrada, salida] (s ≥ 0) en que la proyección del rayo está sobre el rectángulo [0, ancho] × [0, alto], o null. */
+function tramoSobreLaGrilla(o: Punto3, d: Punto3, ancho: number, alto: number): [number, number] | null {
+  let entrada = 0;
+  let salida = Infinity;
+  for (const [origen, dir, limite] of [[o.x, d.x, ancho], [o.y, d.y, alto]]) {
+    if (dir === 0) {
+      if (origen < 0 || origen > limite) return null;
+      continue;
+    }
+    const a = -origen / dir;
+    const b = (limite - origen) / dir;
+    entrada = Math.max(entrada, Math.min(a, b));
+    salida = Math.min(salida, Math.max(a, b));
+  }
+  return salida >= entrada ? [entrada, salida] : null;
 }
 
 /** Corte del rayo con una caja en su marco local (test de losas). Devuelve la distancia y la normal en el mundo. */
@@ -75,11 +93,30 @@ export function crearObjetos(p: Pista, relieve: Relieve): Objetos {
       .map(o => ({ objeto: o, huella: rectanguloGirado(o.x, o.y, gradosARadianes(o.rot), o.props.largo, 2 * o.props.radio) })),
   ];
 
+  // Lo más alto que puede estar el suelo: sobre eso, un rayo que no baja ya no choca con él.
+  const alturaMaxima = Math.max(0, ...p.baldosas.map(b => b.nivel + (b.tipo === 'rampa' ? Math.max(0, T * Math.tan(gradosARadianes(b.props.angulo))) : 0)))
+    + Math.max(0, ...p.objetos.map(o => (o.tipo === 'bache' ? o.props.radio : 0)));
+
+  /**
+   * Suelo: marcha de 2 mm sobre el relieve solo mientras el rayo está sobre la grilla y bajo la altura
+   * máxima; fuera de la grilla el suelo es plano a altura 0 y se resuelve sin marchar. Así termina con max = Infinity.
+   */
   const rayoContraSuelo = (o: Punto3, d: Punto3, max: number): { distancia: number; normal: Punto3 } | null => {
     const debajo = (s: number) => o.z + s * d.z <= relieve.altura(o.x + s * d.x, o.y + s * d.y);
     if (debajo(0)) return { distancia: 0, normal: normalSuelo(o.x, o.y) };
-    for (let s = 0; s < max; ) {
-      const siguiente = Math.min(s + PASO_SUELO, max);
+    const plano = (desde: number, hasta: number) => {
+      if (d.z >= 0) return null;
+      const s = o.z / -d.z;
+      return s >= desde && s <= Math.min(hasta, max) ? { distancia: s, normal: { x: 0, y: 0, z: 1 } } : null;
+    };
+    const tramo = tramoSobreLaGrilla(o, d, p.columnas * T, p.filas * T);
+    if (!tramo) return plano(0, Infinity);
+    const [entrada, salida] = tramo;
+    const antes = plano(0, entrada);
+    if (antes) return antes;
+    const hasta = Math.min(max, salida);
+    for (let s = entrada; s < hasta; ) {
+      const siguiente = Math.min(s + PASO_SUELO, hasta);
       if (debajo(siguiente)) {
         let fuera = s;
         let dentro = siguiente;
@@ -90,9 +127,10 @@ export function crearObjetos(p: Pista, relieve: Relieve): Objetos {
         }
         return { distancia: dentro, normal: normalSuelo(o.x + dentro * d.x, o.y + dentro * d.y) };
       }
+      if (d.z >= 0 && o.z + siguiente * d.z > alturaMaxima) return null;
       s = siguiente;
     }
-    return null;
+    return plano(salida, Infinity);
   };
 
   const normalSuelo = (x: number, y: number): Punto3 => {

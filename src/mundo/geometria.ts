@@ -63,6 +63,12 @@ export function distanciaAPoligono(p: Punto2, pol: Punto2[]): number {
   return minimo;
 }
 
+/** Distancia entre dos polígonos convexos: 0 si se tocan o se traslapan. */
+export function distanciaEntrePoligonos(a: Punto2[], b: Punto2[]): number {
+  if (penetracion(a, b) !== null) return 0;
+  return Math.min(...a.map(p => distanciaAPoligono(p, b)), ...b.map(p => distanciaAPoligono(p, a)));
+}
+
 /** Esquinas (antihorario) de un rectángulo centrado en (cx, cy), con su largo a lo largo de `angulo` (rad). */
 export function rectanguloGirado(cx: number, cy: number, angulo: number, largo: number, ancho: number): Punto2[] {
   const c = Math.cos(angulo);

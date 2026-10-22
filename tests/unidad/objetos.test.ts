@@ -56,3 +56,12 @@ it('crearMundo reúne superficie, relieve y objetos', () => {
   expect(m.muestrear(150, 150)).toEqual({ r: 0, g: 0, b: 0 }); expect(m.esLinea(150, 150)).toBe(true);
   expect(m.baldosaEn(150, 150)?.tipo).toBe('recta'); expect(m.baldosaEn(400, 150)).toBeNull(); expect(m.altura(150, 150)).toBe(0);
 });
+
+it('raycast con max infinito termina: sin impacto da null y fuera de la pista ve el suelo', () => {
+  const m = crearMundo(pistaDe({ columnas: 4, filas: 1, baldosas: [{ c: 1, r: 0, tipo: 'rampa' }] }));
+  expect(m.raycast({ x: 1000, y: 150, z: 35 }, { x: 1, y: 0, z: 0 }, Infinity)).toBeNull();
+  expect(m.raycast({ x: 150, y: 150, z: 35 }, { x: 0, y: 0, z: 1 }, Infinity)).toBeNull();
+  expect(m.raycast({ x: -500, y: 150, z: 100 }, { x: 0, y: 0, z: -1 }, Infinity))
+    .toMatchObject({ distancia: expect.closeTo(100, 1), normal: { x: 0, y: 0, z: 1 } });
+  expect(m.raycast({ x: 0, y: 150, z: 35 }, { x: 1, y: 0, z: 0 }, Infinity)!.distancia).toBeCloseTo(300 + 35 / Math.tan(20 * Math.PI / 180), 0);
+});
