@@ -466,7 +466,7 @@ El simulador evalúa cada ejecución como lo haría un juez, para que los estudi
 | **Empezar desde** | La prueba puede partir desde la partida, un hito o una F. Lo que queda antes de ese punto no suma, y no hay puntaje de tiempo. |
 | **Proyección sobre la línea** | Evento "perdió la línea" si no hay línea bajo la huella durante más de 0,5 s (configurable). Excepción: alrededor del obstáculo, hasta que el robot vuelve a la línea. |
 | **Obstáculo** | Evento "tocó el obstáculo" si la huella del robot lo toca. |
-| **Decisiones** (marcas y F1) | Evento "camino equivocado" si el robot sale del cruce o recorre el cuadrado F1 por un lado distinto del esperado. Se evalúa cuando el robot entra por la flecha de la baldosa. |
+| **Decisiones** (marcas y F1) | Evento "camino equivocado" si el robot sale del cruce o recorre el cuadrado F1 por un lado distinto del esperado. Las marcas se leen desde el lado por donde entra el robot (las que quedan antes del cruce), también al llegar a una unión en T por su rama. El cuadrado F1 se evalúa entrando por la flecha. |
 | **Tamaño del robot:** ≤ 20 × 20 × 20 cm | −20 puntos por cada centímetro de más, según `robot/config.ts`. Se muestra en la tarjeta del robot. |
 
 - En la UI, la tarjeta **"Juez virtual"** muestra los hitos 1–8 y la meta (se encienden en amarillo `#FFD166` al alcanzarlos), el puntaje, el tiempo restante y los reinicios usados.
@@ -721,6 +721,7 @@ El catálogo FIRVI (§10.3) se implementa en la fase 2 (dibujo, relieve y superf
 - **Cada F tiene su punto** en la pista, que se elige libremente (objeto `desafio`, §10.3).
 - **Punto de partida elegible:** una prueba puede empezar desde la partida, un hito o una F; lo anterior no suma y no hay puntaje de tiempo.
 - **Saltar una F** que no se logra completar es un reinicio de las bases: −10, máximo 3 y sin puntaje de tiempo (§10.6).
+- **Unión en T por la rama:** el juez también la evalúa. Las marcas de cruces y uniones se leen desde el lado por donde entra el robot (§10.6).
 
 **Pendiente (no bloquea la implementación):**
 1. Medidas, pines y montaje reales del robot. El usuario los medirá más adelante; mientras tanto se usan los valores provisionales de §8, editables desde la app.

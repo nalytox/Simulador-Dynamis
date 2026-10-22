@@ -58,8 +58,11 @@ it('cruce: marca a la derecha obliga a salir por el sur', () => {
   const mal = new Juez(crearMundo(conCruce({ ad: true })), ROBOT_POR_DEFECTO);
   recorrer(mal, [[0, 200, 450], [0.5, 450, 450], [1, 450, 700]]);
   expect(tipos(mal, 'camino-equivocado')).toMatchObject([{ mensaje: 'Tomaste el camino equivocado en el cruce.', baldosa: { c: 1, r: 1 } }]);
+  // Entrando por el sur, `ad` queda antes y a la izquierda: hay que salir por el oeste.
   const otroLado = new Juez(crearMundo(conCruce({ ad: true })), ROBOT_POR_DEFECTO);
-  recorrer(otroLado, [[0, 450, 200], [0.5, 450, 450], [1, 450, 700]]); expect(tipos(otroLado, 'camino-equivocado')).toEqual([]);
+  recorrer(otroLado, [[0, 450, 200], [0.5, 450, 450], [1, 450, 700]]); expect(tipos(otroLado, 'camino-equivocado')).toHaveLength(1);
+  const otroLadoBien = new Juez(crearMundo(conCruce({ ad: true })), ROBOT_POR_DEFECTO);
+  recorrer(otroLadoBien, [[0, 450, 200], [0.5, 450, 450], [1, 200, 450]]); expect(tipos(otroLadoBien, 'camino-equivocado')).toEqual([]);
 });
 
 it('cuadrado F1: el lado correcto no genera evento y el otro sí', () => {
@@ -70,4 +73,13 @@ it('cuadrado F1: el lado correcto no genera evento y el otro sí', () => {
   const abajo = new Juez(crearMundo(f1), ROBOT_POR_DEFECTO);
   recorrer(abajo, [[0, 200, 150], [0.3, 340, 150], [0.6, 400, 45], [0.9, 560, 150], [1.2, 650, 150]]);
   expect(tipos(abajo, 'camino-equivocado').map(e => e.mensaje)).toEqual(['Tomaste el camino equivocado en el cuadrado F1.']);
+});
+
+it('unión en T por la rama: la marca decide hacia dónde girar', () => {
+  const conT = pistaDe({ columnas: 3, filas: 3, baldosas: [{ c: 1, r: 1, tipo: 'unionT', props: { rama: 'izq', marcas: { ai: false, ad: false, di: true, dd: false } } }] });
+  const bien = new Juez(crearMundo(conT), ROBOT_POR_DEFECTO);
+  recorrer(bien, [[0, 450, 700], [0.5, 450, 450], [1, 700, 450]]); expect(tipos(bien, 'camino-equivocado')).toEqual([]);
+  const mal = new Juez(crearMundo(conT), ROBOT_POR_DEFECTO);
+  recorrer(mal, [[0, 450, 700], [0.5, 450, 450], [1, 200, 450]]);
+  expect(tipos(mal, 'camino-equivocado').map(e => e.mensaje)).toEqual(['Tomaste el camino equivocado en la unión en T.']);
 });

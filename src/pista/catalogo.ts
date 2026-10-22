@@ -116,16 +116,42 @@ export function bocasDe(b: Baldosa): Lado[] {
   }
 }
 
+/** Convención RoboCup: marcas a ambos lados = vuelta, solo un lado = girar hacia él, ninguna = recto. */
+function accionPorMarcas(izquierda: boolean, derecha: boolean): Accion {
+  if (izquierda && derecha) return 'vuelta';
+  if (izquierda) return 'izq';
+  if (derecha) return 'der';
+  return 'recto';
+}
+
 /**
- * Qué debe hacer el robot al entrar por la flecha de un cruce o unión en T (convención RoboCup):
- * solo cuentan las marcas de antes del cruce. null si la pieza no pide una decisión.
+ * Qué debe hacer el robot al entrar por la flecha de un cruce o unión en T: solo cuentan las
+ * marcas de antes del cruce. null si la pieza no pide una decisión.
  */
 export function accionEsperada(b: Baldosa): Accion | null {
   if (b.tipo !== 'cruce' && b.tipo !== 'unionT') return null;
-  if (b.props.accion) return b.props.accion;
-  const { ai, ad } = b.props.marcas;
-  if (ai && ad) return 'vuelta';
-  if (ai) return 'izq';
-  if (ad) return 'der';
-  return 'recto';
+  return b.props.accion ?? accionPorMarcas(b.props.marcas.ai, b.props.marcas.ad);
+}
+
+/** Según por dónde entra el robot: qué marcas quedan antes del cruce y por dónde sale con cada acción. */
+const DESDE: Record<Lado, { izquierda: keyof Marcas; derecha: keyof Marcas; salida: Record<Accion, Lado> }> = {
+  oeste: { izquierda: 'ai', derecha: 'ad', salida: { recto: 'este', izq: 'norte', der: 'sur', vuelta: 'oeste' } },
+  sur: { izquierda: 'ad', derecha: 'dd', salida: { recto: 'norte', izq: 'oeste', der: 'este', vuelta: 'sur' } },
+  este: { izquierda: 'dd', derecha: 'di', salida: { recto: 'oeste', izq: 'sur', der: 'norte', vuelta: 'este' } },
+  norte: { izquierda: 'di', derecha: 'ai', salida: { recto: 'sur', izq: 'este', der: 'oeste', vuelta: 'norte' } },
+};
+
+/**
+ * Por dónde debe salir el robot de un cruce o unión en T si entró por `entrada` (borde local). Las
+ * marcas se leen desde ese lado; entrando por la flecha se respeta la acción elegida a mano.
+ * null si la pieza no pide una decisión o si la salida esperada no tiene línea.
+ */
+export function salidaEsperada(b: Baldosa, entrada: Lado): Lado | null {
+  if (b.tipo !== 'cruce' && b.tipo !== 'unionT') return null;
+  const desde = DESDE[entrada];
+  const accion = entrada === 'oeste'
+    ? accionEsperada(b)!
+    : accionPorMarcas(b.props.marcas[desde.izquierda], b.props.marcas[desde.derecha]);
+  const salida = desde.salida[accion];
+  return bocasDe(b).includes(salida) ? salida : null;
 }

@@ -2,10 +2,10 @@ import { distanciaAPoligono, distanciaEntrePoligonos, penetracion, puntoEnPoligo
 import type { MundoPista } from '../mundo/pista';
 import type { Punto2 } from '../mundo/tipos';
 import { aLocal, aMundo } from '../pista/baldosas';
-import { accionEsperada, BARRA_META } from '../pista/catalogo';
+import { BARRA_META, salidaEsperada } from '../pista/catalogo';
 import { puntosDePartida, type PuntoDePartida } from '../pista/puntos';
 import { gradosARadianes } from '../pista/serializacion';
-import { TAMANO_BALDOSA, type Accion, type Baldosa, type Hito, type Lado, type Obstaculo } from '../pista/tipos';
+import { TAMANO_BALDOSA, type Baldosa, type Hito, type Lado, type Obstaculo } from '../pista/tipos';
 import { huellaRobot, type ConfigRobot } from '../robot/config';
 import type { Pose } from '../simulacion/simulador';
 
@@ -56,8 +56,6 @@ const EPSILON_US = 1e-3;
 const CONTACTO_MM = 2;
 /** Separación de la grilla de puntos de la huella con que se busca la línea bajo el robot. */
 const PASO_HUELLA_MM = 5;
-/** Lado por donde debe salir el robot de un cruce, si entró por la flecha (oeste). */
-const SALIDA_ESPERADA: Record<Accion, Lado> = { recto: 'este', izq: 'norte', der: 'sur', vuelta: 'oeste' };
 const NOMBRE_DECISION = { cruce: 'el cruce', unionT: 'la unión en T' } as const;
 
 /** Por qué borde de la baldosa queda un punto que está fuera de ella (null si está dentro). */
@@ -277,14 +275,14 @@ export class Juez {
     this.tocando = toca;
   }
 
-  /** Cruces, uniones en T y cuadrado F1: solo se evalúan si el robot entró por la flecha (oeste). */
+  /** Cruces y uniones en T: según las marcas vistas desde la entrada. Cuadrado F1: solo entrando por la flecha. */
   private revisarDecisiones(pose: Pose): void {
     const baldosa = this.mundo.baldosaEn(pose.x, pose.y);
     if (baldosa !== this.baldosaActual) {
       const anterior = this.baldosaActual;
-      if (anterior && (anterior.tipo === 'cruce' || anterior.tipo === 'unionT') && this.entrada === 'oeste') {
-        const salida = ladoFuera(anterior, pose.x, pose.y);
-        if (salida !== SALIDA_ESPERADA[accionEsperada(anterior)!]) {
+      if (anterior && (anterior.tipo === 'cruce' || anterior.tipo === 'unionT') && this.entrada) {
+        const esperada = salidaEsperada(anterior, this.entrada);
+        if (esperada !== null && ladoFuera(anterior, pose.x, pose.y) !== esperada) {
           this.anotar('camino-equivocado', `Tomaste el camino equivocado en ${NOMBRE_DECISION[anterior.tipo]}.`, { c: anterior.c, r: anterior.r });
         }
       }
