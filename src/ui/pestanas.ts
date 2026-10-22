@@ -24,6 +24,8 @@ export function crearPestanas(contenedor: HTMLElement, eventos: EventosPestanas)
   });
   return {
     pintar(rutas, activa) {
+      // Al redibujar se pierde el botón con foco: si el foco estaba aquí, vuelve a la pestaña activa.
+      const teniaFoco = contenedor.contains(doc.activeElement);
       contenedor.replaceChildren();
       for (const ruta of rutas) {
         const tab = doc.createElement('button');
@@ -52,6 +54,7 @@ export function crearPestanas(contenedor: HTMLElement, eventos: EventosPestanas)
       nueva.setAttribute('aria-label', 'Crear un archivo');
       nueva.addEventListener('click', () => eventos.alCrear());
       contenedor.append(nueva);
+      if (teniaFoco) contenedor.querySelector<HTMLButtonElement>('[role="tab"][aria-selected="true"]')?.focus();
     },
   };
 }

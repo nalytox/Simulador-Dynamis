@@ -9,7 +9,7 @@ export type ResultadoImportacion =
   | { ok: false; mensaje: string };
 
 const MAXIMO_BYTES = 1024 * 1024;
-const CARPETAS_IGNORADAS = new Set(['node_modules', 'build']);
+const CARPETAS_IGNORADAS = new Set(['node_modules', 'build', '__MACOSX']);
 const SIN_INO = 'No encontramos un archivo .ino en la carpeta. Un proyecto de Arduino necesita uno.';
 
 const ignorarCarpeta = (segmento: string) => segmento.startsWith('.') || CARPETAS_IGNORADAS.has(segmento);
@@ -22,13 +22,16 @@ const aTexto = (bytes: Uint8Array) => decodificador.decode(bytes).replace(/^﻿/
  */
 export function proyectoDesdeArchivos(archivos: ArchivoLeido[]): ResultadoImportacion {
   const limpias = archivos.map(a => ({ ...a, ruta: a.ruta.replace(/\\/g, '/').replace(/^\/+/, '') }));
-  const primeras = new Set(limpias.map(a => (a.ruta.includes('/') ? a.ruta.split('/')[0] : '')));
+  // La carpeta raíz se busca sin lo que se ignora de todos modos (por ejemplo, el __MACOSX/ de un .zip de Mac).
+  const primeras = new Set(limpias
+    .filter(a => !(a.ruta.includes('/') && ignorarCarpeta(a.ruta.split('/')[0])))
+    .map(a => (a.ruta.includes('/') ? a.ruta.split('/')[0] : '')));
   const carpeta = primeras.size === 1 && !primeras.has('') ? [...primeras][0] : null;
 
   const codigo: Record<string, string> = {};
   const ignorados: string[] = [];
   for (const a of limpias) {
-    const ruta = carpeta ? a.ruta.slice(carpeta.length + 1) : a.ruta;
+    const ruta = carpeta && a.ruta.startsWith(`${carpeta}/`) ? a.ruta.slice(carpeta.length + 1) : a.ruta;
     const segmentos = ruta.split('/');
     if (segmentos.slice(0, -1).some(ignorarCarpeta) || tipoDeArchivo(ruta) === 'otro' || a.bytes.length > MAXIMO_BYTES) {
       ignorados.push(ruta);

@@ -5,6 +5,8 @@ import { puedeBorrar, validarNombreArchivo } from './archivos';
 import { archivoPrincipal, ordenarArchivos, type Proyecto } from '../proyecto/proyecto';
 import { leerArrastre, leerCarpeta, leerInput, leerZip, proyectoDesdeArchivos, type ArchivoLeido } from '../proyecto/importar';
 import { guardarEnCarpeta, nombreZip, proyectoAZip, type CarpetaEscribible } from '../proyecto/exportar';
+import { firmaProyecto } from '../compilador/cliente';
+import { PROYECTO_INICIAL } from '../ejemplos';
 
 export interface OpcionesPrograma {
   proyecto: Proyecto;
@@ -52,7 +54,13 @@ export function crearPanelPrograma(raiz: Document, o: OpcionesPrograma): PanelPr
     activo = ruta;
     o.alCambiarActivo(ruta);
     pintar();
-    editor.mostrar(proyecto.archivos[ruta] ?? '');
+    editor.mostrar(ruta, proyecto.archivos[ruta] ?? '');
+  };
+  /** Otro proyecto: sin historial de deshacer del anterior. */
+  const abrirProyecto = (p: Proyecto) => {
+    editor.olvidar();
+    cambiar(p);
+    elegir(archivoPrincipal(p) ?? ordenarArchivos(p)[0]);
   };
   const pestanas = crearPestanas($('pestanas'), {
     alElegir: elegir,
@@ -66,6 +74,7 @@ export function crearPanelPrograma(raiz: Document, o: OpcionesPrograma): PanelPr
       const nombre = await pedirNombre(raiz, { titulo: `Renombrar ${ruta}`, inicial: ruta, boton: 'Renombrar', validar: n => validarNombreArchivo(proyecto, n, ruta) });
       if (!nombre || nombre === ruta) return;
       const archivos = Object.fromEntries(Object.entries(proyecto.archivos).map(([r, t]) => [r === ruta ? nombre : r, t]));
+      editor.olvidar(ruta);
       cambiar({ ...proyecto, archivos });
       elegir(activo === ruta ? nombre : activo);
     },
@@ -74,6 +83,7 @@ export function crearPanelPrograma(raiz: Document, o: OpcionesPrograma): PanelPr
       if (problema) return o.mostrarError(`No se puede borrar ${ruta}`, problema);
       if (!(await confirmar(raiz, { titulo: `¿Borrar ${ruta}?`, boton: 'Borrar' }))) return;
       const { [ruta]: _, ...archivos } = proyecto.archivos;
+      editor.olvidar(ruta);
       cambiar({ ...proyecto, archivos });
       elegir(activo === ruta ? (archivoPrincipal(proyecto) ?? ordenarArchivos(proyecto)[0]) : activo);
     },
@@ -83,16 +93,34 @@ export function crearPanelPrograma(raiz: Document, o: OpcionesPrograma): PanelPr
     $('chip-carpeta').textContent = `Carpeta: ${proyecto.nombre}`;
   }
 
-  /** Reemplaza el proyecto por uno importado; si no sirve, avisa y deja el que estaba. */
-  const importar = (archivos: ArchivoLeido[]) => {
+  /** El proyecto del navegador puede ser la única copia: antes de reemplazarlo se pregunta, salvo si es el ejemplo intacto. */
+  const puedeReemplazar = async () =>
+    firmaProyecto(proyecto) === firmaProyecto(PROYECTO_INICIAL)
+    || confirmar(raiz, { titulo: '¿Reemplazar tu proyecto? Si no lo descargaste, se va a perder.', boton: 'Reemplazar' });
+
+  /** Reemplaza el proyecto por uno importado; si no sirve o no se confirma, deja el que estaba. Dice si lo abrió. */
+  const importar = async (archivos: ArchivoLeido[]): Promise<boolean> => {
     const r = proyectoDesdeArchivos(archivos);
-    if (!r.ok) return o.mostrarError('No pudimos abrir esa carpeta', r.mensaje);
-    cambiar(r.proyecto);
-    elegir(archivoPrincipal(r.proyecto) ?? ordenarArchivos(r.proyecto)[0]);
+    if (!r.ok) {
+      o.mostrarError('No pudimos abrir esa carpeta', r.mensaje);
+      return false;
+    }
+    if (!(await puedeReemplazar())) return false;
+    abrirProyecto(r.proyecto);
     if (r.ignorados.length > 0) {
       const muestra = r.ignorados.slice(0, MOSTRAR_IGNORADOS).join(', ');
       o.mensajeSistema(`No abrí ${r.ignorados.length} archivo(s) que no son de código: ${muestra}${r.ignorados.length > MOSTRAR_IGNORADOS ? '…' : ''}.`);
     }
+    return true;
+  };
+  /** "Guardar en la carpeta" solo sirve para la carpeta que se abrió con el selector, y mientras siga abierta. */
+  const recordarCarpeta = (dir: FileSystemDirectoryHandle | null) => {
+    carpeta = dir;
+    $('btn-guardar-carpeta').hidden = dir === null;
+  };
+  /** Importa algo que no es la carpeta del selector. */
+  const importarOtro = async (archivos: ArchivoLeido[]) => {
+    if (await importar(archivos)) recordarCarpeta(null);
   };
 
   const inCarpeta = $('in-carpeta') as HTMLInputElement;
@@ -102,15 +130,13 @@ export function crearPanelPrograma(raiz: Document, o: OpcionesPrograma): PanelPr
     if (!ventana.showDirectoryPicker) return inCarpeta.click();
     try {
       const dir = await ventana.showDirectoryPicker();
-      importar(await leerCarpeta(dir as unknown as Parameters<typeof leerCarpeta>[0]));
-      carpeta = dir;
-      $('btn-guardar-carpeta').hidden = false;
+      if (await importar(await leerCarpeta(dir as unknown as Parameters<typeof leerCarpeta>[0]))) recordarCarpeta(dir);
     } catch (e) {
       if ((e as Error).name !== 'AbortError') o.mostrarError('No pudimos abrir esa carpeta', (e as Error).message);
     }
   });
   inCarpeta.addEventListener('change', async () => {
-    if (inCarpeta.files?.length) importar(await leerInput(inCarpeta.files));
+    if (inCarpeta.files?.length) await importarOtro(await leerInput(inCarpeta.files));
     inCarpeta.value = '';
   });
   $('btn-zip').addEventListener('click', () => inZip.click());
@@ -119,7 +145,7 @@ export function crearPanelPrograma(raiz: Document, o: OpcionesPrograma): PanelPr
     inZip.value = '';
     if (!f) return;
     try {
-      importar(leerZip(new Uint8Array(await f.arrayBuffer())));
+      await importarOtro(leerZip(new Uint8Array(await f.arrayBuffer())));
     } catch {
       o.mostrarError('No pudimos abrir ese .zip', 'El archivo no parece ser un .zip válido.');
     }
@@ -130,7 +156,7 @@ export function crearPanelPrograma(raiz: Document, o: OpcionesPrograma): PanelPr
     if (!e.dataTransfer?.types.includes('Files')) return;
     e.preventDefault();
     e.stopPropagation();
-    importar(await leerArrastre(e.dataTransfer.items));
+    await importarOtro(await leerArrastre(e.dataTransfer.items));
   }, true);
 
   $('btn-descargar').addEventListener('click', () => {
@@ -154,12 +180,12 @@ export function crearPanelPrograma(raiz: Document, o: OpcionesPrograma): PanelPr
   });
 
   pintar();
-  editor.mostrar(proyecto.archivos[activo] ?? '');
+  editor.mostrar(activo, proyecto.archivos[activo] ?? '');
   return {
     proyecto: () => proyecto,
     abrir(p) {
-      cambiar(p);
-      elegir(archivoPrincipal(p) ?? ordenarArchivos(p)[0]);
+      abrirProyecto(p);
+      recordarCarpeta(null);
     },
     limpiarError: () => editor.marcarLinea(null),
     marcarError(archivo, linea) {

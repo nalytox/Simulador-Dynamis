@@ -20,6 +20,9 @@ test('editar, recargar y el cambio sigue ahí', async ({ page }) => {
   await page.keyboard.type('\n// hola desde la prueba');
   await page.waitForTimeout(1000);
   await page.reload();
+  // CodeMirror dibuja solo las líneas visibles: se baja al final, donde quedó el cambio.
+  await codigo(page).click();
+  await page.keyboard.press('Control+End');
   await expect(codigo(page)).toContainText('// hola desde la prueba');
 });
 

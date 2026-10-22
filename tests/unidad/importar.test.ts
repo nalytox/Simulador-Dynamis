@@ -28,6 +28,14 @@ describe('importar proyectos', () => {
     expect([...r.ignorados].sort()).toEqual(['.git/config', 'foto.png', 'grande.h', 'node_modules/x/x.h']);
   });
 
+  it('un .zip hecho en Mac (con __MACOSX/) se abre igual', () => {
+    const r = proyectoDesdeArchivos([archivo('seguidor/seguidor.ino'), archivo('__MACOSX/seguidor/._seguidor.ino', new Uint8Array([0, 5, 22, 7]))]);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.proyecto).toEqual({ nombre: 'seguidor', archivos: { 'seguidor.ino': 'void setup() {}' } });
+    expect(r.ignorados).toEqual(['__MACOSX/seguidor/._seguidor.ino']);
+  });
+
   it('sin .ino en la raíz da el mensaje y no un proyecto', () => {
     expect(proyectoDesdeArchivos([archivo('p/pines.h'), archivo('p/src/otro.ino')]))
       .toEqual({ ok: false, mensaje: 'No encontramos un archivo .ino en la carpeta. Un proyecto de Arduino necesita uno.' });

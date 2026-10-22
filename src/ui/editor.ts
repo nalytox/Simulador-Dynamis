@@ -1,10 +1,13 @@
 import { basicSetup } from 'codemirror';
 import { cpp } from '@codemirror/lang-cpp';
 import { EditorView, Decoration, type DecorationSet } from '@codemirror/view';
-import { StateEffect, StateField } from '@codemirror/state';
+import { EditorState, StateEffect, StateField } from '@codemirror/state';
 
 export interface EditorCodigo {
-  mostrar(texto: string): void;
+  /** Muestra un archivo. Cada archivo guarda su propio historial: deshacer nunca cruza de una pestaña a otra. */
+  mostrar(ruta: string, texto: string): void;
+  /** Olvida el historial de un archivo (renombrado o borrado), o de todos (otro proyecto). */
+  olvidar(ruta?: string): void;
   texto(): string;
   /** Marca una línea (1 en adelante) con error; null la quita. Editar también la quita. */
   marcarLinea(linea: number | null): void;
@@ -45,20 +48,31 @@ const tema = EditorView.theme({
 });
 
 export function crearEditor(contenedor: HTMLElement, alCambiar: (texto: string) => void): EditorCodigo {
-  let cargando = false;
-  const vista = new EditorView({
-    parent: contenedor,
-    extensions: [
-      basicSetup, cpp(), tema, campoError,
-      EditorView.contentAttributes.of({ 'aria-label': 'Código del programa' }),
-      EditorView.updateListener.of(u => { if (u.docChanged && !cargando) alCambiar(u.state.doc.toString()); }),
-    ],
-  });
+  const extensiones = [
+    basicSetup, cpp(), tema, campoError,
+    EditorView.contentAttributes.of({ 'aria-label': 'Código del programa' }),
+    // setState (cambiar de pestaña) no pasa por aquí: solo lo que escribe el estudiante.
+    EditorView.updateListener.of(u => { if (u.docChanged) alCambiar(u.state.doc.toString()); }),
+  ];
+  const nuevo = (texto: string) => EditorState.create({ doc: texto, extensions: extensiones });
+  const vista = new EditorView({ parent: contenedor, state: nuevo('') });
+  const estados = new Map<string, EditorState>();
+  let rutaActual: string | null = null;
   return {
-    mostrar(texto) {
-      cargando = true;
-      vista.dispatch({ changes: { from: 0, to: vista.state.doc.length, insert: texto }, effects: fijarError.of(null) });
-      cargando = false;
+    mostrar(ruta, texto) {
+      if (rutaActual !== null) estados.set(rutaActual, vista.state);
+      const guardado = estados.get(ruta);
+      vista.setState(guardado && guardado.doc.toString() === texto ? guardado : nuevo(texto));
+      rutaActual = ruta;
+    },
+    olvidar(ruta) {
+      if (ruta === undefined) {
+        estados.clear();
+        rutaActual = null;
+      } else {
+        estados.delete(ruta);
+        if (ruta === rutaActual) rutaActual = null;
+      }
     },
     texto: () => vista.state.doc.toString(),
     marcarLinea: linea => vista.dispatch({ effects: fijarError.of(linea) }),

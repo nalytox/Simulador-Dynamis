@@ -71,19 +71,20 @@ export async function ejecutarPrueba(o: OpcionesPrueba): Promise<FinEjecucion> {
   let reinicio = 0;
   let mensaje: string | null = null;
   let ultima = -Infinity;
+  /** Avisos ya publicados: el simulador los lista por origen, no en el orden en que aparecen. */
+  const publicados = new Set<string>();
   for (;;) {
     let poseReinicio: Pose | null = null;
-    let avisosVistos = 0;
     let sim!: Simulador;
     const publicar = () => {
       const { x, y, z, yaw, pitch, roll } = sim.estado;
-      const avisos = sim.avisos;
+      const avisos = sim.avisos.filter(a => !publicados.has(a));
+      for (const a of avisos) publicados.add(a);
       o.publicar({
         reinicio, t: sim.tiempoUs / 1e6, estado: { x, y, z, yaw, pitch, roll }, motores: sim.motores,
         sensores: sim.medirParaVista(azarVista), juez: juez.estado, serial: sim.tomarSerial(),
-        avisos: avisos.slice(avisosVistos), mensaje,
+        avisos, mensaje,
       });
-      avisosVistos = avisos.length;
       mensaje = null;
       ultima = ahora();
     };

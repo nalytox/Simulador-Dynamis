@@ -28,12 +28,34 @@ export function crearConsola(caja: HTMLElement, pildora: HTMLElement, botonLimpi
     div.append(t, texto);
     return div;
   };
+  // Lo que ya está en pantalla: así cada cuadro solo agrega las líneas nuevas y quita las viejas.
+  let cerradasDibujadas = 0;
+  let limpiezasVistas = -1;
+  let filaAbierta: HTMLElement | null = null;
   const dibujar = () => {
     pendiente = false;
     if (bitacora.version === dibujada) return;
     dibujada = bitacora.version;
     const pegada = alFinal();
-    caja.replaceChildren(...bitacora.visibles().map(fila));
+    const lineas = bitacora.lineas;
+    const abierta = bitacora.abierta;
+    const nuevas = bitacora.totalCerradas - cerradasDibujadas;
+    filaAbierta?.remove();
+    filaAbierta = null;
+    if (bitacora.limpiezas !== limpiezasVistas || nuevas > lineas.length) {
+      caja.replaceChildren(...lineas.map(fila));
+    } else if (nuevas > 0) {
+      caja.append(...lineas.slice(lineas.length - nuevas).map(fila));
+    }
+    // Las visibles cuentan la línea abierta: sin ella caben todas las cerradas guardadas.
+    const cerradasVisibles = bitacora.visibles().length - (abierta ? 1 : 0);
+    while (caja.childElementCount > cerradasVisibles) caja.firstElementChild!.remove();
+    if (abierta) {
+      filaAbierta = fila(abierta);
+      caja.append(filaAbierta);
+    }
+    limpiezasVistas = bitacora.limpiezas;
+    cerradasDibujadas = bitacora.totalCerradas;
     if (pegada || caja.childElementCount === 0) bajar();
     else pildora.hidden = false;
   };

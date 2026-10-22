@@ -50,6 +50,18 @@ describe('bitácora de mensajes', () => {
     expect(visibles[0].texto).toBe('101');
   });
 
+  it('una línea sin fin se corta cada 1000 caracteres', () => {
+    const b = new Bitacora();
+    b.agregarSerial(0, 'x'.repeat(2500));
+    expect(b.lineas.map(l => l.texto.length)).toEqual([1000, 1000]);
+    expect(b.abierta?.texto).toHaveLength(500);
+    const c = new Bitacora();
+    c.agregarSerial(0, 'a'.repeat(999));
+    c.agregarSerial(1, 'bc');
+    expect(c.lineas.map(l => l.texto)).toEqual(['a'.repeat(999) + 'b']);
+    expect(c.abierta?.texto).toBe('c');
+  });
+
   it('formatoTiempo usa una decimal con coma', () => {
     expect(formatoTiempo(12.345)).toBe('12,3 s');
     expect(formatoTiempo(0)).toBe('0,0 s');

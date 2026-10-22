@@ -78,6 +78,15 @@ describe('la prueba completa', { timeout: 120_000 }, () => {
     expect(fin).toMatchObject({ motivo: 'terminado', juez: { meta: true } });
   });
 
+  it('cada aviso del simulador se publica una sola vez, sin importar el orden en que aparecen', async () => {
+    // El aviso del Serial aparece antes que el de pinMode, pero el simulador lista primero los de los pines.
+    const { instantaneas } = await correr(IR_Y_PARAR.replace('Serial.begin(115200); Serial.println("setup");',
+      'Serial.println("sin begin"); delay(100); digitalWrite(16, HIGH); delay(100);'));
+    const avisos = instantaneas.flatMap(i => i.avisos);
+    expect(avisos.filter(a => a.includes('Serial.begin'))).toHaveLength(1);
+    expect(avisos.filter(a => a.includes('pinMode(16, OUTPUT)'))).toHaveLength(1);
+  });
+
   it('un error del programa termina la prueba con su error', async () => {
     const { fin } = await correr('void setup() { Serial.begin(115200); }\nvoid loop() { volatile int z = 0; Serial.println(millis() / z); }');
     expect(fin.motivo).toBe('error');
