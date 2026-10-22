@@ -2,6 +2,9 @@ import { crearPanelPrograma } from './programa';
 import { Bitacora } from './bitacora';
 import { crearConsola } from './consola';
 import { registrarPrueba } from './pruebas';
+import { crearLienzo } from './lienzo';
+import { puntosDePartida } from '../pista/puntos';
+import { ROBOT_POR_DEFECTO } from '../robot/config';
 import { abrirAlmacen, conRetardo, type Almacen, type DatosGuardados, type Preferencias } from '../proyecto/almacen';
 import { PROYECTO_INICIAL, PISTA_INICIAL } from '../ejemplos';
 
@@ -64,6 +67,9 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
     mensajeSistema,
     mostrarError,
   });
-  void pista;
+  const lienzo = crearLienzo($('lienzo-sim') as HTMLCanvasElement, ROBOT_POR_DEFECTO);
+  lienzo.mostrarPista(pista);
+  lienzo.reiniciar(puntosDePartida(pista)[0].pose);
+  registrarPrueba('lienzo', { aPantalla: lienzo.aPantalla, vista: lienzo.vista });
   if (!almacen) mensajeSistema(SIN_AUTOGUARDADO);
 }

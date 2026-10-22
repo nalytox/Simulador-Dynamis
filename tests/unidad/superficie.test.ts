@@ -1,5 +1,8 @@
 import { it, expect } from 'vitest';
-import { crearSuperficie } from '../../src/mundo/superficie';
+import { crearSuperficie, colorVisible, hexARgb } from '../../src/mundo/superficie';
+import { figurasDe, type Figura } from '../../src/pista/catalogo';
+import { aMundo } from '../../src/pista/baldosas';
+import type { Baldosa } from '../../src/pista/tipos';
 import { pistaDe } from '../ayuda/pistas';
 
 const NEGRO = { r: 0, g: 0, b: 0 };
@@ -88,4 +91,26 @@ it('cuadrado F1 de 21 cm con entrada y salida centradas', () => {
   const s = sup('cuadradoF1');
   expect([[20, 150], [150, 255], [150, 45], [45, 100], [280, 150]].every(([u, v]) => s.esLinea(u, v))).toBe(true);
   expect(s.esLinea(150, 150)).toBe(false);
+});
+
+it('colorVisible da lo mismo que color(x, y) en una baldosa normal, en una invertida y en una marca', () => {
+  const p = pistaDe({ columnas: 3, filas: 1, baldosas: [
+    { c: 0, r: 0, tipo: 'recta' },
+    { c: 1, r: 0, tipo: 'recta', props: { invertida: true } },
+    { c: 2, r: 0, tipo: 'cruce', rot: 90, props: { marcas: { ai: true, ad: false, di: false, dd: false }, colorMarca: '#FF0000' } },
+  ] });
+  const s = crearSuperficie(p);
+  const [normal, invertida, cruce] = p.baldosas;
+  const centro = (b: Baldosa, f: Figura) => f.forma === 'rect' ? aMundo(b, (f.u0 + f.u1) / 2, (f.v0 + f.v1) / 2) : aMundo(b, f.cu, f.cv);
+  for (const b of [normal, invertida]) {
+    const linea = figurasDe(b)[0];
+    const enLinea = centro(b, linea);
+    expect(hexARgb(colorVisible(b, linea))).toEqual(s.color(enLinea.x, enLinea.y));
+    const fondo = aMundo(b, 150, 30);
+    expect(hexARgb(colorVisible(b, null))).toEqual(s.color(fondo.x, fondo.y));
+  }
+  const marca = figurasDe(cruce).find(f => f.rol === 'marca')!;
+  const enMarca = centro(cruce, marca);
+  expect(hexARgb(colorVisible(cruce, marca))).toEqual({ r: 255, g: 0, b: 0 });
+  expect(s.color(enMarca.x, enMarca.y)).toEqual({ r: 255, g: 0, b: 0 });
 });

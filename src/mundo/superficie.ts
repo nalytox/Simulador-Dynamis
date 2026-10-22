@@ -25,6 +25,17 @@ function contiene(f: Figura, u: number, v: number): boolean {
 }
 
 /**
+ * Color (hex) con que se ve una figura de una baldosa, o su fondo si figura es null. La misma regla
+ * sirve para lo que siente el robot y para lo que dibuja la pantalla.
+ */
+export function colorVisible(b: Baldosa, f: Figura | null): string {
+  const invertida = b.props.invertida;
+  if (f === null) return invertida ? COLOR_CINTA : COLOR_FONDO;
+  if (f.rol === 'linea') return invertida ? COLOR_FONDO : COLOR_CINTA;
+  return f.forma === 'rect' && f.color ? f.color : COLOR_CINTA;
+}
+
+/**
  * Superficie de la pista: evalúa las figuras del catálogo, las mismas que se dibujan en pantalla.
  * Fuera de la grilla y en celdas sin baldosa hay fondo blanco.
  */
@@ -32,7 +43,6 @@ export function crearSuperficie(p: Pista): Superficie {
   const indice = crearIndice(p);
   const figuras = new Map<Baldosa, Figura[]>(p.baldosas.map(b => [b, figurasDe(b, p.colorMarcas)]));
   const fondo = hexARgb(COLOR_FONDO);
-  const cinta = hexARgb(COLOR_CINTA);
   const colores = new Map<string, Rgb>();
   const colorDe = (hex: string) => {
     let rgb = colores.get(hex);
@@ -55,11 +65,7 @@ export function crearSuperficie(p: Pista): Superficie {
     color(x, y) {
       const q = consultar(x, y);
       if (!q) return { ...fondo };
-      const invertida = q.baldosa.props.invertida;
-      const { figura } = q;
-      if (figura === null) return { ...(invertida ? cinta : fondo) };
-      if (figura.rol === 'linea') return { ...(invertida ? fondo : cinta) };
-      return { ...colorDe(figura.forma === 'rect' && figura.color ? figura.color : COLOR_CINTA) };
+      return { ...colorDe(colorVisible(q.baldosa, q.figura)) };
     },
     esLinea(x, y) {
       return consultar(x, y)?.figura?.rol === 'linea';
