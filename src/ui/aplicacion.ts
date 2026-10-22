@@ -1,4 +1,7 @@
 import { crearPanelPrograma } from './programa';
+import { Bitacora } from './bitacora';
+import { crearConsola } from './consola';
+import { registrarPrueba } from './pruebas';
 import { abrirAlmacen, conRetardo, type Almacen, type DatosGuardados, type Preferencias } from '../proyecto/almacen';
 import { PROYECTO_INICIAL, PISTA_INICIAL } from '../ejemplos';
 
@@ -33,12 +36,19 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
   const guardarProyecto = guardar('proyecto');
   const guardarPreferencias = guardar('preferencias');
 
+  const bitacora = new Bitacora();
+  const consola = crearConsola($('consola'), $('pildora-nuevos'), $('btn-limpiar'), bitacora);
+  /** Tiempo simulado de la prueba en curso, para las líneas del sistema. */
+  let tActual = 0;
   const mensajeSistema = (texto: string) => {
-    const linea = raiz.createElement('div');
-    linea.className = 'sistema';
-    linea.textContent = texto;
-    $('consola').append(linea);
+    bitacora.agregarSistema(tActual, texto);
+    consola.refrescar();
   };
+  registrarPrueba('mensajes', (t: number, texto: string) => {
+    tActual = t;
+    bitacora.agregarSerial(t, texto);
+    consola.refrescar();
+  });
   const mostrarError = (titulo: string, mensaje: string) => {
     $('burbuja-titulo').textContent = titulo;
     $('burbuja-mensaje').textContent = mensaje;
