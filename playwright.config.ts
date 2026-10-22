@@ -8,7 +8,9 @@ const CHROMIUM_LOCAL = '/opt/pw-browsers/chromium';
 export default defineConfig({
   testDir: 'tests/e2e',
   timeout: 180_000,
+  expect: { timeout: 10_000 },
   use: {
+    actionTimeout: 15_000,
     baseURL: `http://localhost:${PUERTO}`,
     launchOptions: { executablePath: existsSync(CHROMIUM_LOCAL) ? CHROMIUM_LOCAL : undefined },
   },

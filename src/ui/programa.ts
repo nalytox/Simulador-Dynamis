@@ -1,0 +1,163 @@
+import { crearEditor } from './editor';
+import { crearPestanas } from './pestanas';
+import { confirmar, pedirNombre } from './dialogo';
+import { puedeBorrar, validarNombreArchivo } from './archivos';
+import { archivoPrincipal, ordenarArchivos, type Proyecto } from '../proyecto/proyecto';
+import { leerArrastre, leerCarpeta, leerInput, leerZip, proyectoDesdeArchivos, type ArchivoLeido } from '../proyecto/importar';
+import { guardarEnCarpeta, nombreZip, proyectoAZip, type CarpetaEscribible } from '../proyecto/exportar';
+
+export interface OpcionesPrograma {
+  proyecto: Proyecto;
+  activo?: string;
+  alCambiarProyecto(p: Proyecto): void;
+  alCambiarActivo(ruta: string): void;
+  mensajeSistema(texto: string): void;
+  mostrarError(titulo: string, mensaje: string): void;
+}
+
+export interface PanelPrograma {
+  proyecto(): Proyecto;
+  /** Abre la pestaña y marca la línea con error (null la desmarca). */
+  marcarError(archivo: string, linea: number | null): void;
+}
+
+/** Contenido inicial de un archivo nuevo, según su tipo. */
+function plantilla(ruta: string): string {
+  if (/\.(h|hpp)$/i.test(ruta)) return '#pragma once\n';
+  if (/\.(c|cpp)$/i.test(ruta)) return '#include <Arduino.h>\n';
+  return '';
+}
+
+const MOSTRAR_IGNORADOS = 5;
+
+type Ventana = Window & { showDirectoryPicker?(): Promise<FileSystemDirectoryHandle> };
+
+/** El panel "Mi programa": editor, pestañas, abrir (carpeta, .zip, arrastre) y guardar. */
+export function crearPanelPrograma(raiz: Document, o: OpcionesPrograma): PanelPrograma {
+  let proyecto = o.proyecto;
+  let activo = o.activo && o.activo in proyecto.archivos ? o.activo : ordenarArchivos(proyecto)[0];
+  let carpeta: FileSystemDirectoryHandle | null = null;
+  const $ = (id: string) => raiz.getElementById(id)!;
+
+  const cambiar = (nuevo: Proyecto) => {
+    proyecto = nuevo;
+    o.alCambiarProyecto(proyecto);
+  };
+  const editor = crearEditor($('editor'), texto => cambiar({ ...proyecto, archivos: { ...proyecto.archivos, [activo]: texto } }));
+
+  const elegir = (ruta: string) => {
+    activo = ruta;
+    o.alCambiarActivo(ruta);
+    pintar();
+    editor.mostrar(proyecto.archivos[ruta] ?? '');
+  };
+  const pestanas = crearPestanas($('pestanas'), {
+    alElegir: elegir,
+    async alCrear() {
+      const nombre = await pedirNombre(raiz, { titulo: 'Archivo nuevo', inicial: '', boton: 'Crear', validar: n => validarNombreArchivo(proyecto, n) });
+      if (!nombre) return;
+      cambiar({ ...proyecto, archivos: { ...proyecto.archivos, [nombre]: plantilla(nombre) } });
+      elegir(nombre);
+    },
+    async alRenombrar(ruta) {
+      const nombre = await pedirNombre(raiz, { titulo: `Renombrar ${ruta}`, inicial: ruta, boton: 'Renombrar', validar: n => validarNombreArchivo(proyecto, n, ruta) });
+      if (!nombre || nombre === ruta) return;
+      const archivos = Object.fromEntries(Object.entries(proyecto.archivos).map(([r, t]) => [r === ruta ? nombre : r, t]));
+      cambiar({ ...proyecto, archivos });
+      elegir(activo === ruta ? nombre : activo);
+    },
+    async alBorrar(ruta) {
+      const problema = puedeBorrar(proyecto, ruta);
+      if (problema) return o.mostrarError(`No se puede borrar ${ruta}`, problema);
+      if (!(await confirmar(raiz, { titulo: `¿Borrar ${ruta}?`, boton: 'Borrar' }))) return;
+      const { [ruta]: _, ...archivos } = proyecto.archivos;
+      cambiar({ ...proyecto, archivos });
+      elegir(activo === ruta ? (archivoPrincipal(proyecto) ?? ordenarArchivos(proyecto)[0]) : activo);
+    },
+  });
+  function pintar() {
+    pestanas.pintar(ordenarArchivos(proyecto), activo);
+    $('chip-carpeta').textContent = `Carpeta: ${proyecto.nombre}`;
+  }
+
+  /** Reemplaza el proyecto por uno importado; si no sirve, avisa y deja el que estaba. */
+  const importar = (archivos: ArchivoLeido[]) => {
+    const r = proyectoDesdeArchivos(archivos);
+    if (!r.ok) return o.mostrarError('No pudimos abrir esa carpeta', r.mensaje);
+    cambiar(r.proyecto);
+    elegir(archivoPrincipal(r.proyecto) ?? ordenarArchivos(r.proyecto)[0]);
+    if (r.ignorados.length > 0) {
+      const muestra = r.ignorados.slice(0, MOSTRAR_IGNORADOS).join(', ');
+      o.mensajeSistema(`No abrí ${r.ignorados.length} archivo(s) que no son de código: ${muestra}${r.ignorados.length > MOSTRAR_IGNORADOS ? '…' : ''}.`);
+    }
+  };
+
+  const inCarpeta = $('in-carpeta') as HTMLInputElement;
+  const inZip = $('in-zip') as HTMLInputElement;
+  $('btn-carpeta').addEventListener('click', async () => {
+    const ventana = raiz.defaultView as Ventana;
+    if (!ventana.showDirectoryPicker) return inCarpeta.click();
+    try {
+      const dir = await ventana.showDirectoryPicker();
+      importar(await leerCarpeta(dir as unknown as Parameters<typeof leerCarpeta>[0]));
+      carpeta = dir;
+      $('btn-guardar-carpeta').hidden = false;
+    } catch (e) {
+      if ((e as Error).name !== 'AbortError') o.mostrarError('No pudimos abrir esa carpeta', (e as Error).message);
+    }
+  });
+  inCarpeta.addEventListener('change', async () => {
+    if (inCarpeta.files?.length) importar(await leerInput(inCarpeta.files));
+    inCarpeta.value = '';
+  });
+  $('btn-zip').addEventListener('click', () => inZip.click());
+  inZip.addEventListener('change', async () => {
+    const f = inZip.files?.[0];
+    inZip.value = '';
+    if (!f) return;
+    try {
+      importar(leerZip(new Uint8Array(await f.arrayBuffer())));
+    } catch {
+      o.mostrarError('No pudimos abrir ese .zip', 'El archivo no parece ser un .zip válido.');
+    }
+  });
+  const zonaEditor = $('editor');
+  zonaEditor.addEventListener('dragover', e => { if (e.dataTransfer?.types.includes('Files')) e.preventDefault(); }, true);
+  zonaEditor.addEventListener('drop', async e => {
+    if (!e.dataTransfer?.types.includes('Files')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    importar(await leerArrastre(e.dataTransfer.items));
+  }, true);
+
+  $('btn-descargar').addEventListener('click', () => {
+    const url = URL.createObjectURL(new Blob([proyectoAZip(proyecto) as Uint8Array<ArrayBuffer>], { type: 'application/zip' }));
+    const a = raiz.createElement('a');
+    a.href = url;
+    a.download = nombreZip(proyecto);
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+  $('btn-guardar-carpeta').addEventListener('click', async () => {
+    if (!carpeta) return;
+    try {
+      const permiso = await (carpeta as unknown as { requestPermission(o: { mode: string }): Promise<string> }).requestPermission({ mode: 'readwrite' });
+      if (permiso !== 'granted') return;
+      await guardarEnCarpeta(carpeta as unknown as CarpetaEscribible, proyecto);
+      o.mensajeSistema('Guardé tu proyecto en la carpeta.');
+    } catch (e) {
+      o.mostrarError('No pudimos guardar en la carpeta', (e as Error).message);
+    }
+  });
+
+  pintar();
+  editor.mostrar(proyecto.archivos[activo] ?? '');
+  return {
+    proyecto: () => proyecto,
+    marcarError(archivo, linea) {
+      if (archivo in proyecto.archivos && archivo !== activo) elegir(archivo);
+      editor.marcarLinea(linea);
+      if (linea !== null) editor.irALinea(linea);
+    },
+  };
+}
