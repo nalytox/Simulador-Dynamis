@@ -734,3 +734,77 @@ Expected: todas las pruebas pasan y el typecheck no tiene errores.
 git add tests/integracion/seguidor.test.ts src/modelos/README.md README.md docs/superpowers/specs/2026-10-17-simulador-dynamis-design.md
 git commit -m "Seguidor de línea de punta a punta con QTRSensors; documentación de la fase 3"
 ```
+
+---
+
+### Task 9: Juez: las marcas se evalúan desde el lado por donde entra el robot (pedido del usuario)
+
+El usuario pidió (2026-10-22) que el juez también evalúe una unión en T a la que el robot llega por su rama. La regla física de las marcas lo cubre para cualquier entrada: el robot mira las marcas que quedan **antes** del cruce desde su lado de entrada. Las marcas son las mismas de siempre (`ai`, `ad`, `di` y `dd` en el marco de la flecha). El cuadrado F1 se sigue evaluando solo entrando por la flecha.
+
+**Files:**
+- Modify: `src/pista/catalogo.ts`, `src/juez/juez.ts`, `docs/superpowers/specs/2026-10-17-simulador-dynamis-design.md` (§10.6 fila Decisiones, §20)
+- Test: `tests/unidad/catalogo.test.ts`, `tests/unidad/juez-eventos.test.ts`
+
+**Interfaces:**
+- Produces: `salidaEsperada(b: Baldosa, entrada: Lado): Lado | null` en `catalogo.ts`.
+  - **Entrada por el oeste (la flecha):** usa `accionEsperada(b)`, que respeta `props.accion`.
+  - **Otras entradas:** deduce la acción de las marcas de antes del cruce: izquierda y derecha dan `vuelta`, solo izquierda da `izq`, solo derecha da `der`, ninguna da `recto`.
+  - **Sin salida esperada:** devuelve `null` si la pieza no es `cruce` ni `unionT`, o si la salida esperada no tiene boca (por ejemplo, seguir derecho al llegar por la rama de una T).
+- El juez compara la salida con `salidaEsperada(baldosa, entrada)` para cualquier entrada, y no juzga cuando da `null`.
+
+**Marcas que quedan antes del cruce y salida esperada**, según la entrada:
+
+| Entrada | Antes, a la izquierda | Antes, a la derecha | recto | izq | der | vuelta |
+|---|---|---|---|---|---|---|
+| oeste | `ai` | `ad` | este | norte | sur | oeste |
+| sur | `ad` | `dd` | norte | oeste | este | sur |
+| este | `dd` | `di` | oeste | sur | norte | este |
+| norte | `di` | `ai` | sur | este | oeste | norte |
+
+- [ ] **Step 1: Escribir las pruebas que fallan.**
+
+```ts
+// catalogo.test.ts
+const cruce = (marcas: Partial<Marcas>) => pistaDe({ columnas: 1, filas: 1, baldosas: [{ c: 0, r: 0, tipo: 'cruce', props: { marcas: { ai: false, ad: false, di: false, dd: false, ...marcas } } }] }).baldosas[0];
+it.each([
+  ['oeste', { ad: true }, 'sur'], ['sur', { ad: true }, 'oeste'], ['este', { dd: true }, 'sur'],
+  ['norte', { di: true }, 'este'], ['sur', {}, 'norte'], ['norte', { ai: true, di: true }, 'norte'],
+] as const)('cruce entrando por %s con %o: sale por %s', (entrada, marcas, salida) => expect(salidaEsperada(cruce(marcas), entrada)).toBe(salida));
+it('T por la rama: la marca de antes indica el giro; sin marca no hay salida posible', () => {
+  const t = (marcas: Partial<Marcas>) => pistaDe({ columnas: 1, filas: 1, baldosas: [{ c: 0, r: 0, tipo: 'unionT', props: { rama: 'izq', marcas: { ai: false, ad: false, di: false, dd: false, ...marcas } } }] }).baldosas[0];
+  expect(salidaEsperada(t({ di: true }), 'norte')).toBe('este');
+  expect(salidaEsperada(t({ ai: true }), 'norte')).toBe('oeste');
+  expect(salidaEsperada(t({}), 'norte')).toBeNull();
+});
+// juez-eventos.test.ts — reemplaza la parte `otroLado` de la prueba del cruce:
+//   entrando por el sur con la marca `ad` (antes, a la izquierda) hay que salir por el oeste; salir por el norte es un error.
+it('unión en T por la rama: la marca decide hacia dónde girar', () => {
+  const conT = pistaDe({ columnas: 3, filas: 3, baldosas: [{ c: 1, r: 1, tipo: 'unionT', props: { rama: 'izq', marcas: { ai: false, ad: false, di: true, dd: false } } }] });
+  const bien = new Juez(crearMundo(conT), ROBOT_POR_DEFECTO);
+  recorrer(bien, [[0, 450, 700], [0.5, 450, 450], [1, 700, 450]]); expect(tipos(bien, 'camino-equivocado')).toEqual([]);
+  const mal = new Juez(crearMundo(conT), ROBOT_POR_DEFECTO);
+  recorrer(mal, [[0, 450, 700], [0.5, 450, 450], [1, 200, 450]]);
+  expect(tipos(mal, 'camino-equivocado').map(e => e.mensaje)).toEqual(['Tomaste el camino equivocado en la unión en T.']);
+});
+```
+
+- [ ] **Step 2: Correrlas y verlas fallar**
+
+Run: `npx vitest run tests/unidad/catalogo.test.ts tests/unidad/juez-eventos.test.ts`
+Expected: FAIL (`salidaEsperada` no existe, y el juez no evalúa otras entradas).
+
+- [ ] **Step 3: Implementar `salidaEsperada` y usarla en el juez.**
+  - En la spec, §10.6, fila Decisiones, cambiar "Se evalúa cuando el robot entra por la flecha de la baldosa" por: "Las marcas se leen desde el lado por donde entra el robot (las que quedan antes del cruce). El cuadrado F1 se evalúa entrando por la flecha."
+  - En §20, agregar la confirmación del usuario.
+
+- [ ] **Step 4: Correr las pruebas del juez y del catálogo**
+
+Run: `npx vitest run tests/unidad/catalogo.test.ts tests/unidad/juez-eventos.test.ts tests/unidad/juez.test.ts && npm run typecheck`
+Expected: PASS.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add src/pista/catalogo.ts src/juez/juez.ts tests/unidad docs/superpowers/specs/2026-10-17-simulador-dynamis-design.md
+git commit -m "Juez: las marcas de cruces y uniones en T se evalúan desde cualquier entrada"
+```
