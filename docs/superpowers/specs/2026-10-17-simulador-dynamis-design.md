@@ -84,7 +84,11 @@ Tres hilos, más un grupo de workers para entrenar:
 
 ### Pausa y ritmo de tiempo real
 
-El worker de simulación lee un bloque de control en `SharedArrayBuffer` (estado: corriendo/pausa; velocidad ×0,25…×4 o "máxima"). En cada punto de sincronización compara el tiempo virtual con el real × velocidad y, si va adelantado, espera con `Atomics.wait`. La pausa también es un `Atomics.wait`, hasta que cambia el estado.
+El worker de simulación lee un bloque de control en `SharedArrayBuffer` (estado: corriendo/pausa; velocidad ×0,25…×4 o "máxima"). En cada paso de física compara el tiempo virtual con el real × velocidad y, si va adelantado, espera con `Atomics.wait`. Así el robot se ve avanzar también dentro de un `delay` largo. La pausa también es un `Atomics.wait`, hasta que cambia el estado.
+
+- **Pedidos al worker:** el worker no atiende mensajes mientras corre el programa. Por eso la pausa, la velocidad y los pedidos del juez ("Volver al último hito", "Saltar al siguiente hito") van por el mismo bloque de control. Detener y Volver al inicio terminan el worker.
+- **Latido:** el worker sube un contador en cada paso y en cada tramo de espera (máximo 50 ms por tramo). Si pasan 2 s reales sin latido mientras corre, la UI muestra el aviso de ciclo sin fin. Un `delay(5000)` a ×1 no lo dispara.
+- **Reinicio del juez:** reinicia el programa desde `setup()` en el punto elegido, como cuando se reinicia el robot real. El juez sigue con su puntaje y su reloj.
 
 `SharedArrayBuffer` requiere aislamiento de origen cruzado (`COOP: same-origin`, `COEP: require-corp`). Vite lo configura en desarrollo. En GitHub Pages se usa `coi-serviceworker`. Si el navegador no queda aislado, la UI muestra un mensaje claro en vez de fallar en silencio.
 
@@ -169,6 +173,7 @@ Cada diagnóstico de Clang se traduce con una tabla de patrones a un mensaje en 
 | `no matching function for call to 'X'` | `X` no recibe esos datos. Revisa cuántos y de qué tipo son. |
 | `redefinition of 'X'` | `X` está definido dos veces. |
 | `cannot initialize … with …` / conversión | Estás guardando un dato de un tipo en una variable de otro tipo. |
+| `undefined symbol: X` (por ejemplo, `Loop` en vez de `loop`) | Falta la función `X`. ¿Está bien escrito su nombre? |
 | (sin patrón) | Mensaje genérico + el texto técnico. |
 
 Errores durante la ejecución:
@@ -571,6 +576,10 @@ Referencia visual: la maqueta en `docs/maqueta/`. Todo en **español (Chile)**, 
   - **Pista:** el robot con cara; el rayo del VL53L0X; los puntos del QTR que se encienden en amarillo al ver línea; el camino recorrido; las rampas con degradado y flechas, y el robot que se agranda un poco al subir. Tiene zoom y desplazamiento.
   - **Juez virtual:** hitos 1–8 y meta (amarillos al alcanzarlos), puntaje, tiempo restante (de 5:00 hacia abajo), reinicios (0 de 3), y los botones "Volver al último hito (−10)" y "Saltar al siguiente hito". Cada hito alcanzado muestra un aviso de logro.
   - **Lo que siente el robot:** tarjetas del QTR (8 barras, valores y posición de la línea), la distancia, el color (muestra y nombre), giro e inclinación (brújula y "Inclinación 18°, subiendo") y los motores (−100 a 100 %). Cada tarjeta tiene **"¿Cómo lo uso?"** con el código de ejemplo.
+    - Las tarjetas muestran lo que miden los sensores en ese instante, aunque el programa no los lea. Los modelos se evalúan con un azar propio de la vista, así lo que se muestra no cambia lo que lee el programa y la prueba sigue siendo reproducible.
+    - **Partir desde:** la tarjeta del juez tiene un selector con la partida, los hitos y las F de la pista.
+    - **Eventos del juez:** un hito o la meta muestran el aviso de logro; los demás ("perdió la línea", "camino equivocado", "tocó el obstáculo", reinicios) un aviso breve. La tarjeta muestra los últimos 3.
+  - **Velocidad:** 5 pasos (×0,25, ×0,5, ×1, ×2 y ×4; ×1 por defecto). La velocidad "máxima" del bloque de control queda para Ajustar parámetros.
 - **Construir pista:** paleta agrupada de piezas, la pista con la flecha de entrada en la baldosa elegida, el panel "Baldosa elegida" con propiedades según el tipo (§10.5), y los botones Guardar, Abrir y Pista nueva.
 - **Ajustar parámetros:** ventana superpuesta (§11.4).
 - **Ejemplos:**
@@ -586,6 +595,7 @@ Referencia visual: la maqueta en `docs/maqueta/`. Todo en **español (Chile)**, 
 - Al volver a la vista *Programar*, se muestra lo último.
 - Se agregan los mensajes **una vez por cuadro** (`requestAnimationFrame`) y se guardan los últimos **500**, para que un `Serial.println` dentro de `loop()` no congele la página.
 - Cada línea muestra el tiempo simulado. El botón **Limpiar** borra todo.
+- Los avisos del simulador (cableado, `Serial` sin `begin`, librerías mal usadas) aparecen como líneas del sistema.
 
 ### Accesibilidad y formato
 
@@ -599,7 +609,7 @@ Referencia visual: la maqueta en `docs/maqueta/`. Todo en **español (Chile)**, 
 | Qué | Dónde |
 |---|---|
 | Proyecto (todos los archivos), pista, preferencias (vista, velocidad) | IndexedDB, autoguardado |
-| Proyecto | `.zip` (descarga y carga), carpeta (abrir y, en Chromium, guardar de vuelta) |
+| Proyecto | `.zip` (descarga y carga), carpeta (abrir y, en Chromium, guardar de vuelta). El `.zip` lleva una carpeta con el nombre del `.ino` principal, porque el Arduino IDE lo exige. |
 | Pista | `.json` (descarga y carga) |
 | Compilador y la app completa | Cache Storage del service worker (se descarga una sola vez; luego funciona sin internet) |
 
@@ -710,7 +720,7 @@ El alcance es grande. Se sugiere implementarlo en fases que dejen algo usable al
    - "Probar mi robot", pausa y velocidad;
    - lienzo, tarjetas de sensores y mensajes con scroll;
    - errores amigables.
-5. **UI Construir pista:** editor de baldosas y objetos, propiedades, guardar y abrir.
+5. **UI Construir pista y "Mi robot":** editor de baldosas y objetos, propiedades, guardar y abrir; la ventana "Mi robot" (§8), que también edita el mundo (se movió desde la fase 4).
 6. **Ajustar parámetros:** `@ajustar`, pool de workers, registro, contratos del agente y la recompensa, ventana y "Usar estos valores".
 7. **Ejemplos, ayuda, despliegue** en GitHub Pages y pruebas extremo a extremo.
 

@@ -62,8 +62,22 @@ export class ClienteCompilador {
     if (!this.trabajador) {
       this.trabajador = this.crearTrabajador();
       this.trabajador.onmessage = e => this.recibir(e.data as MensajeDelCompilador);
+      // Si el worker no alcanza a cargar (por ejemplo, sin red), nunca respondería: se avisa a todos.
+      this.trabajador.onerror = e => this.falloDelTrabajador(e.message || 'El compilador no pudo cargarse.');
     }
     this.trabajador.postMessage(m);
+  }
+
+  private falloDelTrabajador(mensaje: string): void {
+    this.trabajador?.terminate();
+    this.trabajador = null;
+    const prep = this.preparacion;
+    this.preparacion = null;
+    prep?.rechazar(new Error(mensaje));
+    for (const responder of this.pendientes.values()) {
+      responder({ ok: false, diagnosticos: [{ archivo: null, linea: null, columna: null, severidad: 'error', mensaje: `No se pudo compilar: ${mensaje}`, detalle: '' }] });
+    }
+    this.pendientes.clear();
   }
 
   private recibir(m: MensajeDelCompilador): void {
@@ -77,6 +91,9 @@ export class ClienteCompilador {
         prep?.resolver();
         break;
       case 'error-preparar':
+        // Un worker nuevo para reintentar: así no queda nada a medias de la descarga que falló.
+        this.trabajador?.terminate();
+        this.trabajador = null;
         this.preparacion = null;
         prep?.rechazar(new Error(m.mensaje));
         break;

@@ -8,6 +8,7 @@ const WASM_MINIMO = new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]);
 /** Un Worker de mentira: responde como el trabajador del compilador, en el próximo turno. */
 class TrabajadorFalso {
   onmessage: ((e: { data: unknown }) => void) | null = null;
+  onerror: ((e: { message: string }) => void) | null = null;
   compilaciones = 0;
   preparaciones = 0;
   constructor(private fallosAlPreparar = 0) {}
@@ -33,6 +34,19 @@ const proyecto = (codigo: string): Proyecto => ({ nombre: 'p', archivos: { 'p.in
 const cliente = (falso: TrabajadorFalso) => new ClienteCompilador(() => falso as unknown as Worker);
 
 describe('cliente del compilador', () => {
+  it('si el trabajador no alcanza a cargar, preparar rechaza y el reintento usa un trabajador nuevo', async () => {
+    const creados: TrabajadorFalso[] = [];
+    const c = new ClienteCompilador(() => {
+      const t = new TrabajadorFalso();
+      creados.push(t);
+      if (creados.length === 1) t.postMessage = () => { queueMicrotask(() => t.onerror?.({ message: 'no cargó' })); };
+      return t as unknown as Worker;
+    });
+    await expect(c.preparar(() => {})).rejects.toThrow('no cargó');
+    await c.preparar(() => {});
+    expect(creados).toHaveLength(2);
+  });
+
   it('firmaProyecto no depende del orden de los archivos y cambia con el contenido', () => {
     const a = firmaProyecto({ nombre: 'p', archivos: { 'p.ino': 'a', 'b.h': 'b' } });
     expect(firmaProyecto({ nombre: 'p', archivos: { 'b.h': 'b', 'p.ino': 'a' } })).toBe(a);

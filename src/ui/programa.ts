@@ -17,6 +17,9 @@ export interface OpcionesPrograma {
 
 export interface PanelPrograma {
   proyecto(): Proyecto;
+  /** Reemplaza el proyecto abierto (por ejemplo, uno importado). */
+  abrir(p: Proyecto): void;
+  limpiarError(): void;
   /** Abre la pestaña y marca la línea con error (null la desmarca). */
   marcarError(archivo: string, linea: number | null): void;
 }
@@ -154,6 +157,11 @@ export function crearPanelPrograma(raiz: Document, o: OpcionesPrograma): PanelPr
   editor.mostrar(proyecto.archivos[activo] ?? '');
   return {
     proyecto: () => proyecto,
+    abrir(p) {
+      cambiar(p);
+      elegir(archivoPrincipal(p) ?? ordenarArchivos(p)[0]);
+    },
+    limpiarError: () => editor.marcarLinea(null),
     marcarError(archivo, linea) {
       if (archivo in proyecto.archivos && archivo !== activo) elegir(archivo);
       editor.marcarLinea(linea);

@@ -34,7 +34,8 @@ const campoError = StateField.define<DecorationSet>({
 /** Tema con la paleta de Dynamis (spec §12). */
 const tema = EditorView.theme({
   '&': { height: '470px', fontSize: '14px', backgroundColor: '#FFFFFF', color: '#12164A' },
-  '.cm-scroller': { fontFamily: "'JetBrains Mono', monospace", lineHeight: '1.7' },
+  // Sin ligaduras: ">=" se ve como dos caracteres, igual que como se escribe.
+  '.cm-scroller': { fontFamily: "'JetBrains Mono', monospace", lineHeight: '1.7', fontVariantLigatures: 'none' },
   '.cm-gutters': { backgroundColor: '#FFFFFF', color: '#9AA6C9', border: 'none' },
   '.cm-activeLine': { backgroundColor: '#F4FAFF' },
   '.cm-activeLineGutter': { backgroundColor: '#DDF4FF', color: '#0B0F98' },

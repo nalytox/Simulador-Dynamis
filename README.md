@@ -5,15 +5,16 @@ Los estudiantes escriben el código **Arduino real** del robot (ESP32, QTR-MX-8A
 TCS34725) y lo prueban en una pista virtual que sigue las bases de Rescue Line FIRVI 2026, antes de
 subirlo al robot físico.
 
-> **Estado: fase 3 de 7 — librerías de sensores.** Todavía no hay interfaz. El simulador ya
-> compila proyectos Arduino de varios archivos a WebAssembly y los ejecuta con tiempo virtual sobre
-> una pista FIRVI descrita en JSON:
-> - rectas, giros, cortes, cruces con marcas de color, rampas, baches, F1, F2 y obstáculo;
-> - un juez virtual le pone puntaje a cada prueba como lo dicen las bases;
-> - el código usa las librerías de siempre del robot, y cada lectura sale de los modelos de
->   sensores del profesor.
+> **Estado: fase 4 de 7 — la interfaz para programar.** Se abre en el navegador con
+> `npm run dev`:
+> - el editor con pestañas, abrir una carpeta o un `.zip`, descargar el proyecto y autoguardado;
+> - **"Probar mi robot"** compila en el navegador y muestra al robot en la pista, con pausa,
+>   velocidad, "Volver al inicio" y el aviso de ciclo sin fin;
+> - los mensajes del `Serial`, lo que miden los sensores, el juez virtual y los errores
+>   explicados en español.
 >
-> Las fases siguientes se describen en la
+> Faltan Construir pista y "Mi robot" (fase 5), Ajustar parámetros (fase 6), y los ejemplos, la
+> ayuda y la publicación en GitHub Pages (fase 7). Las fases se describen en la
 > [spec](docs/superpowers/specs/2026-10-17-simulador-dynamis-design.md#19-fases-sugeridas-para-el-plan).
 
 ## Librerías soportadas
@@ -37,7 +38,11 @@ Son reimplementaciones compatibles con la API pública de cada librería (el det
 | Comando | Qué hace |
 |---|---|
 | `npm install` | Instala las dependencias (incluye Clang/LLVM compilado a WebAssembly, ~100 MB). |
+| `npm run dev` | Abre el simulador en `http://localhost:5173` (construye el núcleo si cambió). |
+| `npm run build` | Genera la app estática en `dist/`, con el compilador y el núcleo. |
+| `npm run preview` | Sirve `dist/` para probarla como quedará publicada. |
 | `npm test` | Corre las pruebas de unidad e integración. Antes, construye el núcleo si cambió. |
+| `npm run e2e` | Corre las pruebas de punta a punta en Chromium con Playwright (levanta `npm run dev`). |
 | `npm run nucleo` | Compila el núcleo Arduino simulado a `generado/nucleo.a` (`-- --forzar` para rehacerlo). |
 | `npm run medir` | Mide los tiempos de compilación y de simulación. |
 | `npm run typecheck` | Revisa los tipos de TypeScript. |
@@ -45,18 +50,23 @@ Son reimplementaciones compatibles con la API pública de cada librería (el det
 ## Estructura
 
 ```
+index.html      la página (la vista Programar de la maqueta)
 src/
-  proyecto/     modelo de proyecto de varios archivos (.ino, .h, .cpp, .c)
-  compilador/   preprocesado como el Arduino IDE, llamada a Clang y diagnósticos
+  main.ts       punto de entrada de la app
+  ui/           paneles de la interfaz: editor, pestañas, mensajes, lienzo, tarjetas, juez y acciones
+  ejemplos/     el proyecto y la pista con que abre la app
+  proyecto/     proyecto de varios archivos, abrir (carpeta, .zip, arrastre), descargar y autoguardado
+  compilador/   preprocesado como el Arduino IDE, Clang en un worker, diagnósticos y errores amigables
   nucleo/       el Arduino core del ESP32 simulado y las librerías de sensores, en C++
-  simulacion/   puente wasm ↔ simulador, reloj virtual, pines, driver de motores, sensores y Simulador
+  simulacion/   puente wasm ↔ simulador, reloj virtual, pines, motores, sensores, el worker de la prueba
+                y el bloque de control (pausa, velocidad y reinicios)
   robot/        configuración del robot (medidas, sensores, pines) y validaciones
   pista/        modelo de la pista FIRVI (JSON), catálogo de piezas, puntos de partida y avisos de las bases
   mundo/        el mundo que leen los modelos: color del suelo, relieve, colisiones y raycast 3D
   juez/         juez virtual: hitos, meta, tiempo, reinicios, saltos de F y eventos
   modelos/      ← modelos matemáticos del profesor (dinámica y sensores)
 scripts/        construcción del núcleo
-tests/          unidad/, integracion/, medicion/
+tests/          unidad/, integracion/, medicion/, e2e/ (Playwright)
 docs/           spec, planes y maqueta de la interfaz
 ```
 
@@ -88,4 +98,5 @@ evaluar una cabecera precompilada. Falta medir en un Chromebook escolar dentro d
 - [Plan de la fase 1](docs/superpowers/plans/2026-10-21-fase-1-base-de-ejecucion.md)
 - [Plan de la fase 2](docs/superpowers/plans/2026-10-22-fase-2-pista-mundo-juez.md)
 - [Plan de la fase 3](docs/superpowers/plans/2026-10-22-fase-3-librerias-de-sensores.md)
+- [Plan de la fase 4](docs/superpowers/plans/2026-10-22-fase-4-ui-programar.md)
 - [Maqueta de la interfaz](docs/maqueta/simulador-dynamis.html) (ábrela en el navegador)
