@@ -10,6 +10,7 @@ import { crearBurbuja } from './burbuja';
 import { crearAvisos } from './avisos';
 import { crearVistas } from './vistas';
 import { crearEditorPista } from './editor-pista';
+import { crearPanelPista } from './panel-pista';
 import { ClienteCompilador } from '../compilador/cliente';
 import { primerError } from '../compilador/amigables';
 import { ClienteSimulacion } from '../simulacion/cliente';
@@ -78,9 +79,16 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
 
   // Las dos vistas: al volver a Programar, los mensajes se muestran desde el final.
   crearVistas(raiz, { alCambiar: v => { if (v === 'programar') consola.irAlFinal(); } });
+  const panelPista = crearPanelPista(raiz, {
+    alCambiar: p => editorPista.editar(p),
+    alElegir: s => editorPista.elegir(s),
+  });
   const editorPista = crearEditorPista(raiz, {
-    alCambiar: p => { pista = p; },
-    alElegir: () => {},
+    alCambiar: p => {
+      pista = p;
+      panelPista.mostrar(p, editorPista.seleccion());
+    },
+    alElegir: s => panelPista.mostrar(editorPista.pista(), s),
   });
   editorPista.mostrar(pista);
 

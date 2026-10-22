@@ -13,6 +13,8 @@ export type Seleccion = { clase: 'baldosa'; c: number; r: number } | { clase: 'o
 export interface EditorPista {
   /** Muestra otra pista (abierta o nueva) sin avisar un cambio. */
   mostrar(p: Pista): void;
+  /** Aplica un cambio hecho fuera del lienzo (el panel): conserva lo elegido si sigue existiendo y avisa el cambio. */
+  editar(p: Pista): void;
   pista(): Pista;
   seleccion(): Seleccion | null;
   elegir(sel: Seleccion | null): void;
@@ -65,7 +67,7 @@ export function crearEditorPista(raiz: Document, eventos: { alCambiar(p: Pista):
       miniatura.setAttribute('aria-hidden', 'true');
       dibujarMiniatura(miniatura, pieza);
       boton.append(miniatura, pieza.nombre);
-      boton.addEventListener('click', () => usar(herramienta === pieza ? null : pieza));
+      boton.addEventListener('click', () => usar(pieza));
       botones.set(pieza, boton);
       piezas.append(boton);
     }
@@ -227,6 +229,11 @@ export function crearEditorPista(raiz: Document, eventos: { alCambiar(p: Pista):
       ajustarVista();
       foco = { c: 0, r: 0 };
       elegir(null);
+    },
+    editar(p) {
+      editar(p);
+      const sigue = sel?.clase === 'baldosa' ? dentro(sel) : sel?.clase === 'objeto' ? sel.indice < p.objetos.length : true;
+      if (!sigue) elegir(null);
     },
     pista: () => pista,
     seleccion: () => sel,
