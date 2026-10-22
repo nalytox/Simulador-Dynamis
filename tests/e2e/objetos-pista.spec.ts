@@ -99,3 +99,12 @@ test('el nombre de la pista se edita', async ({ page }) => {
   await escribir(page, '#pista-nombre', '   ');
   await expect(page.locator('#pista-nombre')).toHaveValue('Mi pista loca');
 });
+
+test('arrastrar el inicio o un objeto fuera del lienzo los deja en el borde de la pista', async ({ page }) => {
+  await abrirEditor(page);
+  const { inicio } = await pistaEditor(page);
+  await arrastrar(page, inicio, { x: -900, y: -900 });
+  expect((await pistaEditor(page)).inicio).toMatchObject({ x: 0, y: 0 });
+  await arrastrar(page, { x: 750, y: 450 }, { x: 3500, y: 2500 });
+  expect((await pistaEditor(page)).objetos[0]).toMatchObject({ x: 2390, y: 1790 });
+});

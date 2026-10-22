@@ -180,6 +180,9 @@ export function crearVentanaRobot(raiz: Document, eventos: { robot(): ConfigRobo
       mostrarError(r.errores);
       return;
     }
+    // Reemplazar un robot con cambios pide confirmar, como "Volver a los valores del profe".
+    const sinCambios = JSON.stringify(eventos.robot()) === JSON.stringify(ROBOT_POR_DEFECTO);
+    if (!sinCambios && !(await confirmar(raiz, { titulo: '¿Reemplazar tu robot? Si no lo exportaste, se pierden tus cambios.', boton: 'Reemplazar' }))) return;
     cargar(r.robot);
     importado.textContent = r.avisos.length > 0 ? `Importé tu robot. ${r.avisos.join(' ')}` : 'Importé tu robot.';
   });

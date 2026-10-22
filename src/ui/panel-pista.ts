@@ -28,10 +28,13 @@ const acotar = (n: number, min: number, max: number) => Math.min(max, Math.max(m
  * con sus propiedades, y debajo de la pista la lista "Revisión de las bases". Cada cambio se avisa
  * con la pista nueva; los números escritos a mano se acotan a su rango.
  */
-export function crearPanelPista(raiz: Document, eventos: { alCambiar(p: Pista): void; alElegir(sel: Seleccion | null): void }): PanelPista {
+export function crearPanelPista(raiz: Document, eventos: { pista(): Pista; alCambiar(p: Pista): void; alElegir(sel: Seleccion | null): void }): PanelPista {
   const titulo = raiz.getElementById('panel-titulo')!;
   const cuerpo = raiz.getElementById('panel-pista')!;
   const listaAvisos = raiz.getElementById('avisos-pista')!;
+  /** Los cambios se aplican sobre la pista actual del editor, no sobre la del último dibujo del panel. */
+  const actual = () => eventos.pista();
+  let dibujos = 0;
 
   const el = <K extends keyof HTMLElementTagNameMap>(tag: K, clase?: string, ...hijos: Hijo[]): HTMLElementTagNameMap[K] => {
     const e = raiz.createElement(tag);
@@ -99,7 +102,7 @@ export function crearPanelPista(raiz: Document, eventos: { alCambiar(p: Pista): 
   };
 
   function propiedadesDeBaldosa(p: Pista, b: Baldosa): HTMLElement[] {
-    const cambiar = (props: Record<string, unknown>) => eventos.alCambiar(cambiarBaldosa(p, b.c, b.r, { props }));
+    const cambiar = (props: Record<string, unknown>) => eventos.alCambiar(cambiarBaldosa(actual(), b.c, b.r, { props }));
     const partes: HTMLElement[] = [];
     if (b.tipo === 'cruce' || b.tipo === 'unionT') {
       const marcas = b.props.marcas;
@@ -156,19 +159,19 @@ export function crearPanelPista(raiz: Document, eventos: { alCambiar(p: Pista): 
     return [
       bloque(etiqueta('Tipo'), el('span', 'grande', NOMBRE_TIPO[b.tipo]), el('span', 'sub', textoPosicion(b))),
       bloque(
-        numero({ id: 'pp-altura', texto: 'Altura (cm)', valor: Number((b.nivel / 10).toFixed(1)), min: 0, max: 50, paso: 0.1, alCambiar: v => eventos.alCambiar(cambiarBaldosa(p, c, r, { nivel: v * 10 })) }),
+        numero({ id: 'pp-altura', texto: 'Altura (cm)', valor: Number((b.nivel / 10).toFixed(1)), min: 0, max: 50, paso: 0.1, alCambiar: v => eventos.alCambiar(cambiarBaldosa(actual(), c, r, { nivel: v * 10 })) }),
         nota(b.nivel > 0 ? `Esta baldosa está a ${textoAltura(b.nivel)} del suelo.` : 'Esta baldosa está en el suelo.'),
       ),
       ...propiedadesDeBaldosa(p, b),
       bloque(etiqueta('Girar'), el('div', 'fila-botones',
-        boton('pp-girar-izq', 'Izquierda', () => eventos.alCambiar(girarBaldosa(p, c, r, 1))),
-        boton('pp-girar-der', 'Derecha', () => eventos.alCambiar(girarBaldosa(p, c, r, -1))))),
-      bloque(etiqueta('Quitar'), boton('pp-vaciar', 'Dejar vacía', () => eventos.alCambiar(vaciarCelda(p, c, r)))),
+        boton('pp-girar-izq', 'Izquierda', () => eventos.alCambiar(girarBaldosa(actual(), c, r, 1))),
+        boton('pp-girar-der', 'Derecha', () => eventos.alCambiar(girarBaldosa(actual(), c, r, -1))))),
+      bloque(etiqueta('Quitar'), boton('pp-vaciar', 'Dejar vacía', () => eventos.alCambiar(vaciarCelda(actual(), c, r)))),
     ];
   }
 
   function mostrarObjeto(p: Pista, i: number, o: ObjetoDePista): HTMLElement[] {
-    const cambiar = (cambios: Record<string, unknown>) => eventos.alCambiar(cambiarObjeto(p, i, cambios));
+    const cambiar = (cambios: Record<string, unknown>) => eventos.alCambiar(cambiarObjeto(actual(), i, cambios));
     const medida = (id: string, texto: string, mm: number, max: number, clave: string) =>
       numero({ id, texto, valor: mm / 10, min: 1, max, paso: 0.5, alCambiar: v => cambiar({ [clave]: v * 10 }) });
     const nombre = { obstaculo: 'Obstáculo', bache: 'Bache', hito: o.tipo === 'hito' ? `Hito ${o.props.numero}` : '', desafio: o.tipo === 'desafio' ? `Desafío ${o.props.nombre}` : '' }[o.tipo];
@@ -205,9 +208,9 @@ export function crearPanelPista(raiz: Document, eventos: { alCambiar(p: Pista): 
       partes.push(bloque(label, direccion(o.props.yaw, v => cambiar({ yaw: v })),
         numero({ id: 'pp-siguiente', texto: 'Hito siguiente', valor: o.props.hitoSiguiente, min: 1, max: 99, paso: 1, alCambiar: v => cambiar({ hitoSiguiente: Math.round(v) }) })));
     }
-    partes.push(bloque(etiqueta('Girar'), boton('pp-girar', o.tipo === 'bache' ? 'Girar 45°' : 'Girar 90°', () => eventos.alCambiar(girarObjeto(p, i)))));
+    partes.push(bloque(etiqueta('Girar'), boton('pp-girar', o.tipo === 'bache' ? 'Girar 45°' : 'Girar 90°', () => eventos.alCambiar(girarObjeto(actual(), i)))));
     partes.push(bloque(etiqueta('Quitar'), boton('pp-quitar', 'Quitar', () => {
-      eventos.alCambiar(quitarObjeto(p, i));
+      eventos.alCambiar(quitarObjeto(actual(), i));
       eventos.alElegir(null);
     })));
     return partes;
@@ -216,7 +219,10 @@ export function crearPanelPista(raiz: Document, eventos: { alCambiar(p: Pista): 
   function mostrarInicio(p: Pista): HTMLElement[] {
     return [
       bloque(etiqueta('Dónde parte el robot'), el('span', 'sub', `x = ${cm(p.inicio.x)} cm, y = ${cm(p.inicio.y)} cm`)),
-      bloque(direccion(p.inicio.yaw, v => eventos.alCambiar(moverInicio(p, p.inicio.x, p.inicio.y, v))),
+      bloque(direccion(p.inicio.yaw, v => {
+        const { x, y } = actual().inicio;
+        eventos.alCambiar(moverInicio(actual(), x, y, v));
+      }),
         nota('Arrastra el inicio en la pista para moverlo.')),
     ];
   }
@@ -239,7 +245,16 @@ export function crearPanelPista(raiz: Document, eventos: { alCambiar(p: Pista): 
 
   return {
     mostrar(p, sel) {
-      const enfocado = cuerpo.contains(raiz.activeElement) ? raiz.activeElement!.id : '';
+      const mio = ++dibujos;
+      const activo = raiz.activeElement;
+      const enfocado = activo instanceof HTMLElement && cuerpo.contains(activo) ? activo.id : '';
+      // Un valor escrito y sin confirmar se aplica antes de redibujar (su `change` llega con el blur).
+      // Si eso volvió a dibujar el panel, ese dibujo ya es el más nuevo.
+      if (enfocado) (activo as HTMLElement).blur();
+      if (mio !== dibujos) {
+        if (enfocado) raiz.getElementById(enfocado)?.focus();
+        return;
+      }
       let partes: HTMLElement[];
       if (sel?.clase === 'baldosa') {
         titulo.textContent = 'Baldosa elegida';

@@ -101,7 +101,14 @@ test('Exportar e importar robot.json', async ({ page }) => {
 
   const { vl53l0x, ...sinDistancia } = { ...ROBOT_POR_DEFECTO, ruedas: { ...ROBOT_POR_DEFECTO.ruedas, diametro: 50 } };
   void vl53l0x;
+  // El robot tiene cambios: reemplazarlo pide confirmar.
+  const dialogo = page.locator('dialog.dialogo[open]');
   await importar(JSON.stringify(sinDistancia));
+  await expect(dialogo).toContainText('¿Reemplazar tu robot? Si no lo exportaste, se pierden tus cambios.');
+  await dialogo.getByRole('button', { name: 'Cancelar' }).click();
+  await expect(campo(page, 'chasis.ancho')).toHaveValue('150');
+  await importar(JSON.stringify(sinDistancia));
+  await dialogo.getByRole('button', { name: 'Reemplazar' }).click();
   await expect(page.locator('#robot-error')).toBeHidden();
   await expect(campo(page, 'ruedas.diametro')).toHaveValue('50');
   await expect(campo(page, 'chasis.ancho')).toHaveValue('132');

@@ -277,9 +277,16 @@ export function crearEditorPista(raiz: Document, eventos: { alCambiar(p: Pista):
     pedirDibujo();
   }).observe(canvas);
 
+  /** Un campo con un valor escrito y sin confirmar (panel, nombre, tamaño) lo aplica antes que la pista cambie. */
+  const confirmarCampo = () => {
+    const activo = raiz.activeElement;
+    if (activo instanceof HTMLInputElement || activo instanceof HTMLSelectElement) activo.blur();
+  };
+
   canvas.tabIndex = 0;
   canvas.addEventListener('pointerdown', e => {
     if (e.button !== 0 || vista.escala === 0) return;
+    confirmarCampo();
     conTeclado = false;
     const punto = puntoDelEvento(e);
     const tomado = herramienta ? null : loQueHayEn(pista, punto.x, punto.y);

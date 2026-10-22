@@ -93,6 +93,7 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
   // Las dos vistas: al volver a Programar, los mensajes se muestran desde el final.
   crearVistas(raiz, { alCambiar: v => { if (v === 'programar') consola.irAlFinal(); } });
   const panelPista = crearPanelPista(raiz, {
+    pista: () => editorPista.pista(),
     alCambiar: p => editorPista.editar(p),
     alElegir: s => editorPista.elegir(s),
   });
@@ -110,7 +111,7 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
       editorPista.mostrar(p);
       alEditarPista(p);
     },
-  });
+  }, PISTA_INICIAL);
   /** La pista editada se guarda y, si no corre una prueba, se ve al tiro en Programar. */
   function alEditarPista(p: Pista) {
     pistaEditada = p;

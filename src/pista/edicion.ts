@@ -1,4 +1,5 @@
-import { celdaDe, ladoEnMundo } from './baldosas';
+import { aLocal, celdaDe, ladoEnMundo } from './baldosas';
+import { alturaBaldosa } from '../mundo/relieve';
 import { gradosARadianes, normalizarPista } from './serializacion';
 import { TAMANO_BALDOSA, type Baldosa, type Lado, type ObjetoDePista, type Pista, type Rotacion, type TipoBaldosa } from './tipos';
 
@@ -14,6 +15,8 @@ export const FILAS = { min: 2, max: 12 };
 const PASO_MM = 10;
 const MEDIO = TAMANO_BALDOSA / 2;
 const VECINO: Record<Lado, [number, number]> = { este: [1, 0], oeste: [-1, 0], norte: [0, 1], sur: [0, -1] };
+/** Una baldosa cuyo borde está a menos de esto de la parte alta de una rampa se considera subida por ella (mm). */
+const TOLERANCIA_MM = 0.5;
 
 const ajustar = (mm: number) => Math.round(mm / PASO_MM) * PASO_MM;
 const acotar = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n));
@@ -38,20 +41,42 @@ export function subidaRampa(b: Baldosa): number {
   return b.tipo === 'rampa' ? TAMANO_BALDOSA * Math.tan(gradosARadianes(b.props.angulo)) : 0;
 }
 
+type Celda = { c: number; r: number };
+
+/** La celda hacia donde sube una rampa y el punto medio del borde que comparten. */
+function arribaDe(rampa: Baldosa): Celda & { x: number; y: number } {
+  const [dc, dr] = VECINO[ladoEnMundo(rampa, 'este')];
+  return { c: rampa.c + dc, r: rampa.r + dr, x: (rampa.c + 0.5 + dc / 2) * TAMANO_BALDOSA, y: (rampa.r + 0.5 + dr / 2) * TAMANO_BALDOSA };
+}
+
+/** Cuánto está el suelo de la baldosa por sobre su nivel en el punto (x, y) de su borde. */
+function sobreNivelEn(b: Baldosa, x: number, y: number): number {
+  const { u, v } = aLocal(b, x, y);
+  return alturaBaldosa(b, acotar(u, 0, TAMANO_BALDOSA), acotar(v, 0, TAMANO_BALDOSA)) - b.nivel;
+}
+
+/** El nivel que deja el borde de `b` a la altura de la parte alta de `rampa` (en su borde común). */
+function nivelJuntoA(rampa: Baldosa, b: Baldosa): number {
+  const borde = arribaDe(rampa);
+  return rampa.nivel + subidaRampa(rampa) - sobreNivelEn(b, borde.x, borde.y);
+}
+
 /**
  * Continuidad de las rampas (§10.4): la baldosa que sigue a una rampa en la dirección de subida
- * queda al nivel de su parte alta. Si esa también es una rampa, sigue con la próxima.
+ * queda con su borde a la altura de la parte alta. Si esa también es una rampa, sigue con la
+ * próxima; se detiene al volver a una celda ya vista (dos rampas enfrentadas forman un pico).
  */
 function conRampasContinuas(baldosas: Baldosa[], desde: Baldosa): Baldosa[] {
   const resultado = [...baldosas];
-  const vistas = new Set<Baldosa>();
+  const vistas = new Set<string>();
   let actual = desde;
-  while (actual.tipo === 'rampa' && !vistas.has(actual)) {
-    vistas.add(actual);
-    const [dc, dr] = VECINO[ladoEnMundo(actual, 'este')];
-    const i = resultado.findIndex(enCelda(actual.c + dc, actual.r + dr));
+  while (actual.tipo === 'rampa') {
+    vistas.add(`${actual.c},${actual.r}`);
+    const arriba = arribaDe(actual);
+    if (vistas.has(`${arriba.c},${arriba.r}`)) break;
+    const i = resultado.findIndex(enCelda(arriba.c, arriba.r));
     if (i < 0) break;
-    resultado[i] = { ...resultado[i], nivel: actual.nivel + subidaRampa(actual) } as Baldosa;
+    resultado[i] = { ...resultado[i], nivel: nivelJuntoA(actual, resultado[i]) } as Baldosa;
     actual = resultado[i];
   }
   return resultado;
@@ -62,14 +87,32 @@ function conBaldosa(p: Pista, b: Baldosa): Pista {
   return { ...p, baldosas: conRampasContinuas([...resto, b], b) };
 }
 
-/** El nivel de la parte alta de una rampa que sube hacia (c, r), si hay una. */
-function nivelDeRampaHacia(p: Pista, c: number, r: number): number | null {
-  const rampa = p.baldosas.find(b => {
-    if (b.tipo !== 'rampa') return false;
-    const [dc, dr] = VECINO[ladoEnMundo(b, 'este')];
-    return b.c + dc === c && b.r + dr === r;
-  });
-  return rampa ? rampa.nivel + subidaRampa(rampa) : null;
+/** La rampa que sube hacia la celda de `b`, si hay una. */
+function rampaHacia(p: Pista, b: Celda): Baldosa | null {
+  return p.baldosas.find(o => {
+    if (o.tipo !== 'rampa') return false;
+    const arriba = arribaDe(o);
+    return arriba.c === b.c && arriba.r === b.r;
+  }) ?? null;
+}
+
+/** El nivel para una pieza nueva en una celda a la que sube una rampa, si hay una. */
+function nivelAlFinalDeRampa(p: Pista, b: Baldosa): number | null {
+  const rampa = rampaHacia(p, b);
+  return rampa ? nivelJuntoA(rampa, b) : null;
+}
+
+/**
+ * Antes de girar una rampa: la baldosa que tenía arriba vuelve a la altura de su parte baja, si
+ * seguía a la altura de su parte alta (si el estudiante le puso otra altura, no se toca).
+ */
+function sinLoQueSubio(p: Pista, rampa: Baldosa): Pista {
+  if (rampa.tipo !== 'rampa') return p;
+  const arriba = arribaDe(rampa);
+  const b = baldosaEn(p, arriba.c, arriba.r);
+  if (!b || Math.abs(b.nivel - nivelJuntoA(rampa, b)) > TOLERANCIA_MM) return p;
+  const bajada = { ...b, nivel: b.nivel - subidaRampa(rampa) } as Baldosa;
+  return { ...p, baldosas: p.baldosas.map(o => (o === b ? bajada : o)) };
 }
 
 /**
@@ -78,15 +121,21 @@ function nivelDeRampaHacia(p: Pista, c: number, r: number): number | null {
  */
 export function colocarBaldosa(p: Pista, c: number, r: number, tipo: TipoBaldosa, rot: Rotacion = 0, props: Record<string, unknown> = {}): Pista {
   const completas = propsCompletas(tipo, props) ?? propsCompletas(tipo, {})!;
-  const nivel = baldosaEn(p, c, r)?.nivel ?? nivelDeRampaHacia(p, c, r) ?? 0;
-  return conBaldosa(p, { c, r, rot, nivel, tipo, props: completas } as Baldosa);
+  const nueva = { c, r, rot, nivel: 0, tipo, props: completas } as Baldosa;
+  nueva.nivel = baldosaEn(p, c, r)?.nivel ?? nivelAlFinalDeRampa(p, nueva) ?? 0;
+  return conBaldosa(p, nueva);
 }
 
 /** sentido 1: 90° antihorario; -1: 90° horario. */
 export function girarBaldosa(p: Pista, c: number, r: number, sentido: 1 | -1): Pista {
   const b = baldosaEn(p, c, r);
   if (!b) return p;
-  return conBaldosa(p, { ...b, rot: girar(b.rot, 90 * sentido) as Rotacion });
+  const girada = { ...b, rot: girar(b.rot, 90 * sentido) as Rotacion } as Baldosa;
+  const sinSubida = sinLoQueSubio(p, b);
+  // Una rampa girada cambia la altura de su borde: si otra rampa sube hacia ella, se vuelve a ajustar a esa.
+  const anterior = girada.tipo === 'rampa' ? rampaHacia(sinSubida, girada) : null;
+  if (anterior) girada.nivel = nivelJuntoA(anterior, girada);
+  return conBaldosa(sinSubida, girada);
 }
 
 export function vaciarCelda(p: Pista, c: number, r: number): Pista {
@@ -130,10 +179,19 @@ function mayorHito(p: Pista): number {
   return Math.max(0, ...p.objetos.map(o => (o.tipo === 'hito' ? o.props.numero : 0)));
 }
 
-/** Agrega un objeto en (x, y), ajustado a 1 cm, numerado y orientado según la baldosa de abajo. */
+/** Agrega un objeto en (x, y), ajustado a 1 cm y dentro de la grilla, numerado y orientado según la baldosa de abajo. */
 export function agregarObjeto(p: Pista, tipo: TipoObjetoNuevo, x: number, y: number): { pista: Pista; indice: number } {
-  const objeto = objetoNuevo(p, tipo, ajustar(x), ajustar(y));
+  const punto = enLaGrilla(p, x, y);
+  const objeto = objetoNuevo(p, tipo, punto.x, punto.y);
   return { pista: { ...p, objetos: [...p.objetos, objeto] }, indice: p.objetos.length };
+}
+
+/** (x, y) ajustado a 1 cm y dentro de la grilla, para que nada quede fuera de la pista. */
+function enLaGrilla(p: Pista, x: number, y: number): { x: number; y: number } {
+  return {
+    x: acotar(ajustar(x), 0, p.columnas * TAMANO_BALDOSA - PASO_MM),
+    y: acotar(ajustar(y), 0, p.filas * TAMANO_BALDOSA - PASO_MM),
+  };
 }
 
 function conObjeto(p: Pista, i: number, cambiar: (o: ObjetoDePista) => ObjetoDePista): Pista {
@@ -142,7 +200,7 @@ function conObjeto(p: Pista, i: number, cambiar: (o: ObjetoDePista) => ObjetoDeP
 }
 
 export function moverObjeto(p: Pista, i: number, x: number, y: number): Pista {
-  return conObjeto(p, i, o => ({ ...o, x: ajustar(x), y: ajustar(y) }));
+  return conObjeto(p, i, o => ({ ...o, ...enLaGrilla(p, x, y) }));
 }
 
 /** Gira 90° un obstáculo, 45° un bache, y 90° la dirección (yaw) de un hito o un desafío. */
@@ -175,7 +233,7 @@ export function quitarObjeto(p: Pista, i: number): Pista {
 }
 
 export function moverInicio(p: Pista, x: number, y: number, yaw: number = p.inicio.yaw): Pista {
-  return { ...p, inicio: { x: ajustar(x), y: ajustar(y), yaw } };
+  return { ...p, inicio: { ...enLaGrilla(p, x, y), yaw } };
 }
 
 /**

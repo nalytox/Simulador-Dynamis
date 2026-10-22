@@ -107,3 +107,28 @@ test('la pista editada se ve en Programar y la usa la próxima prueba', async ({
   await expect.poll(() => brilloProgramar(page, 1950, 150)).toBeLessThan(150);
   await expect(page.locator('#chip-pista')).toHaveText('8 × 6 baldosas de 30 cm');
 });
+
+test('editar la pista no cambia el "Partir desde" elegido', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#sel-desde').selectOption('hito-2');
+  await page.locator('#tab-pista').click();
+  await elegirPieza(page, 'Recta');
+  await clicCelda(page, 6, 0);
+  await page.locator('#tab-programar').click();
+  await expect(page.locator('#sel-desde')).toHaveValue('hito-2');
+});
+
+test('Abrir una pista sobre una pista editada pide confirmar', async ({ page }) => {
+  await abrirEditor(page);
+  await elegirPieza(page, 'Recta');
+  await clicCelda(page, 6, 0);
+  const dialogo = page.locator('dialog[open]');
+  await abrirArchivo(page, 'otra.json', escribirPista({ ...pistaVacia(4, 4), nombre: 'Otra' }));
+  await expect(dialogo).toContainText('¿Reemplazar tu pista? Si no la guardaste, se va a perder.');
+  await dialogo.getByRole('button', { name: 'Cancelar' }).click();
+  await expect(dialogo).toBeHidden();
+  expect(await baldosa(page, 6, 0)).toMatchObject({ tipo: 'recta' });
+  await abrirArchivo(page, 'otra.json', escribirPista({ ...pistaVacia(4, 4), nombre: 'Otra' }));
+  await dialogo.getByRole('button', { name: 'Reemplazar' }).click();
+  await expect(page.locator('#pista-nombre')).toHaveValue('Otra');
+});

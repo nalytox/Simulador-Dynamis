@@ -20,6 +20,7 @@ type Registro = Record<string, unknown>;
 
 const NO_ES_ROBOT = 'El archivo no es un robot válido.';
 const PIN_MAXIMO = 39;
+const SENSORES_QTR = 8;
 /** Medidas que deben ser mayores que 0. */
 const POSITIVAS = new Set(['chasis.largo', 'chasis.ancho', 'chasis.alto', 'ruedas.diametro', 'ruedas.trocha', 'qtr.separacion', 'qtr.altura']);
 const PINES = new Set(['motores.izq.pwm', 'motores.izq.in1', 'motores.izq.in2', 'motores.der.pwm', 'motores.der.in1', 'motores.der.in2']);
@@ -51,7 +52,9 @@ function normalizarValor(plantilla: unknown, dato: unknown, ruta: string, avisos
     return salida;
   }
   if (Array.isArray(plantilla)) {
-    if (!Array.isArray(dato) || !dato.every(Number.isInteger)) errores.push(`${ruta} debe ser una lista de pines (números enteros).`);
+    // Array.from convierte los huecos en undefined: una lista con huecos no pasa.
+    if (!Array.isArray(dato) || !Array.from(dato).every(Number.isInteger)) errores.push(`${ruta} debe ser una lista de pines (números enteros).`);
+    else if (dato.length !== SENSORES_QTR) errores.push(`${ruta} debe tener ${SENSORES_QTR} pines, uno por sensor.`);
     return dato;
   }
   if (typeof plantilla === 'string') {
@@ -156,6 +159,8 @@ export function conCampo(r: ConfigRobot, ruta: string, valor: number | boolean |
   const camino = partes(ruta);
   let destino = copia as unknown as Registro;
   for (const parte of camino.slice(0, -1)) destino = destino[parte] as Registro;
+  // En una lista solo se cambian posiciones que existen: nunca se dejan huecos.
+  if (Array.isArray(destino) && !(Number(camino.at(-1)) < destino.length)) return copia;
   destino[camino.at(-1)!] = final;
   return copia;
 }

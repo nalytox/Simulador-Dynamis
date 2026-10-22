@@ -51,7 +51,11 @@ export function crearTarjetaJuez(raiz: Document, eventos: { alPedir(p: Pedido): 
         return div;
       });
       $('hitos').replaceChildren(...circulos);
-      seleccion.replaceChildren(...puntosDePartida(p).map(punto => new Option(punto.nombre, punto.id)));
+      // Si el punto elegido sigue en la pista nueva, se mantiene.
+      const antes = seleccion.value;
+      const puntos = puntosDePartida(p);
+      seleccion.replaceChildren(...puntos.map(punto => new Option(punto.nombre, punto.id)));
+      if (puntos.some(punto => punto.id === antes)) seleccion.value = antes;
     },
     mostrar(e) {
       reinicios = e?.reinicios ?? 0;

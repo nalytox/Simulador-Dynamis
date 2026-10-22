@@ -78,3 +78,12 @@ it('validarRobot sigue avisando un pin repetido después de conCampo', () => {
   const r = conCampo(copia(), 'qtr.pines.1', 36);
   expect(validarRobot(r).map(a => a.mensaje)).toContain('El pin 36 está usado dos veces.');
 });
+
+it('el QTR necesita exactamente 8 pines, sin huecos', () => {
+  const seis = { ...copia(), qtr: { ...copia().qtr, pines: [36, 39, 34, 35, 32, 33] } };
+  expect(normalizarRobot(seis)).toEqual({ ok: false, errores: ['qtr.pines debe tener 8 pines, uno por sensor.'] });
+  const conHueco = copia();
+  delete (conHueco.qtr.pines as (number | undefined)[])[6];
+  expect(normalizarRobot(conHueco).ok).toBe(false);
+  expect(conCampo(copia(), 'qtr.pines.9', 3).qtr.pines).toEqual(ROBOT_POR_DEFECTO.qtr.pines);
+});

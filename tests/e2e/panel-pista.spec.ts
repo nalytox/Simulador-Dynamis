@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { abrirEditor, baldosa, clicCelda, clicEn, elegirPieza, enPantalla, seleccion } from './ayuda/editor';
+import { abrirEditor, baldosa, clicCelda, clicEn, elegirPieza, enPantalla, pistaEditor, seleccion } from './ayuda/editor';
 
 const panel = (page: Page) => page.locator('#panel-pista');
 
@@ -120,4 +120,20 @@ test('cortes, F2 y F1 tienen sus controles', async ({ page }) => {
   await colocar(page, 'Unión en T (rama a la izquierda)', 4, 4);
   await panel(page).getByLabel('Rama').selectOption('der');
   expect((await baldosa(page, 4, 4))!.props).toMatchObject({ rama: 'der' });
+});
+
+test('un valor escrito sin confirmar se aplica antes del clic en la pista', async ({ page }) => {
+  await abrirEditor(page);
+  await colocar(page, 'Rampa', 5, 4);
+  // Se escribe 30 sin Enter y se hace clic en otra celda con la Rampa todavía elegida.
+  await page.locator('#pp-angulo').fill('30');
+  await clicCelda(page, 6, 1);
+  expect((await baldosa(page, 5, 4))!.props).toMatchObject({ angulo: 30 });
+  expect(await baldosa(page, 6, 1)).toMatchObject({ tipo: 'rampa' });
+  expect(await seleccion(page)).toEqual({ clase: 'baldosa', c: 6, r: 1 });
+  // Lo mismo con el nombre y el tamaño de la pista.
+  await page.locator('#pista-nombre').fill('Con rampas');
+  await clicCelda(page, 6, 0);
+  expect((await pistaEditor(page)).nombre).toBe('Con rampas');
+  expect(await baldosa(page, 6, 0)).toMatchObject({ tipo: 'rampa' });
 });

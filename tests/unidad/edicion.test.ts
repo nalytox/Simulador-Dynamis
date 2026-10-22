@@ -205,3 +205,68 @@ it('ninguna función cambia la pista original', () => {
   redimensionar(p, 2, 2);
   expect(p).toEqual(antes);
 });
+
+it('dos rampas enfrentadas forman un pico y no se cuelgan', () => {
+  let p = colocarBaldosa(pistaVacia(), 1, 0, 'rampa');
+  p = colocarBaldosa(p, 2, 0, 'rampa');
+  p = girarBaldosa(girarBaldosa(p, 2, 0, 1), 2, 0, 1);
+  // La de (2, 0) sube hacia el oeste: su parte alta queda junto a la parte alta de la de (1, 0).
+  expect(baldosaEn(p, 2, 0)!.rot).toBe(180);
+  expect(baldosaEn(p, 1, 0)!.nivel).toBeCloseTo(0, 6);
+  expect(baldosaEn(p, 2, 0)!.nivel).toBeCloseTo(0, 6);
+  // En el otro orden, igual.
+  let q = colocarBaldosa(pistaVacia(), 2, 0, 'rampa', 180);
+  q = colocarBaldosa(q, 1, 0, 'rampa');
+  expect(baldosaEn(q, 1, 0)!.nivel).toBeCloseTo(0, 6);
+  expect(baldosaEn(q, 2, 0)!.nivel).toBeCloseTo(0, 6);
+});
+
+it('un ciclo de cuatro rampas termina', () => {
+  let p = colocarBaldosa(pistaVacia(), 0, 0, 'rampa', 0);
+  p = colocarBaldosa(p, 1, 0, 'rampa', 90);
+  p = colocarBaldosa(p, 1, 1, 'rampa', 180);
+  p = colocarBaldosa(p, 0, 1, 'rampa', 270);
+  p = cambiarBaldosa(p, 0, 0, { props: { angulo: 25 } });
+  expect(p.baldosas).toHaveLength(4);
+  expect(p.baldosas.every(b => Number.isFinite(b.nivel))).toBe(true);
+});
+
+it('una pieza junto al costado de una rampa queda a la altura del medio del borde', () => {
+  // La rampa de (1, 1) sube hacia el norte: la recta de (2, 1) ve su costado.
+  let p = colocarBaldosa(pistaVacia(), 1, 1, 'rampa', 90);
+  p = colocarBaldosa(p, 1, 2, 'recta');
+  expect(baldosaEn(p, 1, 2)!.nivel).toBeCloseTo(subida(20), 6);
+  const q = colocarBaldosa(p, 2, 1, 'rampa', 0);
+  expect(baldosaEn(q, 2, 1)!.nivel).toBe(0);
+});
+
+it('girar una rampa baja la baldosa que había subido y sube la nueva', () => {
+  let p = pistaVacia();
+  for (const [c, r] of [[2, 1], [1, 2], [0, 1], [1, 0]]) p = colocarBaldosa(p, c, r, 'recta');
+  p = colocarBaldosa(p, 1, 1, 'rampa');
+  const niveles = () => [[2, 1], [1, 2], [0, 1], [1, 0]].map(([c, r]) => Math.round(baldosaEn(p, c, r)!.nivel * 100) / 100);
+  expect(niveles()).toEqual([109.19, 0, 0, 0]);
+  p = girarBaldosa(p, 1, 1, 1);
+  expect(niveles()).toEqual([0, 109.19, 0, 0]);
+  p = girarBaldosa(p, 1, 1, 1);
+  expect(niveles()).toEqual([0, 0, 109.19, 0]);
+  p = girarBaldosa(p, 1, 1, 1);
+  p = girarBaldosa(p, 1, 1, 1);
+  expect(niveles()).toEqual([109.19, 0, 0, 0]);
+});
+
+it('girar una rampa no baja una baldosa que el estudiante subió a otra altura', () => {
+  let p = colocarBaldosa(colocarBaldosa(pistaVacia(), 2, 1, 'recta'), 1, 1, 'rampa');
+  p = cambiarBaldosa(p, 2, 1, { nivel: 300 });
+  p = girarBaldosa(p, 1, 1, 1);
+  expect(baldosaEn(p, 2, 1)!.nivel).toBe(300);
+});
+
+it('mover un objeto o el inicio no los deja fuera de la grilla', () => {
+  let p = agregarObjeto(pistaVacia(), 'hito', 450, 450).pista;
+  p = moverObjeto(p, 0, -500, 99999);
+  expect(p.objetos[0]).toMatchObject({ x: 0, y: 1790 });
+  p = moverInicio(p, 5000, -40);
+  expect(p.inicio).toMatchObject({ x: 2390, y: 0 });
+  expect(agregarObjeto(p, 'obstaculo', 2400, 1800).pista.objetos[1]).toMatchObject({ x: 2390, y: 1790 });
+});
