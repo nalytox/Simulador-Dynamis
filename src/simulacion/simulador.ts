@@ -38,6 +38,8 @@ export interface OpcionesSimulador {
   /** Modelos de sensores del profesor; los que falten usan los placeholders de src/modelos. */
   modelos?: Partial<ModelosSensores>;
   ambiente?: Ambiente;
+  /** Valores de los parámetros @ajustar de esta prueba, por id (`grupo.nombre`); los que faltan usan el del código. */
+  ajustes?: Record<string, number>;
 }
 
 export interface ResultadoEjecucion { motivo: 'tiempo' | 'error' | 'detenido'; tiempoUs: number; error?: ErrorEjecucion }
@@ -103,6 +105,7 @@ export class Simulador {
   private readonly lectorAnalogico: ((pin: number, sim: Simulador) => number) | null;
   private readonly modelos: ModelosSensores;
   private readonly ambiente: Ambiente;
+  private readonly ajustes: Record<string, number>;
 
   private bitsAdc = BITS_ADC_POR_DEFECTO;
   private serialActivo = false;
@@ -127,6 +130,7 @@ export class Simulador {
     this.lectorAnalogico = o.lectorAnalogico ?? null;
     this.modelos = { ...MODELOS_POR_DEFECTO, ...o.modelos };
     this.ambiente = o.ambiente ?? { luz: 'normal' };
+    this.ajustes = o.ajustes ?? {};
     this.estadoActual = this.dinamica.estadoInicial(o.poseInicial ?? { x: 0, y: 0, yaw: 0 }, this.robot, this.mundo);
     this.estadoAnterior = this.estadoActual;
   }
@@ -329,6 +333,10 @@ export class Simulador {
         return 0;
       },
       azarU32: () => Math.floor(this.azarPrograma() * 4294967296) >>> 0,
+      ajustable: (grupo, nombre, valor) => {
+        const propio = this.ajustes[`${grupo}.${nombre}`];
+        return typeof propio === 'number' && Number.isFinite(propio) ? propio : valor;
+      },
       salidaEstandar: bytes => { this.texto += this.decodificadorEstandar.decode(bytes, { stream: true }); },
       tiempoNs: () => BigInt(Math.floor(this.t)) * 1000n,
     };

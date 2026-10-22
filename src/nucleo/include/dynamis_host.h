@@ -41,6 +41,9 @@ DYN_IMPORTAR("mpu_leer") void dyn_mpu_leer(float* datos7);
 DYN_IMPORTAR("tcs_leer") void dyn_tcs_leer(uint32_t integracion_us, uint32_t ganancia, int led, uint16_t* rgbc);
 
 static inline void dynAvisar(const char* texto) { dyn_aviso(texto, strlen(texto)); }
+/** Un valor marcado con @ajustar: el preprocesador reemplaza el número por esta llamada, y el
+ * simulador responde el valor de la prueba (o `valor`, el del código). Ver src/compilador/ajustables.ts. */
+DYN_IMPORTAR("ajustable") double __dyn_ajustable(const char* grupo, const char* nombre, double valor);
 DYN_IMPORTAR("azar_u32") uint32_t dyn_azar_u32(void);
 
 #ifdef __cplusplus

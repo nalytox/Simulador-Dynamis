@@ -6,8 +6,8 @@
 QTRSensors qtr;
 uint16_t valores[8];
 
-const int VELOCIDAD = 100;   // velocidad hacia adelante, de 0 a 255
-const float KP = 0.025;      // cuánto corrige por cada unidad de error
+const int VELOCIDAD = 100;   // velocidad hacia adelante, de 0 a 255 · @ajustar siguelineas 50..200
+const float KP = 0.025;      // cuánto corrige por cada unidad de error · @ajustar siguelineas 0..0.1
 
 unsigned long ultimoMensaje = 0;
 unsigned long inicioRecorrido = 0;

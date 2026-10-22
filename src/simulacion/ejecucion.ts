@@ -41,6 +41,8 @@ export interface OpcionesPrueba {
   /** Id del punto de partida ('partida', 'hito-n' o 'desafio-F1'). */
   desde: string;
   semilla: number;
+  /** Valores de los parámetros @ajustar (para "Ver esta prueba en la pista"). */
+  ajustes?: Record<string, number>;
   control: Int32Array;
   publicar: (i: Instantanea) => void;
   /** Reloj real (por defecto, performance.now y Atomics.wait); las pruebas usan uno de mentira. */
@@ -89,7 +91,7 @@ export async function ejecutarPrueba(o: OpcionesPrueba): Promise<FinEjecucion> {
       ultima = ahora();
     };
     sim = await Simulador.crear({
-      modulo: o.modulo, mundo, robot: o.robot, poseInicial: pose, semilla: o.semilla,
+      modulo: o.modulo, mundo, robot: o.robot, poseInicial: pose, semilla: o.semilla, ajustes: o.ajustes,
       alPasoFisica: (tUs, estado) => {
         juez.actualizar(tUs, estado);
         if (juez.termino) return sim.detener();

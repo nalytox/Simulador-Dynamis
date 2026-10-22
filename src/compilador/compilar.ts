@@ -1,6 +1,7 @@
 import { runClang, runLLVM, Exit } from '@yowasp/clang';
 import type { Proyecto } from '../proyecto/proyecto';
 import { prepararUnidades, ErrorProyecto, type UnidadCompilacion } from './preprocesador';
+import { conAjustables } from './ajustables';
 import { parsearDiagnosticos, diagnosticosDeFallo, type Diagnostico } from './diagnosticos';
 import { aArbol, leerDeArbol, type Arbol } from './arbol';
 import opciones from './opciones.json';
@@ -57,9 +58,13 @@ const argumentosDeUnidad = (u: UnidadCompilacion) => [
   `-I${DIR_NUCLEO}/include`, '-c', u.ruta, '-o', `${u.ruta}.o`,
 ];
 
-/** Compila un proyecto Arduino a un módulo WebAssembly enlazado con el núcleo. */
-export async function compilar(p: Proyecto, nucleo: ArchivosNucleo): Promise<ResultadoCompilacion> {
+/**
+ * Compila un proyecto Arduino a un módulo WebAssembly enlazado con el núcleo. Los valores marcados con
+ * @ajustar pasan por __dyn_ajustable (spec §11.1), sin cambiar los números de línea.
+ */
+export async function compilar(original: Proyecto, nucleo: ArchivosNucleo): Promise<ResultadoCompilacion> {
   await prepararCompilador();
+  const p = conAjustables(original);
   let unidades: UnidadCompilacion[];
   try {
     unidades = prepararUnidades(p);

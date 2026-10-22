@@ -17,6 +17,8 @@ export interface OpcionesInicio {
   robot: ConfigRobot;
   desde: string;
   semilla: number;
+  /** Valores de los parámetros @ajustar (para "Ver esta prueba en la pista"). */
+  ajustes?: Record<string, number>;
   /** Centésimas de la velocidad real (100 = ×1). */
   velocidad: number;
 }
@@ -53,7 +55,7 @@ export class ClienteSimulacion {
     trabajador.onmessage = e => this.recibir(trabajador, e.data as MensajeDelSimulador);
     const mensaje: MensajeAlSimulador = {
       tipo: 'iniciar', modulo: o.modulo, pista: o.pista, robot: o.robot, desde: o.desde, semilla: o.semilla,
-      control: control.buffer as SharedArrayBuffer,
+      ajustes: o.ajustes, control: control.buffer as SharedArrayBuffer,
     };
     trabajador.postMessage(mensaje);
     this.trabajador = trabajador;

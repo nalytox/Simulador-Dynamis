@@ -32,6 +32,8 @@ export interface Anfitrion {
   /** Cuentas crudas r, g, b, c del TCS34725. */
   tcsLeer(integracionUs: number, ganancia: number, led: boolean): number[];
   azarU32(): number;
+  /** El valor de un parámetro @ajustar en esta prueba; `valor` es el del código. */
+  ajustable(grupo: string, nombre: string, valor: number): number;
   /** printf y la salida estándar de C (en el ESP32 salen por el mismo UART que Serial). */
   salidaEstandar(bytes: Uint8Array): void;
   tiempoNs(): bigint;
@@ -51,6 +53,14 @@ type Memoria = () => WebAssembly.Memory;
 type FabricaImport = (a: Anfitrion, memoria: Memoria) => (...args: never[]) => unknown;
 
 const u32 = (x: number) => x >>> 0;
+
+/** Una cadena C (terminada en 0) de la memoria del programa. */
+function leerCadena(memoria: Memoria, ptr: number): string {
+  const bytes = new Uint8Array(memoria().buffer);
+  let fin = u32(ptr);
+  while (fin < bytes.length && bytes[fin] !== 0) fin++;
+  return new TextDecoder().decode(bytes.subarray(u32(ptr), fin));
+}
 
 const DYNAMIS: Record<string, FabricaImport> = {
   millis: a => () => a.millis(),
@@ -83,6 +93,8 @@ const DYNAMIS: Record<string, FabricaImport> = {
     new Uint16Array(memoria().buffer, u32(ptr), 4).set(cuentas);
   },
   azar_u32: a => () => a.azarU32(),
+  ajustable: (a, memoria) => (grupo: number, nombre: number, valor: number) =>
+    a.ajustable(leerCadena(memoria, grupo), leerCadena(memoria, nombre), valor),
 };
 
 const ERRNO = { exito: 0, descriptorInvalido: 8, noImplementado: 52 };

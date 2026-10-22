@@ -47,6 +47,13 @@ describe('puente wasm ↔ anfitrión', { timeout: 120_000 }, () => {
     expect(texto()).toBe('¡olá');
   });
 
+  it('el import ajustable lee las cadenas de la memoria', async () => {
+    const { anfitrion, llamadas } = crearAnfitrionFalso();
+    const conAjustable: Anfitrion = { ...anfitrion, ajustable: (grupo, nombre, valor) => { llamadas.push(['ajustable', grupo, nombre, valor]); return 2.25; } };
+    await correr('void setup() { double v = __dyn_ajustable("siguelineas", "kp", 1.5); dyn_delay((uint32_t)(v * 1000)); }\nvoid loop() {}', conAjustable);
+    expect(llamadas).toEqual([['ajustable', 'siguelineas', 'kp', 1.5], ['delay', 2250]]);
+  });
+
   it('printf llega por la salida estándar', async () => {
     const { anfitrion, texto } = crearAnfitrionFalso();
     await correr('void setup() { printf("x=%d\\n", 5); fflush(stdout); }\nvoid loop() {}', anfitrion);

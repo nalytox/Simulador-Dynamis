@@ -12,6 +12,7 @@ export interface MensajeAlSimulador {
   robot: ConfigRobot;
   desde: string;
   semilla: number;
+  ajustes?: Record<string, number>;
   control: SharedArrayBuffer;
 }
 export type MensajeDelSimulador = { tipo: 'instantanea'; datos: Instantanea } | { tipo: 'fin'; datos: FinEjecucion };
@@ -23,7 +24,7 @@ ambito.onmessage = async ({ data }) => {
   const m = data as MensajeAlSimulador;
   try {
     const fin = await ejecutarPrueba({
-      modulo: m.modulo, pista: m.pista, robot: m.robot, desde: m.desde, semilla: m.semilla,
+      modulo: m.modulo, pista: m.pista, robot: m.robot, desde: m.desde, semilla: m.semilla, ajustes: m.ajustes,
       control: new Int32Array(m.control), publicar: datos => enviar({ tipo: 'instantanea', datos }),
     });
     enviar({ tipo: 'fin', datos: fin });

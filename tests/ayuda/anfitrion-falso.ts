@@ -26,6 +26,7 @@ export function crearAnfitrionFalso(): { anfitrion: Anfitrion; llamadas: unknown
     mpuLeer: () => { llamadas.push(['mpuLeer']); return [0, 0, 0, 0, 0, 0, 0]; },
     tcsLeer: (...args: unknown[]) => { llamadas.push(['tcsLeer', ...args]); return [0, 0, 0, 0]; },
     azarU32: registrar('azarU32', 12345), salidaEstandar: escribir('salidaEstandar'), tiempoNs: () => 0n,
+    ajustable: (grupo: string, nombre: string, valor: number) => { llamadas.push(['ajustable', grupo, nombre, valor]); return valor; },
   };
   return { anfitrion, llamadas, texto: () => texto };
 }
