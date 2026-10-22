@@ -3,7 +3,9 @@ import { colorMuestra } from './lecturas';
 import { figurasDe, type Figura } from '../pista/catalogo';
 import { colorVisible } from '../mundo/superficie';
 import { rectanguloGirado } from '../mundo/geometria';
-import { gradosARadianes, poseInicial } from '../pista/serializacion';
+import { gradosARadianes, pistaVacia, poseInicial } from '../pista/serializacion';
+import { agregarObjeto, colocarBaldosa } from '../pista/edicion';
+import type { Pieza } from './paleta';
 import { TAMANO_BALDOSA as T, type Baldosa, type ObjetoDePista, type Pista } from '../pista/tipos';
 import { poseVL53 } from '../simulacion/sensores';
 import type { EstadoRobot, Pose } from '../simulacion/simulador';
@@ -157,6 +159,24 @@ export function dibujarPista(ctx: CanvasRenderingContext2D, v: Vista, pista: Pis
   ctx.stroke();
   for (const o of pista.objetos) objeto(ctx, o);
   flechaInicio(ctx, poseInicial(pista));
+}
+
+/** La miniatura de una pieza de la paleta: su baldosa, o el objeto o el inicio sobre una recta. */
+export function dibujarMiniatura(canvas: HTMLCanvasElement, pieza: Pieza): void {
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  // El inicio queda fuera del dibujo salvo en la pieza "Inicio del robot".
+  let pista: Pista = { ...pistaVacia(1, 1), inicio: { x: -10 * T, y: -10 * T, yaw: 0 } };
+  if (pieza.clase === 'baldosa') pista = colocarBaldosa(pista, 0, 0, pieza.tipo, 0, pieza.props);
+  else {
+    pista = colocarBaldosa(pista, 0, 0, 'recta');
+    if (pieza.clase === 'objeto') pista = agregarObjeto(pista, pieza.tipo, T / 2, T / 2).pista;
+    else pista = { ...pista, inicio: { x: T / 2 + 50, y: T / 2, yaw: 0 } };
+  }
+  const escala = Math.min(canvas.width, canvas.height) / T;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  dibujarPista(ctx, { escala, x0: (canvas.width - T * escala) / 2, y0: (canvas.height + T * escala) / 2 }, pista);
 }
 
 function rayoVL53(ctx: CanvasRenderingContext2D, estado: EstadoRobot, robot: ConfigRobot, distanciaMm: number): void {
