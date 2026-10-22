@@ -339,6 +339,8 @@ export function leerTCS34725({ t, estado, sensor, tiempoIntegracionMs, ganancia,
 - MPU6050: gravedad proyectada según la inclinación, más `gz = Δyaw/dt`.
 - TCS34725: color muestreado, escalado por la ganancia y el tiempo de integración.
 
+**Cuándo se llama cada modelo:** en el instante de cada lectura del programa. El QTR se evalúa en **cada `analogRead`**, con el tiempo `t` de esa lectura, y el núcleo usa el valor del sensor pedido. Así cada muestra tiene su propio instante y su propio ruido, como en el ADC real, también las 4 muestras que promedia `QTRSensors`. No se reutiliza una lectura de un paso de física a otro: se prefirió el realismo a la velocidad (decisión del usuario, 2026-10-22).
+
 `ambiente` = `{ luz: 'normal' | 'fuerte' | 'tenue' }`, elegido en la pista. Las bases advierten que la luz del recinto varía, así que los modelos ópticos (QTR y TCS) pueden usarlo para simular ese efecto. Los placeholders lo ignoran.
 
 `src/modelos/README.md` documenta cada firma, las unidades, los marcos y un ejemplo.
@@ -683,6 +685,7 @@ Referencia visual: la maqueta en `docs/maqueta/`. Todo en **español (Chile)**, 
 | Descarga del compilador (~30–100 MB) en redes escolares lentas | Cache Storage tras la primera vez; barra de progreso; opción de servir los archivos desde el mismo sitio comprimidos. |
 | Compilación lenta o falta de memoria en Chromebooks modestos | `nucleo.a` precompilado; reutilizar el módulo si no hubo cambios; medirlo temprano (primera tarea del plan) con un sketch real en hardware modesto. |
 | Rendimiento de "Ajustar parámetros" | Pruebas sin dibujo y sin ritmo de tiempo real; recompensa calculada en el worker; registro diezmado. |
+| El modelo del QTR se evalúa en cada `analogRead` (32 veces por `qtr.read`): con el placeholder, el seguidor de línea corre a ~1,7× el tiempo real en un servidor | Medirlo en un Chromebook en la fase 4. Si no alcanza el tiempo real, acelerar sin cambiar lo que se simula (por ejemplo, que el modelo sepa qué sensor se pide y calcule solo ese), nunca reutilizando lecturas entre pasos. |
 | Fidelidad de las librerías simuladas | Pruebas de integración por librería con los ejemplos oficiales de cada una adaptados al robot. |
 | Navegadores sin `SharedArrayBuffer` | `coi-serviceworker`; mensaje claro si aun así no está disponible. |
 
@@ -728,6 +731,7 @@ El catálogo FIRVI (§10.3) se implementa en la fase 2 (dibujo, relieve y superf
 - **Cada F tiene su punto** en la pista, que se elige libremente (objeto `desafio`, §10.3).
 - **Punto de partida elegible:** una prueba puede empezar desde la partida, un hito o una F; lo anterior no suma y no hay puntaje de tiempo.
 - **Saltar una F** que no se logra completar es un reinicio de las bases: −10, máximo 3 y sin puntaje de tiempo (§10.6).
+- **Lecturas del QTR:** lo más realista antes que lo más rápido. Cada `analogRead` evalúa el modelo en su propio instante y con ruido independiente (§9).
 - **Unión en T por la rama:** el juez también la evalúa. Las marcas de cruces y uniones se leen desde el lado por donde entra el robot (§10.6).
 
 **Pendiente (no bloquea la implementación):**
