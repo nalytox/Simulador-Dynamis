@@ -1,10 +1,11 @@
-import { penetracion, puntoEnPoligono } from '../mundo/geometria';
+import { distanciaAPoligono, penetracion, puntoEnPoligono, rectanguloGirado } from '../mundo/geometria';
 import type { MundoPista } from '../mundo/pista';
 import type { Punto2 } from '../mundo/tipos';
-import { aMundo } from '../pista/baldosas';
-import { BARRA_META } from '../pista/catalogo';
+import { aLocal, aMundo } from '../pista/baldosas';
+import { accionEsperada, BARRA_META } from '../pista/catalogo';
 import { puntosDePartida, type PuntoDePartida } from '../pista/puntos';
-import { TAMANO_BALDOSA, type Hito } from '../pista/tipos';
+import { gradosARadianes } from '../pista/serializacion';
+import { TAMANO_BALDOSA, type Accion, type Baldosa, type Hito, type Lado, type Obstaculo } from '../pista/tipos';
 import { huellaRobot, type ConfigRobot } from '../robot/config';
 import type { Pose } from '../simulacion/simulador';
 
@@ -51,6 +52,19 @@ const LIMITE_TAMANO_MM = 200;
 const VELOCIDAD_DETENIDO_MM_S = 5;
 const DETENIDO_EN_META_S = 1;
 const EPSILON_US = 1e-3;
+/** Separación de la grilla de puntos de la huella con que se busca la línea bajo el robot. */
+const PASO_HUELLA_MM = 5;
+/** Lado por donde debe salir el robot de un cruce, si entró por la flecha (oeste). */
+const SALIDA_ESPERADA: Record<Accion, Lado> = { recto: 'este', izq: 'norte', der: 'sur', vuelta: 'oeste' };
+const NOMBRE_DECISION = { cruce: 'el cruce', unionT: 'la unión en T' } as const;
+
+/** Por qué borde de la baldosa queda un punto que está fuera de ella (null si está dentro). */
+function ladoFuera(b: Baldosa, x: number, y: number): Lado | null {
+  const { u, v } = aLocal(b, x, y);
+  if (u >= 0 && u < TAMANO_BALDOSA && v >= 0 && v < TAMANO_BALDOSA) return null;
+  const excesos: [Lado, number][] = [['oeste', -u], ['este', u - TAMANO_BALDOSA], ['sur', -v], ['norte', v - TAMANO_BALDOSA]];
+  return excesos.reduce((a, b) => (b[1] > a[1] ? b : a))[0];
+}
 
 /** "a la partida", "al hito 2" o "a F1", para los mensajes. */
 function aPunto(p: PuntoDePartida): string {
@@ -90,9 +104,26 @@ export class Juez {
   private sinTiempo: boolean;
   private readonly eventos: EventoJuez[] = [];
 
+  private readonly obstaculos: Punto2[][];
+  private readonly perdidaLineaS: number;
+  private readonly radioObstaculoMm: number;
+  private fueraDeLineaDesde: number | null = null;
+  private avisoLinea = false;
+  private rodeando = false;
+  private tocando = false;
+  /** Baldosa bajo el centro del robot (undefined antes de la primera evaluación). */
+  private baldosaActual: Baldosa | null | undefined = undefined;
+  private entrada: Lado | null = null;
+  private ladoF1Decidido = false;
+
   constructor(private readonly mundo: MundoPista, private readonly robot: ConfigRobot, opciones: OpcionesJuez = {}) {
     const pista = mundo.pista;
     this.pasoUs = opciones.pasoUs ?? 10_000;
+    this.perdidaLineaS = opciones.perdidaLineaS ?? 0.5;
+    this.radioObstaculoMm = opciones.radioObstaculoMm ?? 300;
+    this.obstaculos = pista.objetos
+      .filter((o): o is Obstaculo => o.tipo === 'obstaculo')
+      .map(o => rectanguloGirado(o.x, o.y, gradosARadianes(o.rot), o.props.largo, o.props.ancho));
     this.puntos = puntosDePartida(pista);
     const idDesde = opciones.desde ?? 'partida';
     const desde = this.puntos.find(p => p.id === idDesde);
@@ -182,6 +213,10 @@ export class Juez {
       this.anotar('hito', `Llegaste al hito ${numero} (+${PUNTOS_HITO[numero - 1] ?? 0}).`);
     }
 
+    this.revisarLinea(pose, t);
+    this.revisarObstaculo(huella);
+    this.revisarDecisiones(pose);
+
     const velocidad = this.posePrevia && this.ultimaEvalUs !== null && this.relojUs > this.ultimaEvalUs
       ? Math.hypot(pose.x - this.posePrevia.x, pose.y - this.posePrevia.y) / ((this.relojUs - this.ultimaEvalUs) / 1e6)
       : Infinity;
@@ -200,6 +235,67 @@ export class Juez {
       this.terminado = true;
       this.tiempoFinal = t - this.inicioTiempo;
       this.anotar('fin-tiempo', 'Se acabaron los 5 minutos.');
+    }
+  }
+
+  /** ¿Algún punto de una grilla de 5 mm dentro de la huella cae sobre la cinta? */
+  private sobreLaLinea(pose: Pose): boolean {
+    const { xDelantero, largo, ancho } = this.robot.chasis;
+    const c = Math.cos(pose.yaw);
+    const s = Math.sin(pose.yaw);
+    for (let lx = xDelantero - largo; lx <= xDelantero; lx += PASO_HUELLA_MM) {
+      for (let ly = -ancho / 2; ly <= ancho / 2; ly += PASO_HUELLA_MM) {
+        if (this.mundo.esLinea(pose.x + lx * c - ly * s, pose.y + lx * s + ly * c)) return true;
+      }
+    }
+    return false;
+  }
+
+  private revisarLinea(pose: Pose, t: number): void {
+    if (this.sobreLaLinea(pose)) {
+      this.fueraDeLineaDesde = null;
+      this.avisoLinea = false;
+      this.rodeando = false;
+      return;
+    }
+    if (!this.rodeando && this.obstaculos.some(o => distanciaAPoligono(pose, o) <= this.radioObstaculoMm)) this.rodeando = true;
+    if (this.rodeando) return;
+    this.fueraDeLineaDesde ??= t;
+    if (!this.avisoLinea && t - this.fueraDeLineaDesde > this.perdidaLineaS) {
+      this.avisoLinea = true;
+      this.anotar('perdio-linea', 'Perdiste la línea.');
+    }
+  }
+
+  private revisarObstaculo(huella: Punto2[]): void {
+    const toca = this.mundo.colisiona(huella)?.objeto.tipo === 'obstaculo';
+    if (toca && !this.tocando) this.anotar('toco-obstaculo', 'Tocaste el obstáculo.');
+    this.tocando = toca;
+  }
+
+  /** Cruces, uniones en T y cuadrado F1: solo se evalúan si el robot entró por la flecha (oeste). */
+  private revisarDecisiones(pose: Pose): void {
+    const baldosa = this.mundo.baldosaEn(pose.x, pose.y);
+    if (baldosa !== this.baldosaActual) {
+      const anterior = this.baldosaActual;
+      if (anterior && (anterior.tipo === 'cruce' || anterior.tipo === 'unionT') && this.entrada === 'oeste') {
+        const salida = ladoFuera(anterior, pose.x, pose.y);
+        if (salida !== SALIDA_ESPERADA[accionEsperada(anterior)!]) {
+          this.anotar('camino-equivocado', `Tomaste el camino equivocado en ${NOMBRE_DECISION[anterior.tipo]}.`, { c: anterior.c, r: anterior.r });
+        }
+      }
+      this.baldosaActual = baldosa;
+      this.entrada = baldosa && this.posePrevia ? ladoFuera(baldosa, this.posePrevia.x, this.posePrevia.y) : null;
+      this.ladoF1Decidido = false;
+    }
+    if (baldosa?.tipo === 'cuadradoF1' && this.entrada === 'oeste' && !this.ladoF1Decidido) {
+      const { u, v } = aLocal(baldosa, pose.x, pose.y);
+      if (u >= TAMANO_BALDOSA / 2) {
+        this.ladoF1Decidido = true;
+        if ((v >= TAMANO_BALDOSA / 2 ? 'izq' : 'der') !== baldosa.props.correcto) {
+          this.anotar('camino-equivocado', 'Tomaste el camino equivocado en el cuadrado F1.', { c: baldosa.c, r: baldosa.r });
+        }
+      }
     }
   }
 
@@ -244,6 +340,12 @@ export class Juez {
     this.posePrevia = null;
     this.paradaDesde = null;
     this.intentado = false;
+    this.fueraDeLineaDesde = null;
+    this.avisoLinea = false;
+    this.rodeando = false;
+    this.tocando = false;
+    this.baldosaActual = undefined;
+    this.entrada = null;
     return { ok: true, pose: { ...punto.pose } };
   }
 }
