@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { abrirEditor, baldosa, clicCelda, elegirPieza, enPantalla, seleccion } from './ayuda/editor';
+import { abrirEditor, baldosa, clicCelda, clicEn, elegirPieza, enPantalla, seleccion } from './ayuda/editor';
 
 const panel = (page: Page) => page.locator('#panel-pista');
 
@@ -38,7 +38,8 @@ test('una rampa muestra "sube 10,9 cm" y ajusta la altura de la baldosa siguient
   await colocar(page, 'Rampa', 2, 2);
   await expect(panel(page)).toContainText('sube 10,9 cm');
   await page.keyboard.press('Escape');
-  await clicCelda(page, 3, 2);
+  // En el centro de (3, 2) está el hito 2: se hace clic en una esquina de la baldosa.
+  await clicEn(page, 3 * 300 + 60, 2 * 300 + 60);
   await expect(page.locator('#pp-altura')).toHaveValue('10.9');
   await clicCelda(page, 2, 2);
   await page.locator('#pp-angulo').fill('30');

@@ -240,6 +240,11 @@ mpu.getEvent(&amp;a, &amp;g, &amp;temp);</pre>
           <span class="chip" id="chip-herr">Elegir</span>
           <div class="header-der"><button class="btn-mini" id="btn-elegir" aria-pressed="true">Elegir</button></div>
         </header>
+        <div class="pista-datos">
+          <label for="pista-nombre">Nombre <input type="text" id="pista-nombre" maxlength="40" autocomplete="off" spellcheck="false"></label>
+          <label for="pista-columnas">Columnas <input type="number" id="pista-columnas" step="1"></label>
+          <label for="pista-filas">Filas <input type="number" id="pista-filas" step="1"></label>
+        </div>
         <div class="lienzo-caja"><canvas class="lienzo" id="lienzo-editor" aria-label="Editor de la pista. Flechas para moverte por la grilla, Enter para colocar o elegir, R para girar, Supr para quitar y Esc para volver a Elegir."></canvas></div>
         <div class="revision">
           <h3>Revisión de las bases</h3>

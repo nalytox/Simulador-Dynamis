@@ -34,3 +34,20 @@ export const clicCelda = (page: Page, c: number, r: number) => clicEn(page, (c +
 
 export const elegirPieza = (page: Page, nombre: string) =>
   page.locator('#paleta-baldosas').getByRole('button', { name: nombre, exact: true }).click();
+
+/** Arrastra con el mouse desde un punto de la pista (mm) hasta otro. */
+export async function arrastrar(page: Page, desde: { x: number; y: number }, hasta: { x: number; y: number }): Promise<void> {
+  const caja = (await page.locator('#lienzo-editor').boundingBox())!;
+  const a = await enPantalla(page, desde.x, desde.y);
+  const b = await enPantalla(page, hasta.x, hasta.y);
+  await page.mouse.move(caja.x + a.x, caja.y + a.y);
+  await page.mouse.down();
+  await page.mouse.move(caja.x + b.x, caja.y + b.y, { steps: 8 });
+  await page.mouse.up();
+}
+
+/** Escribe un valor en un campo y lo confirma con Enter. */
+export async function escribir(page: Page, selector: string, valor: string): Promise<void> {
+  await page.locator(selector).fill(valor);
+  await page.locator(selector).press('Enter');
+}
