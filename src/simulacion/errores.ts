@@ -44,5 +44,8 @@ function tipoDe(e: unknown): TipoErrorEjecucion {
 
 export function clasificarErrorEjecucion(e: unknown): ErrorEjecucion {
   const tipo = tipoDe(e);
-  return { tipo, mensaje: MENSAJES[tipo], tecnico: e instanceof Error ? e.message : String(e) };
+  let tecnico = e instanceof Error ? e.message : String(e);
+  // Para el profesor: dónde falló su modelo (spec §14).
+  if (e instanceof ErrorSimulador && e.cause instanceof Error && e.cause.stack) tecnico += `\n${e.cause.stack}`;
+  return { tipo, mensaje: MENSAJES[tipo], tecnico };
 }
