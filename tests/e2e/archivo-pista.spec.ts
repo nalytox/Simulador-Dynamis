@@ -101,7 +101,8 @@ test('la pista editada se ve en Programar y la usa la próxima prueba', async ({
   await clicCelda(page, 6, 0);
   await page.locator('#tab-programar').click();
   await expect(page.locator('#txt-estado')).toHaveText('El robot está corriendo');
-  expect(await brilloProgramar(page, 1950, 150)).toBeGreaterThan(600);
+  // Al volver a la pestaña el lienzo recupera su tamaño y se redibuja en el cuadro siguiente.
+  await expect.poll(() => brilloProgramar(page, 1950, 150)).toBeGreaterThan(600);
   await page.locator('#btn-inicio').click();
   await expect.poll(() => brilloProgramar(page, 1950, 150)).toBeLessThan(150);
   await expect(page.locator('#chip-pista')).toHaveText('8 × 6 baldosas de 30 cm');
