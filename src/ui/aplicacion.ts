@@ -14,6 +14,7 @@ import { crearPanelPista } from './panel-pista';
 import { crearArchivoPista } from './archivo-pista';
 import { crearVentanaRobot } from './mi-robot';
 import { crearVentanaEjemplos } from './ejemplos';
+import { crearRecorrido } from './recorrido';
 import { crearVentanaAjuste, type PedidoEntrenamiento, type FinVentana } from './ajustar';
 import { crearAgente } from '../ajuste/agente.js';
 import { calcularRecompensa } from '../ajuste/recompensa.js';
@@ -44,6 +45,15 @@ const LOGROS = new Set(['hito', 'meta']);
 function mostrarAvisoGlobal(raiz: Document, texto: string): void {
   raiz.getElementById('aviso-global-txt')!.textContent = texto;
   raiz.getElementById('aviso-global')!.hidden = false;
+}
+
+/** El localStorage del navegador; en algunos modos privados ni siquiera se puede leer la propiedad. */
+function almacenLocal(raiz: Document): Storage | undefined {
+  try {
+    return raiz.defaultView?.localStorage;
+  } catch {
+    return undefined;
+  }
 }
 
 async function leer<K extends keyof DatosGuardados>(almacen: Almacen | null, clave: K): Promise<DatosGuardados[K] | undefined> {
@@ -359,6 +369,8 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
   juez.habilitar(false);
   mostrar('listo');
   if (!almacen) mensajeSistema(SIN_AUTOGUARDADO);
+  const recorrido = crearRecorrido(raiz, almacenLocal(raiz));
+  recorrido.mostrarSiEsPrimeraVez();
 
   registrarPrueba('mensajes', (t: number, texto: string) => {
     tActual = t;

@@ -417,3 +417,14 @@ button:disabled { opacity: .55; cursor: not-allowed; }
 .ej-acciones { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .ej-acciones button { min-height: 40px; }
 @media (max-width: 1100px) { .ejemplos-cuerpo { grid-template-columns: minmax(0, 1fr); } }
+
+/* Recorrido de la primera visita */
+.recorrido { position: fixed; z-index: 60; display: flex; gap: 12px; align-items: flex-start; max-width: 360px; padding: 14px 16px; background: var(--blanco); color: var(--tinta); border: 3px solid var(--azul); border-radius: 18px; box-shadow: 0 16px 40px rgba(11, 15, 152, .28); }
+.recorrido[hidden] { display: none; }
+.recorrido > svg { width: 52px; height: 52px; flex: none; }
+.rec-texto { font-family: var(--f-display); font-weight: 600; font-size: 21px; margin: 0 0 10px; }
+.rec-pie { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.rec-paso { font-size: 14px; opacity: .75; margin-right: auto; }
+.rec-pie button { min-height: 40px; }
+.recorrido-foco { outline: 4px solid var(--sol); outline-offset: 4px; border-radius: 12px; }
+@media (prefers-reduced-motion: no-preference) { .recorrido { transition: top .2s ease, left .2s ease; } }

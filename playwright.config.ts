@@ -12,6 +12,8 @@ export default defineConfig({
   use: {
     actionTimeout: 15_000,
     baseURL: `http://localhost:${PUERTO}`,
+    // Las pruebas parten con el recorrido de la primera visita ya visto (recorrido.spec.ts lo prueba).
+    storageState: 'tests/e2e/estado-inicial.json',
     launchOptions: { executablePath: existsSync(CHROMIUM_LOCAL) ? CHROMIUM_LOCAL : undefined },
   },
   projects: [{ name: 'chromium', use: { browserName: 'chromium' } }],
