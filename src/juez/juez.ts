@@ -43,11 +43,11 @@ export interface OpcionesJuez {
   desde?: string;
 }
 
-const PUNTOS_META = 15;
-const TIEMPO_LIMITE_S = 300;
-const MAXIMO_REINICIOS = 3;
-const DESCUENTO_REINICIO = 10;
-const DESCUENTO_POR_CM = 20;
+export const PUNTOS_META = 15;
+export const TIEMPO_LIMITE_S = 300;
+export const MAXIMO_REINICIOS = 3;
+export const DESCUENTO_REINICIO = 10;
+export const DESCUENTO_POR_CM = 20;
 const LIMITE_TAMANO_MM = 200;
 const VELOCIDAD_DETENIDO_MM_S = 5;
 const DETENIDO_EN_META_S = 1;

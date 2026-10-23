@@ -1,11 +1,9 @@
 import { textoTiempoRestante } from './lecturas';
-import { PUNTOS_HITO, type EstadoJuez } from '../juez/juez';
+import { MAXIMO_REINICIOS, PUNTOS_HITO, PUNTOS_META, type EstadoJuez } from '../juez/juez';
 import { puntosDePartida } from '../pista/puntos';
 import type { Pista } from '../pista/tipos';
 import type { Pedido } from '../simulacion/control';
 
-const PUNTOS_META = 15;
-const MAXIMO_REINICIOS = 3;
 const EVENTOS_VISIBLES = 3;
 
 export interface TarjetaJuez {

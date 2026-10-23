@@ -15,6 +15,7 @@ import { crearArchivoPista } from './archivo-pista';
 import { crearVentanaRobot } from './mi-robot';
 import { crearVentanaEjemplos } from './ejemplos';
 import { crearRecorrido } from './recorrido';
+import { crearVentanaAyuda } from './ayuda';
 import { crearVentanaAjuste, type PedidoEntrenamiento, type FinVentana } from './ajustar';
 import { crearAgente } from '../ajuste/agente.js';
 import { calcularRecompensa } from '../ajuste/recompensa.js';
@@ -154,6 +155,16 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
     },
   });
   $('btn-mi-robot').addEventListener('click', () => ventanaRobot.abrir());
+  const recorrido = crearRecorrido(raiz, almacenLocal(raiz));
+  const ventanaAyuda = crearVentanaAyuda(raiz, {
+    robot: () => robotEditado,
+    abrirMiRobot: () => ventanaRobot.abrir(),
+    verRecorrido: () => {
+      vistas.mostrar('programar');
+      recorrido.mostrar();
+    },
+  });
+  $('btn-ayuda').addEventListener('click', () => ventanaAyuda.abrir());
   const ventanaAjuste = crearVentanaAjuste(raiz, {
     proyecto: () => programa.proyecto(),
     pista: () => pistaEditada,
@@ -369,7 +380,6 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
   juez.habilitar(false);
   mostrar('listo');
   if (!almacen) mensajeSistema(SIN_AUTOGUARDADO);
-  const recorrido = crearRecorrido(raiz, almacenLocal(raiz));
   recorrido.mostrarSiEsPrimeraVez();
 
   registrarPrueba('mensajes', (t: number, texto: string) => {

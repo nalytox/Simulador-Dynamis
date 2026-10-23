@@ -44,7 +44,7 @@
     <div class="extra">
       <button class="btn-banda" id="btn-mi-robot" aria-haspopup="dialog"><svg class="ico" viewBox="0 0 24 24"><rect x="5" y="8" width="14" height="11" rx="3"/><path d="M12 8V4"/><circle cx="12" cy="3.5" r="1"/><circle cx="9.5" cy="13" r="1"/><circle cx="14.5" cy="13" r="1"/><path d="M3 12v3M21 12v3"/></svg><span>Mi robot</span></button>
       <button class="btn-banda" id="btn-ejemplos" aria-haspopup="dialog"><svg class="ico" viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5"/></svg><span>Ejemplos</span></button>
-      <button class="btn-banda" id="btn-ayuda" disabled title="Llega pronto"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.2a2.5 2.5 0 1 1 3.4 2.3c-.7.3-1 .9-1 1.7"/><circle cx="12" cy="16.8" r=".6"/></svg><span>Ayuda</span></button>
+      <button class="btn-banda" id="btn-ayuda" aria-haspopup="dialog"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.2a2.5 2.5 0 1 1 3.4 2.3c-.7.3-1 .9-1 1.7"/><circle cx="12" cy="16.8" r=".6"/></svg><span>Ayuda</span></button>
     </div>
   </div>
 </div>
@@ -328,6 +328,58 @@ mpu.getEvent(&amp;a, &amp;g, &amp;temp);</pre>
     </div>
   </div>
 </div>
+
+<dialog class="ventana ventana-ayuda" id="ventana-ayuda" aria-labelledby="ay-titulo">
+  <div class="ventana-cab">
+    <svg viewBox="0 0 64 64" aria-hidden="true"><use href="#mascota"/></svg>
+    <div class="ventana-tit">
+      <h2 id="ay-titulo">Ayuda</h2>
+      <p>Cómo se usa cada sensor, cómo está conectado tu robot y cómo se puntúa en las bases.</p>
+    </div>
+    <button class="btn-banda" id="ay-cerrar">Volver</button>
+  </div>
+  <div class="ay-pestanas" role="tablist" aria-label="Temas de la ayuda">
+    <button class="modo" role="tab" id="ay-tab-sensores" aria-controls="ay-sensores" aria-selected="true" tabindex="0">Sensores</button>
+    <button class="modo" role="tab" id="ay-tab-conexiones" aria-controls="ay-conexiones" aria-selected="false" tabindex="-1">Conexiones de mi robot</button>
+    <button class="modo" role="tab" id="ay-tab-bases" aria-controls="ay-bases" aria-selected="false" tabindex="-1">Las bases</button>
+    <button class="modo" role="tab" id="ay-tab-inicio" aria-controls="ay-inicio" aria-selected="false" tabindex="-1">Primeros pasos</button>
+  </div>
+  <div class="ay-panel" id="ay-sensores" role="tabpanel" aria-labelledby="ay-tab-sensores"></div>
+  <div class="ay-panel" id="ay-conexiones" role="tabpanel" aria-labelledby="ay-tab-conexiones" hidden>
+    <p>Así está conectado tu robot según «Mi robot». Tu código tiene que usar estos mismos pines.</p>
+    <div class="ay-tablas" id="ay-conexiones-lista"></div>
+    <p class="ay-aviso">⚠ El VL53L0X y el TCS34725 usan la misma dirección I2C (0x29). En el robot real hay que cambiar la dirección del VL53L0X con setAddress (apagando el otro con XSHUT) o usar un multiplexor I2C.</p>
+    <button class="btn-sec" id="ay-mi-robot">Cambiar en Mi robot</button>
+  </div>
+  <div class="ay-panel" id="ay-bases" role="tabpanel" aria-labelledby="ay-tab-bases" hidden>
+    <h3>Cómo se puntúa</h3>
+    <table class="ay-tabla" id="ay-puntaje"></table>
+    <p>Un reinicio es volver al último hito o saltar al siguiente: cualquier salto quita el puntaje de tiempo, y el hito saltado no suma.</p>
+    <h3>Las piezas de la pista</h3>
+    <table class="ay-tabla">
+      <tr><th>Recta</th><td>Una línea negra de 19 mm de borde a borde.</td></tr>
+      <tr><th>Giro suave</th><td>Un cuarto de círculo de 15 cm de radio.</td></tr>
+      <tr><th>Giro en L</th><td>Una esquina de 90° al centro de la baldosa.</td></tr>
+      <tr><th>Línea con cortes</th><td>Trazos con espacios de hasta 4 cm: el robot debe seguir derecho hasta encontrar la línea otra vez.</td></tr>
+      <tr><th>Cruce + y unión en T</th><td>Las marcas verdes antes del cruce dicen qué hacer: a la izquierda, girar a la izquierda; a la derecha, girar a la derecha; a los dos lados, dar la vuelta; sin marcas, seguir derecho. Las marcas después del cruce no cuentan.</td></tr>
+      <tr><th>Rampa</th><td>Sube o baja hasta 35°.</td></tr>
+      <tr><th>Indicador F2</th><td>Una línea que avisa, seguida de una línea corta por cada decisión, hacia el lado del giro.</td></tr>
+      <tr><th>Cuadrado F1</th><td>Un cuadrado con dos caminos: solo uno es el correcto.</td></tr>
+      <tr><th>Partida</th><td>Una línea atravesada que marca dónde empieza el robot.</td></tr>
+      <tr><th>Meta</th><td>Una línea atravesada al final: el robot tiene que detenerse sobre ella.</td></tr>
+      <tr><th>Obstáculo (F4)</th><td>Un cubo sobre la línea que hay que rodear sin tocarlo.</td></tr>
+      <tr><th>Bache</th><td>Un medio cilindro bajo, recto o en diagonal respecto de la línea.</td></tr>
+      <tr><th>Hito</th><td>Un punto de control numerado: los sensores no lo ven, pero el juez sí.</td></tr>
+    </table>
+  </div>
+  <div class="ay-panel" id="ay-inicio" role="tabpanel" aria-labelledby="ay-tab-inicio" hidden>
+    <p>Escribe tu programa en «Programar» y presiona «Probar mi robot». En «Construir pista» armas la pista con las piezas de las bases, y en «Ejemplos» hay proyectos para empezar.</p>
+    <button class="btn-sec" id="ay-recorrido">Ver el recorrido de nuevo</button>
+    <h3>Sin internet</h3>
+    <p>La primera vez que pruebas tu robot, el simulador descarga su compilador. Después queda guardado en este navegador y funciona sin internet.</p>
+    <button class="btn-sec" id="ay-instalar" hidden>Instalar en este computador</button>
+  </div>
+</dialog>
 
 <dialog class="ventana ventana-ejemplos" id="ventana-ejemplos" aria-labelledby="ej-titulo">
   <div class="ventana-cab">
