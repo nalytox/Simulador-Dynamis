@@ -13,6 +13,7 @@ import { crearEditorPista } from './editor-pista';
 import { crearPanelPista } from './panel-pista';
 import { crearArchivoPista } from './archivo-pista';
 import { crearVentanaRobot } from './mi-robot';
+import { crearVentanaAjuste } from './ajustar';
 import { ClienteCompilador } from '../compilador/cliente';
 import { primerError } from '../compilador/amigables';
 import { ClienteSimulacion } from '../simulacion/cliente';
@@ -130,6 +131,14 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
     },
   });
   $('btn-mi-robot').addEventListener('click', () => ventanaRobot.abrir());
+  const ventanaAjuste = crearVentanaAjuste(raiz, {
+    proyecto: () => programa.proyecto(),
+    nombrePista: () => pistaEditada.nombre,
+    entrenar: async () => ({ motivo: 'no-compila', mensaje: 'El entrenamiento llega en la próxima tarea.' }),
+    alVer: () => {},
+    alUsar: () => {},
+  });
+  $('btn-ajustar').addEventListener('click', () => ventanaAjuste.abrir());
   lienzo.mostrarPista(pista);
   const poseDe = (id: string) => (puntosDePartida(pista).find(p => p.id === id) ?? puntosDePartida(pista)[0]).pose;
   const tarjetas = crearTarjetas(raiz);

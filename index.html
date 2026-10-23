@@ -60,7 +60,7 @@
       </button>
       <button class="btn-sec" id="btn-pausa"><svg class="ico relleno" viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1.2"/><rect x="14" y="5" width="4" height="14" rx="1.2"/></svg><span id="txt-pausa">Pausa</span></button>
       <button class="btn-sec" id="btn-inicio"><svg class="ico" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>Volver al inicio</button>
-      <button class="btn-sec btn-ajustar" id="btn-ajustar" disabled title="Llega pronto"><svg class="ico" viewBox="0 0 24 24"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg>Ajustar parámetros</button>
+      <button class="btn-sec btn-ajustar" id="btn-ajustar" aria-haspopup="dialog"><svg class="ico" viewBox="0 0 24 24"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg>Ajustar parámetros</button>
       <span class="chip-estado" id="estado"><i></i><span id="txt-estado">Listo para probar</span></span>
       <label class="velocidad" for="vel">Lento
         <input type="range" id="vel" min="0" max="4" step="1" value="2" aria-label="Velocidad de la simulación">
@@ -313,6 +313,71 @@ mpu.getEvent(&amp;a, &amp;g, &amp;temp);</pre>
     <article class="card">
       <header><h2>Pines</h2><span class="chip">GPIO del ESP32</span></header>
       <div class="campos-robot" id="robot-pines"></div>
+    </article>
+  </div>
+</dialog>
+
+<dialog class="ventana ventana-ajuste" id="ventana-ajuste" aria-labelledby="aj-titulo">
+  <div class="ventana-cab">
+    <svg viewBox="0 0 64 64" aria-hidden="true"><use href="#mascota"/></svg>
+    <div class="ventana-tit">
+      <h2 id="aj-titulo">Ajustar parámetros</h2>
+      <p>Tu robot practica muchas veces en la pista y va aprendiendo qué valores de tu código le funcionan mejor.</p>
+    </div>
+    <button class="btn-banda" id="aj-cerrar">Volver a mi programa</button>
+  </div>
+  <div class="ventana-cuerpo">
+    <article class="card">
+      <header><h2>¿Qué quieres ajustar?</h2></header>
+      <ul class="avisos-pista aj-avisos" id="aj-avisos" hidden></ul>
+      <div class="pids" id="aj-pids"></div>
+    </article>
+
+    <article class="card">
+      <header><h2>Entrenamiento</h2><span class="chip" id="aj-chip">Sin empezar</span></header>
+      <div class="entreno">
+        <div class="ajustes-entreno">
+          <label for="aj-pruebas">Pruebas<input type="number" id="aj-pruebas" value="200" min="10" max="2000" step="10"></label>
+          <label for="aj-duracion">Cada prueba dura<select id="aj-duracion"><option value="10">10 s</option><option value="20" selected>20 s</option><option value="30">30 s</option></select></label>
+          <label for="aj-robots">Robots practicando a la vez<select id="aj-robots"></select></label>
+          <div class="dato">Pista<b id="aj-pista">Mi pista</b></div>
+        </div>
+        <div class="fila-botones">
+          <button class="btn-probar" id="aj-empezar">
+            <svg class="ico relleno" viewBox="0 0 24 24" aria-hidden="true"><path id="aj-ico" d="M7 4.5v15l12.5-7.5z"/></svg>
+            <span id="aj-empezar-txt">Empezar a entrenar</span>
+          </button>
+        </div>
+        <div class="error-pista aj-error" id="aj-error" role="alert" hidden>
+          <div>
+            <p id="aj-error-txt"></p>
+            <button class="btn-mini" id="aj-error-tecnico-btn" hidden>Ver detalle técnico</button>
+            <pre id="aj-error-tecnico" hidden></pre>
+          </div>
+        </div>
+        <div class="progreso"><b id="aj-barra"></b></div>
+        <div class="sub" id="aj-progreso">Aún no hay pruebas.</div>
+        <div class="leyenda"><span><i class="lp"></i>Cada prueba</span><span><i class="ll"></i>Mejor hasta ahora</span><span><i class="lr"></i>Nuevo récord</span></div>
+        <div class="grafico-caja" id="aj-grafico-caja">
+          <svg id="aj-grafico" role="img" aria-label="Recompensa obtenida en cada prueba"></svg>
+          <div class="tip" id="aj-tip" hidden></div>
+        </div>
+        <p class="nota">La recompensa es el puntaje de cada prueba: mientras más alto, mejor lo hizo el robot.</p>
+      </div>
+    </article>
+
+    <article class="card">
+      <header><h2>Mejor resultado</h2></header>
+      <div class="mejor">
+        <div class="valor-grande" id="aj-mejor-r">—</div>
+        <div class="sub" id="aj-mejor-sub">Todavía no hay un mejor resultado.</div>
+        <table class="comparar"><thead><tr><th scope="col">Valor</th><th scope="col">Ahora</th><th scope="col">Mejor</th></tr></thead><tbody id="aj-tabla"></tbody></table>
+        <canvas class="mini" id="aj-mini" aria-label="Recorrido de la mejor prueba"></canvas>
+        <button class="btn-sec" id="aj-ver" disabled style="justify-content:center">Ver esta prueba en la pista</button>
+        <button class="btn-usar" id="aj-usar" disabled>
+          <svg class="ico relleno" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.3 6.5 20.2l1-6.2L3 9.6l6.2-.9z"/></svg>Usar estos valores
+        </button>
+      </div>
     </article>
   </div>
 </dialog>
