@@ -51,8 +51,11 @@ test('un programa que se cuelga no detiene el entrenamiento', async ({ page }) =
   await usarAjusteDePrueba(page);
   await page.goto('/');
   await abrirProyecto(page, { 'p.ino': 'float kp = 1.0; // @ajustar siguelineas\nvoid setup() {}\nvoid loop() { while (kp > 0) {} }\n' });
+  // Se piden 2 pruebas: el mínimo es 10, así que el campo se ajusta a 10.
   await entrenar(page, 2);
+  await expect(page.locator('#aj-pruebas')).toHaveValue('10');
   await expect(page.locator('#aj-chip')).toHaveText('Terminado', { timeout: 240_000 });
-  await expect(page.locator('#aj-progreso')).toHaveText('Prueba 2 de 2');
+  await expect(page.locator('#aj-progreso')).toHaveText('Prueba 10 de 10');
+  await expect(page.locator('#aj-grafico .g-punto')).toHaveCount(10);
   expect(await vivos(page)).toBe(0);
 });
