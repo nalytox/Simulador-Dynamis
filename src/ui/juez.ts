@@ -13,6 +13,8 @@ export interface TarjetaJuez {
   mostrar(e: EstadoJuez | null): void;
   habilitar(corriendo: boolean): void;
   desde(): string;
+  /** Elige desde dónde partir, si ese punto está en la pista. */
+  elegirDesde(id: string): void;
 }
 
 /** La tarjeta del juez virtual: hitos y meta, puntaje, tiempo, reinicios, últimos eventos y desde dónde partir. */
@@ -81,5 +83,8 @@ export function crearTarjetaJuez(raiz: Document, eventos: { alPedir(p: Pedido): 
       actualizarBotones();
     },
     desde: () => seleccion.value,
+    elegirDesde(id) {
+      if ([...seleccion.options].some(o => o.value === id)) seleccion.value = id;
+    },
   };
 }

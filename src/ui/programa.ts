@@ -1,3 +1,4 @@
+import { reescribirAjustables } from '../compilador/ajustables';
 import { crearEditor } from './editor';
 import { crearPestanas } from './pestanas';
 import { confirmar, pedirNombre } from './dialogo';
@@ -24,6 +25,11 @@ export interface PanelPrograma {
   limpiarError(): void;
   /** Abre la pestaña y marca la línea con error (null la desmarca). */
   marcarError(archivo: string, linea: number | null): void;
+  /**
+   * "Usar estos valores" (decisión 12 de la fase 6): reescribe los números marcados con @ajustar, abre el
+   * archivo del primer cambio y resalta sus líneas. El cambio en ese archivo se deshace con Ctrl+Z.
+   */
+  aplicarAjustes(valores: Record<string, number>): { cambiadas: { archivo: string; linea: number }[]; faltan: string[] };
 }
 
 /** Contenido inicial de un archivo nuevo, según su tipo. */
@@ -188,6 +194,21 @@ export function crearPanelPrograma(raiz: Document, o: OpcionesPrograma): PanelPr
       recordarCarpeta(null);
     },
     limpiarError: () => editor.marcarLinea(null),
+    aplicarAjustes(valores) {
+      const r = reescribirAjustables(proyecto, valores);
+      if (r.cambiadas.length === 0) return r;
+      const primero = r.cambiadas[0].archivo;
+      // Los otros archivos cambian en el proyecto; el primero, en el editor, para poder deshacerlo.
+      const otros = [...new Set(r.cambiadas.map(c => c.archivo))].filter(a => a !== primero);
+      if (otros.length > 0) cambiar({ ...proyecto, archivos: { ...proyecto.archivos, ...Object.fromEntries(otros.map(a => [a, r.proyecto.archivos[a]])) } });
+      if (primero !== activo) elegir(primero);
+      const lineasNuevas = r.proyecto.archivos[primero].split('\n');
+      const lineas = r.cambiadas.filter(c => c.archivo === primero).map(c => c.linea);
+      editor.cambiarLineas(lineas.map(linea => ({ linea, texto: lineasNuevas[linea - 1] })));
+      editor.resaltarLineas(lineas);
+      editor.irALinea(lineas[0]);
+      return r;
+    },
     marcarError(archivo, linea) {
       if (archivo in proyecto.archivos && archivo !== activo) elegir(archivo);
       editor.marcarLinea(linea);

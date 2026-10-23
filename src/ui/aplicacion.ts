@@ -30,6 +30,7 @@ import { abrirAlmacen, conRetardo, type Almacen, type DatosGuardados, type Prefe
 import type { Proyecto } from '../proyecto/proyecto';
 import type { Pista } from '../pista/tipos';
 import { PROYECTO_INICIAL, PISTA_INICIAL } from '../ejemplos';
+import { buscarAjustables, formatearValor } from '../compilador/ajustables';
 
 const SIN_AISLAMIENTO = 'Para usar el simulador, recarga la página o usa Chrome, Edge o Firefox recientes.';
 const SIN_AUTOGUARDADO = 'No se pudo activar el guardado automático en este navegador: descarga tu proyecto para no perderlo.';
@@ -97,7 +98,7 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
   });
 
   // Las dos vistas: al volver a Programar, los mensajes se muestran desde el final.
-  crearVistas(raiz, { alCambiar: v => { if (v === 'programar') consola.irAlFinal(); } });
+  const vistas = crearVistas(raiz, { alCambiar: v => { if (v === 'programar') consola.irAlFinal(); } });
   const panelPista = crearPanelPista(raiz, {
     pista: () => editorPista.pista(),
     alCambiar: p => editorPista.editar(p),
@@ -140,8 +141,12 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
     proyecto: () => programa.proyecto(),
     pista: () => pistaEditada,
     entrenar: pedido => entrenarDesdeLaVentana(pedido),
-    alVer: () => {},
-    alUsar: () => {},
+    alVer: m => {
+      vistas.mostrar('programar');
+      juez.elegirDesde('partida');
+      void probar({ ajustes: m.valores, semilla: m.semilla });
+    },
+    alUsar: m => usarValores(m.valores),
   });
   $('btn-ajustar').addEventListener('click', () => ventanaAjuste.abrir());
   lienzo.mostrarPista(pista);
@@ -274,7 +279,20 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
     $('chip-tiempo').textContent = `t = ${formatoTiempo(0)}`;
   }
 
-  async function probar() {
+  /** Escribe en el código los valores del entrenamiento (spec §11.4) y lo cuenta en los mensajes. */
+  function usarValores(valores: Record<string, number>) {
+    vistas.mostrar('programar');
+    const r = programa.aplicarAjustes(valores);
+    if (r.cambiadas.length > 0) {
+      const marcas = buscarAjustables(programa.proyecto()).parametros.filter(a => a.id in valores);
+      avisos.logro('¡Tu robot aprendió! Cambiamos los valores marcados en tu código.');
+      mensajeSistema(`Usé los valores del entrenamiento: ${marcas.map(a => `${a.nombre} = ${formatearValor(valores[a.id], a.entero).replace('.', ',')}`).join(', ')}.`);
+    }
+    if (r.faltan.length > 0) mensajeSistema(`No encontré en tu código: ${r.faltan.join(', ')}. Esos valores no cambiaron.`);
+  }
+
+  /** Corre el programa en la pista; el entrenamiento pasa sus valores y su semilla para repetir una prueba. */
+  async function probar(opciones: { ajustes?: Record<string, number>; semilla?: number } = {}) {
     const mio = ++intento;
     burbuja.ocultar();
     programa.limpiarError();
@@ -285,7 +303,7 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
         compiladorListo = true;
       } catch {
         if (mio !== intento) return;
-        burbuja.mostrar({ ...SIN_COMPILADOR, boton: { texto: 'Reintentar', alClic: () => void probar() } });
+        burbuja.mostrar({ ...SIN_COMPILADOR, boton: { texto: 'Reintentar', alClic: () => void probar(opciones) } });
         mostrar('error');
         return;
       }
@@ -306,7 +324,8 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
     dejarListo();
     simulacion.iniciar({
       modulo: r.modulo, pista, robot, desde: juez.desde(),
-      semilla: crypto.getRandomValues(new Uint32Array(1))[0], velocidad: preferencias.velocidad,
+      semilla: opciones.semilla ?? crypto.getRandomValues(new Uint32Array(1))[0], velocidad: preferencias.velocidad,
+      ajustes: opciones.ajustes,
     });
     juez.habilitar(true);
     mostrar('corriendo');

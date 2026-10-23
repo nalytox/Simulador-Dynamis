@@ -13,10 +13,31 @@ export interface EditorCodigo {
   marcarLinea(linea: number | null): void;
   irALinea(linea: number): void;
   enfocar(): void;
+  /** Cambia líneas enteras (desde 1) del archivo abierto en una sola transacción: Ctrl+Z la deshace. */
+  cambiarLineas(cambios: { linea: number; texto: string }[]): void;
+  /** Resalta líneas (desde 1) hasta la próxima edición; [] las quita. */
+  resaltarLineas(lineas: number[]): void;
 }
 
 const fijarError = StateEffect.define<number | null>();
 const marcaError = Decoration.line({ class: 'linea-error' });
+const fijarAjustadas = StateEffect.define<number[]>();
+const marcaAjustada = Decoration.line({ class: 'linea-ajustada' });
+
+/** Las líneas que cambió "Usar estos valores": se ven resaltadas hasta que el estudiante edite. */
+const campoAjustadas = StateField.define<DecorationSet>({
+  create: () => Decoration.none,
+  update(marcas, tr) {
+    let resultado = tr.docChanged ? Decoration.none : marcas;
+    for (const e of tr.effects) {
+      if (!e.is(fijarAjustadas)) continue;
+      const validas = [...new Set(e.value)].filter(l => l >= 1 && l <= tr.state.doc.lines).sort((a, b) => a - b);
+      resultado = Decoration.set(validas.map(l => marcaAjustada.range(tr.state.doc.line(l).from)));
+    }
+    return resultado;
+  },
+  provide: f => EditorView.decorations.from(f),
+});
 
 const campoError = StateField.define<DecorationSet>({
   create: () => Decoration.none,
@@ -45,11 +66,12 @@ const tema = EditorView.theme({
   '&.cm-focused .cm-cursor': { borderLeftColor: '#0B0F98' },
   '&.cm-focused .cm-selectionBackground, .cm-selectionBackground': { backgroundColor: '#DDF4FF' },
   '.linea-error': { backgroundColor: '#FFE8EC', boxShadow: 'inset 4px 0 0 #C4314B' },
+  '.linea-ajustada': { backgroundColor: '#FFF4D6', boxShadow: 'inset 4px 0 0 #FFD166' },
 });
 
 export function crearEditor(contenedor: HTMLElement, alCambiar: (texto: string) => void): EditorCodigo {
   const extensiones = [
-    basicSetup, cpp(), tema, campoError,
+    basicSetup, cpp(), tema, campoError, campoAjustadas,
     EditorView.contentAttributes.of({ 'aria-label': 'Código del programa' }),
     // setState (cambiar de pestaña) no pasa por aquí: solo lo que escribe el estudiante.
     EditorView.updateListener.of(u => { if (u.docChanged) alCambiar(u.state.doc.toString()); }),
@@ -83,5 +105,11 @@ export function crearEditor(contenedor: HTMLElement, alCambiar: (texto: string) 
       vista.focus();
     },
     enfocar: () => vista.focus(),
+    cambiarLineas(cambios) {
+      const doc = vista.state.doc;
+      const validos = cambios.filter(c => c.linea >= 1 && c.linea <= doc.lines);
+      vista.dispatch({ changes: validos.map(c => ({ from: doc.line(c.linea).from, to: doc.line(c.linea).to, insert: c.texto })) });
+    },
+    resaltarLineas: lineas => vista.dispatch({ effects: fijarAjustadas.of(lineas) }),
   };
 }

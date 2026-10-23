@@ -5,8 +5,7 @@ Los estudiantes escriben el código **Arduino real** del robot (ESP32, QTR-MX-8A
 TCS34725) y lo prueban en una pista virtual que sigue las bases de Rescue Line FIRVI 2026, antes de
 subirlo al robot físico.
 
-> **Estado: fase 5 de 7 — construir la pista y configurar el robot.** Se abre en el navegador con
-> `npm run dev`:
+> **Estado: fase 6 de 7 — ajustar parámetros.** Se abre en el navegador con `npm run dev`:
 > - **Programar:** el editor con pestañas, abrir una carpeta o un `.zip`, descargar el proyecto y
 >   autoguardado; **"Probar mi robot"** compila en el navegador y muestra al robot en la pista, con
 >   pausa, velocidad, "Volver al inicio" y el aviso de ciclo sin fin; los mensajes del `Serial`, lo
@@ -18,10 +17,36 @@ subirlo al robot físico.
 > - **"Mi robot":** las medidas, la posición de los sensores y los pines del robot, con un dibujo
 >   desde arriba y avisos (pines repetidos, sensores fuera del chasis, robot más grande que las
 >   bases). Se exporta e importa como `robot.json`.
+> - **"Ajustar parámetros":** los valores marcados con `@ajustar` en el código, qué ajustar y en qué
+>   rango, varias pruebas a la vez en workers sin recompilar, el gráfico de recompensa por prueba, el
+>   mejor resultado con su recorrido, "Ver esta prueba en la pista" y "Usar estos valores" (reescribe
+>   los números en el código; se deshace con `Ctrl+Z`). **El agente de aprendizaje y la recompensa
+>   los programa el profe:** sus archivos están creados con el contrato, sin rellenar, y mientras
+>   tanto la ventana explica qué falta.
 >
-> Faltan Ajustar parámetros (fase 6), y los ejemplos, la ayuda y la publicación en GitHub Pages
-> (fase 7). Las fases se describen en la
-> [spec](docs/superpowers/specs/2026-10-17-simulador-dynamis-design.md#19-fases-sugeridas-para-el-plan).
+> Faltan los ejemplos, la ayuda y la publicación en GitHub Pages (fase 7). Las fases se describen en
+> la [spec](docs/superpowers/specs/2026-10-17-simulador-dynamis-design.md#19-fases-sugeridas-para-el-plan).
+
+## Ajustar parámetros
+
+Se marca un valor del código con un comentario `@ajustar` en la misma línea. En el ESP32 es solo un
+comentario; en el simulador, cada prueba del entrenamiento le da un valor distinto sin recompilar:
+
+```cpp
+const float KP = 0.025;  // cuánto corrige · @ajustar siguelineas 0..0.1
+int velocidad = 100;     // @ajustar siguelineas 50..200
+#define KD 0.6           // @ajustar siguelineas
+```
+
+- Vale en variables numéricas con un número como valor inicial, y en `#define NOMBRE número`, en
+  cualquier archivo del proyecto. Un `constexpr` marcado da un aviso.
+- El grupo (`siguelineas`, `giroscopio`, `distancia`, `posicion` u otro nombre) ordena las tarjetas
+  de la ventana. El rango `min..max` es opcional: si no está, se usa de 0 a 4 veces el valor.
+
+**Para el profe:** el agente de aprendizaje por refuerzo (`src/ajuste/agente.js`) y la recompensa
+(`src/ajuste/recompensa.js`) están sin rellenar: cada función lanza `FaltaImplementar` con un
+`TODO(profe)`. El contrato, qué recibe cada función, cuándo se llama y en qué hilo corre está en
+[`src/ajuste/README.md`](src/ajuste/README.md).
 
 ## Librerías soportadas
 
@@ -108,4 +133,5 @@ evaluar una cabecera precompilada. Falta medir en un Chromebook escolar dentro d
 - [Plan de la fase 3](docs/superpowers/plans/2026-10-22-fase-3-librerias-de-sensores.md)
 - [Plan de la fase 4](docs/superpowers/plans/2026-10-22-fase-4-ui-programar.md)
 - [Plan de la fase 5](docs/superpowers/plans/2026-10-22-fase-5-construir-pista-y-mi-robot.md)
+- [Plan de la fase 6](docs/superpowers/plans/2026-10-22-fase-6-ajustar-parametros.md)
 - [Maqueta de la interfaz](docs/maqueta/simulador-dynamis.html) (ábrela en el navegador)

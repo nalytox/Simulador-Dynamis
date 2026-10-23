@@ -24,7 +24,7 @@ El robot usa:
 ### Reparto del trabajo
 
 - **Este proyecto (lo construimos aquí):** interfaz gráfica, editor de código, compilación y ejecución del código Arduino, librerías simuladas, editor de pista, primitivas geométricas del mundo, motor de pruebas para "Ajustar parámetros", persistencia y pruebas automáticas.
-- **El profesor/autor (lo implementa él):** los **modelos matemáticos** (dinámica del robot y modelo de cada sensor), el **agente de aprendizaje por refuerzo** y la **función de recompensa**. El proyecto deja *placeholders* simples marcados con `TODO` para que todo funcione de punta a punta mientras tanto.
+- **El profesor/autor (lo implementa él):** los **modelos matemáticos** (dinámica del robot y modelo de cada sensor), el **agente de aprendizaje por refuerzo** y la **función de recompensa**. Para los modelos, el proyecto deja *placeholders* simples marcados con `TODO` para que todo funcione de punta a punta mientras tanto. El agente y la recompensa quedan **sin rellenar**: sus archivos tienen el contrato y un `TODO(profe)`, y la ventana explica qué falta (§11.3).
 - **Casos de la pista:** vienen de las bases FIRVI 2026 y de lo que pidió el usuario: cruces + con marcas de color, línea con cortes, giro suave, rampa, baches, F1/F2, obstáculo, partida y meta (§10).
 
 ### Criterios de éxito
@@ -49,7 +49,7 @@ El robot usa:
 | Pista | **Grilla de baldosas** de 30 cm (8 × 6 = 240 × 180 cm, como las bases FIRVI 2026) + objetos libres encima. Con rampas, baches, cortes, cruces con marcas de color, F1/F2 y obstáculo. |
 | Puntaje | **Juez virtual** con las reglas de las bases (hitos, meta, tiempo, reinicios). La recompensa de entrenamiento puede usarlo. |
 | Placeholders de modelos | Ideales y sin ruido, marcados con `TODO`. |
-| Ajustar parámetros | El proyecto hace la ventana, el motor de pruebas y las interfaces; el profesor hace el **agente RL** y la **recompensa** (con placeholder de búsqueda aleatoria). |
+| Ajustar parámetros | El proyecto hace la ventana, el motor de pruebas y las interfaces; el profesor hace el **agente RL** y la **recompensa** (el proyecto deja sus archivos con el contrato, sin rellenar). |
 | Interfaz | **No** imita al Arduino IDE: amigable para 14 a 16 años, en español, con la paleta de Dynamis. |
 | Uso | Un link (GitHub Pages) que se puede **instalar como app** y funciona **sin internet** después de la primera carga. |
 | Proyectos | **Carpetas con varios archivos** (`.ino`, `.h`, `.cpp`), cada uno en su pestaña. |
@@ -121,8 +121,10 @@ src/
   pista/                       # modelo, catálogo de baldosas y objetos, dibujo, serialización
   robot/                       # configuración del robot (dimensiones, montaje de sensores, pines), dibujo
   ajuste/                      # motor de pruebas, pool de workers, registro de pruebas
-    agente.js                  # ← PROFESOR (placeholder: búsqueda aleatoria)
-    recompensa.js              # ← PROFESOR (placeholder simple)
+    contrato.ts                # tipos del contrato y FaltaImplementar
+    README.md                  # contrato del agente y la recompensa, para el profesor
+    agente.js                  # ← PROFESOR (sin rellenar: lanza FaltaImplementar)
+    recompensa.js              # ← PROFESOR (sin rellenar: lanza FaltaImplementar)
   modelos/                     # ← PROFESOR
     README.md                  # contrato de cada función, unidades y convenciones
     dinamica.js
@@ -516,22 +518,42 @@ float ki = 0;     // @ajustar siguelineas 0..0.01
 
 - **En el ESP32 real** es un comentario, así que el código no cambia.
 - **En el simulador,** el preprocesador reemplaza el inicializador por `__dyn_ajustable("siguelineas", "kp", 0.08)`. En un `#define` el valor se reemplaza por `(__dyn_ajustable(...))`. Los números de línea se mantienen. Cada prueba fija sus valores antes de instanciar el módulo, **sin recompilar**.
+- **Sintaxis:** `@ajustar grupo` o `@ajustar grupo min..max`, dentro del comentario `//` de la misma línea (puede haber texto antes). Vale en:
+  - `[const|static|volatile|unsigned|signed|long|short ...] tipo nombre = número;`, con un tipo numérico de Arduino (`float`, `double`, `int`, `long`, `byte`, `uint8_t`… `int32_t`, `size_t`, `word`; `bool` no);
+  - `#define NOMBRE número`.
+
+  El grupo son letras, números y `_`.
 - Las marcas pueden estar en **cualquier archivo** del proyecto (por ejemplo `config.h`).
-- Un `constexpr` marcado genera un aviso: no puede leerse en tiempo de ejecución.
+- **Avisos** (la marca no se transforma): un `constexpr` marcado, que no puede leerse en tiempo de ejecución; una marca que no está junto a un número así; una marca sin grupo; dos marcas con el mismo nombre.
+- **Enteros y reales:** un parámetro es entero si su tipo es entero, o si es un `#define` cuyo número no tiene `.` ni `e`.
 - **Grupos con nombre e ícono amigables:** `siguelineas`, `giroscopio`, `distancia` y `posicion`. Cualquier otro nombre aparece como "grupo propio".
-- El rango opcional `min..max` de la marca es el valor inicial del rango de búsqueda en la ventana.
-- **"Usar estos valores"** reescribe los números en los archivos y líneas correspondientes, abre esa pestaña y resalta las líneas cambiadas.
+- **Rango de búsqueda:** el `min..max` de la marca; si no tiene, `[0, 4·valor]` (`[4·valor, 0]` si el valor es negativo; `[0, 1]` si es 0). Se edita en la ventana; con `min ≥ max` no se puede empezar.
+- **El ejemplo inicial** trae marcados `VELOCIDAD` (`@ajustar siguelineas 50..200`) y `KP` (`@ajustar siguelineas 0..0.1`), para que la ventana tenga algo que mostrar.
+- **"Usar estos valores":**
+  - busca cada marca por su id en el código actual, aunque se haya movido de línea, y reescribe su número: los enteros redondeados, y los reales con 4 cifras significativas y siempre con punto decimal (`1.0`, no `1`);
+  - abre el archivo del primer cambio y resalta las líneas cambiadas hasta la próxima edición;
+  - el cambio se deshace con `Ctrl+Z`;
+  - avisa con un logro y escribe en los mensajes los valores usados; si una marca ya no está, lo dice y no toca otra línea.
 
 ### 11.2 Motor de pruebas (lo implementa este proyecto)
 
 - El proyecto se compila **una vez**. El `WebAssembly.Module` se envía a los N workers.
 - **Cada prueba:**
   1. Crea una instancia nueva del módulo, con memoria y variables globales limpias.
-  2. Fija los valores propuestos y reinicia el robot en el inicio de la pista con una semilla nueva.
-  3. Ejecuta `setup()` y luego `loop()` sin ritmo de tiempo real, hasta la duración máxima o hasta que `debeTerminar` lo indique.
-- **Registro de la prueba:** cada 10 ms (configurable) guarda `t`, estado, lecturas y motores, más los eventos (`colision`, `fueraDePista`, `cicloSinFin`, error de ejecución) y la semilla.
+  2. Fija los valores propuestos y pone el robot en la **partida** de la pista con una semilla nueva.
+  3. Ejecuta `setup()` y luego `loop()` sin ritmo de tiempo real, hasta la duración máxima, hasta que `debeTerminar` lo indique o hasta que el juez dé la prueba por terminada.
+- **Valores propuestos por el agente:** solo se usan los ids de los parámetros elegidos, acotados a su rango; un valor que no es un número finito toma el valor del código. Los parámetros sin elegir usan el valor del código.
+- **Registro de la prueba:**
+  - un paso cada 10 ms: `{ t, estado, lecturas, motores, eventos }`;
+  - `eventos` son los del juez nuevos en ese paso (`'hito'`, `'meta'`, `'perdio-linea'`, `'toco-obstaculo'`, `'camino-equivocado'`, `'fin-tiempo'`), más `'colision'` (la huella toca un obstáculo) y `'fuera-de-pista'` (el centro sale de la grilla);
+  - `fin.motivo` es `'tiempo' | 'termino' | 'juez' | 'error' | 'ciclo-sin-fin'` (`'termino'`: lo pidió `debeTerminar`; `'juez'`: el juez terminó la prueba), más la semilla y el estado final del juez.
 - **La recompensa se calcula en el worker,** y al hilo principal solo vuelven `{ valores, recompensa, resumen, trayectoria (diezmada), semilla }`.
-- **"Ver esta prueba en la pista"** repite la prueba en la vista normal, con los mismos valores y la misma semilla.
+- **Ciclo sin fin:** un worker sin latido durante 2 s de tiempo real se reemplaza por uno nuevo; la prueba se registra con `fin.motivo = 'ciclo-sin-fin'` y sin pasos, y su recompensa la calcula el hilo principal con el mismo `calcularRecompensa`.
+- **Errores:**
+  - un error de ejecución del programa del estudiante termina esa prueba con `fin.motivo = 'error'`, y el entrenamiento sigue;
+  - `FaltaImplementar` detiene el entrenamiento con "Para entrenar falta que tu profe programe {el agente | la recompensa} (`src/ajuste/…`).";
+  - otra excepción del agente o de la recompensa, o una recompensa que no es un número finito, lo detiene con "Algo falló en el simulador, avisa a tu profe." y el detalle técnico (archivo y pila, §14).
+- **"Ver esta prueba en la pista"** cierra la ventana, va a Programar y repite la prueba en la vista normal, desde la partida, con los mismos valores y la misma semilla.
 
 ### 11.3 Contrato del profesor (`src/ajuste/`)
 
@@ -548,18 +570,17 @@ export function calcularRecompensa(registro) → number
 export function debeTerminar(paso /* { t, estado, lecturas, motores, eventos } */, mundo) → false | string  // motivo
 ```
 
-**Placeholders:**
-- **Agente:** búsqueda aleatoria. 25 % de las veces explora uniformemente el rango; el resto perturba el mejor resultado con ruido gaussiano (σ = 10 % del rango).
-- **Recompensa:** el **puntaje del juez virtual** (§10.6: hitos, meta y tiempo, menos descuentos), más un pequeño bono por la distancia avanzada sobre la línea, para desempatar al comienzo del entrenamiento, cuando todavía no se alcanza ningún hito. `debeTerminar` corta la prueba cuando el juez marca "perdió la línea", "tocó el obstáculo" o "camino equivocado".
+**Sin placeholders (cambio pedido por el usuario, 2026-10-22):** el profesor programa el agente y la recompensa desde cero. `agente.js` y `recompensa.js` quedan con el contrato en JSDoc y un `TODO(profe)`, y cada función lanza `FaltaImplementar` (de `contrato.ts`) con el nombre de la pieza y su archivo. La ventana lo detecta y explica qué falta, sin compilar ni dejar workers vivos. El detalle del contrato (el registro, el resumen y los errores) está en `src/ajuste/README.md`.
 
 ### 11.4 Ventana (interfaz para estudiantes)
 
-- **¿Qué quieres ajustar?:** tarjetas por grupo con cada parámetro, un interruptor para ajustarlo o no, su valor actual, una explicación simple ("Qué tan fuerte corrige", "Frena los zigzags") y su rango de búsqueda. Los grupos que no están en el código muestran cómo marcarlos.
+- **¿Qué quieres ajustar?:** tarjetas por grupo con cada parámetro, un interruptor para ajustarlo o no, su valor actual, una explicación simple ("Qué tan fuerte corrige", "Frena los zigzags") y su rango de búsqueda. Los grupos que no están en el código muestran cómo marcarlos. Los avisos de las marcas se muestran arriba. Sin nada elegido, o con un rango inválido, no se puede empezar.
 - **Entrenamiento:**
-  - Configuración: número de pruebas, duración de cada prueba, robots practicando a la vez y pista.
+  - Configuración: número de pruebas (de 10 a 2000, 200 por defecto), duración de cada prueba (10, 20 o 30 s, 20 por defecto), robots practicando a la vez (de 1 a `min(8, núcleos − 1)`, por defecto `min(4, ese máximo)`); la pista es la del editor y el robot el de "Mi robot".
   - Botón "Empezar a entrenar" o "Detener entrenamiento", y barra de progreso.
-  - Gráfico de recompensa por prueba: puntos `#2C93D3`, línea "mejor hasta ahora" `#4049D8` y récords en `#FFD166`. Este par de azules pasó el validador de color. Lleva leyenda y tooltip.
-- **Mejor resultado:** recompensa, comparación de los valores actuales con los mejores, recorrido de esa prueba, "Ver esta prueba en la pista" y "Usar estos valores".
+  - Cerrar la ventana ("Volver a mi programa" o `Esc`) no detiene el entrenamiento: al abrirla de nuevo se ve el avance. Mientras entrena, los parámetros y la configuración no se editan.
+  - Gráfico de recompensa por prueba: puntos `#2C93D3`, línea "mejor hasta ahora" `#4049D8` y récords en `#FFD166`. Este par de azules pasó el validador de color. Lleva leyenda y tooltip. La escala no supone nada de la recompensa: puede ser negativa, constante o enorme.
+- **Mejor resultado:** la recompensa y el número de la prueba, los valores de esa prueba junto a los del código, su recorrido, "Ver esta prueba en la pista" y "Usar estos valores". No hay una prueba base con "tus valores", así que no se compara la recompensa.
 
 ---
 
@@ -655,7 +676,7 @@ Referencia visual: la maqueta en `docs/maqueta/`. Todo en **español (Chile)**, 
   - la acción esperada según las marcas;
   - continuidad de alturas y avisos del editor;
   - el juez virtual (hitos, meta, tiempo, reinicios, "perdió la línea" con la excepción del obstáculo, "camino equivocado");
-  - placeholders del agente y la recompensa.
+  - las marcas `@ajustar` y su reescritura, el saneo de lo que propone el agente, el bucle de entrenamiento y el gráfico de recompensa.
 - **Integración (Vitest + Node):**
   - compilar proyectos de ejemplo reales con `@yowasp/clang` y ejecutarlos con el simulador sin navegador;
   - comprobar que un sketch que avanza mueve al robot, que `Serial` llega, que el QTR responde a la línea, que `@ajustar` cambia el comportamiento sin recompilar y que un error de sintaxis produce el mensaje amigable con archivo y línea correctos.
@@ -760,6 +781,8 @@ El catálogo FIRVI (§10.3) se implementa en la fase 2 (dibujo, relieve y superf
 - **Saltar una F** que no se logra completar es un reinicio de las bases: −10, máximo 3 y sin puntaje de tiempo (§10.6).
 - **Lecturas del QTR:** lo más realista antes que lo más rápido. Cada `analogRead` evalúa el modelo en su propio instante y con ruido independiente (§9).
 - **Unión en T por la rama:** el juez también la evalúa. Las marcas de cruces y uniones se leen desde el lado por donde entra el robot (§10.6).
+
+- **El profe programa el agente y la recompensa;** el proyecto deja sus archivos con el contrato, sin rellenar (§11.3).
 
 **Pendiente (no bloquea la implementación):**
 1. Medidas, pines y montaje reales del robot. El usuario los medirá más adelante; mientras tanto se usan los valores provisionales de §8, editables desde la app.
