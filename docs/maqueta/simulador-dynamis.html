@@ -1,0 +1,1491 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Maqueta de diseño del Simulador Dynamis. Los movimientos y lecturas son de ejemplo. -->
+<title>Simulador Dynamis</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Lexend:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: banda azul de identidad, barra de acciones grande, dos columnas (mi programa | pista + lo que siente el robot); en "Construir pista": paleta | pista | propiedades. Tema claro único: es la paleta de marca. */
+:root {
+  --azul: #0B0F98;
+  --azul-2: #1C22B8;
+  --celeste: #65C7F7;
+  --hielo: #DDF4FF;
+  --nube: #F4FAFF;
+  --sol: #FFD166;
+  --rosa: #FF9FAD;
+  --tinta: #12164A;
+  --tinta-suave: #4B5387;
+  --blanco: #FFFFFF;
+  --borde: #BFE3F8;
+  --error: #B4234A;
+  --error-fondo: #FFE6EA;
+  --sol-tinta: #5C4300;
+  --f-display: "Fredoka", "Baloo 2", "Trebuchet MS", system-ui, sans-serif;
+  --f-texto: "Lexend", "Segoe UI", system-ui, sans-serif;
+  --f-codigo: "JetBrains Mono", ui-monospace, "Cascadia Code", Consolas, monospace;
+  --radio: 20px;
+  color-scheme: light;
+}
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body {
+  background: var(--nube);
+  color: var(--tinta);
+  font-family: var(--f-texto);
+  font-size: 15px;
+  line-height: 1.45;
+}
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--azul); outline-offset: 2px; border-radius: 10px; }
+svg.ico { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+svg.ico.relleno { fill: currentColor; stroke: none; }
+
+.gutter {
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  max-width: 1480px;
+  margin-inline: auto;
+}
+
+/* ---------- Banda superior ---------- */
+.banda { background: var(--azul); color: var(--blanco); }
+.banda .gutter { display: flex; align-items: center; gap: 20px; padding-block: 12px; flex-wrap: wrap; }
+.marca { display: flex; align-items: center; gap: 10px; margin-right: auto; }
+.marca svg { width: 44px; height: 44px; }
+.marca b { font-family: var(--f-display); font-weight: 700; font-size: 26px; letter-spacing: .5px; line-height: 1; display: block; }
+.marca small { font-size: 12px; letter-spacing: 1.6px; text-transform: uppercase; opacity: .8; }
+.modos { display: flex; gap: 6px; background: rgba(255,255,255,.12); padding: 5px; border-radius: 999px; }
+.modo {
+  display: flex; align-items: center; gap: 8px;
+  border: 0; background: transparent; color: var(--blanco);
+  font-family: var(--f-display); font-weight: 600; font-size: 17px;
+  padding: 9px 18px; border-radius: 999px; opacity: .82;
+}
+.modo[aria-selected="true"] { background: var(--blanco); color: var(--azul); opacity: 1; }
+.modo:focus-visible { outline-color: var(--sol); }
+.extra { display: flex; gap: 8px; }
+.btn-banda {
+  display: flex; align-items: center; gap: 6px; border: 2px solid rgba(255,255,255,.35);
+  background: transparent; color: var(--blanco); padding: 7px 14px; border-radius: 999px; font-weight: 500;
+}
+.btn-banda:hover { background: rgba(255,255,255,.12); }
+.btn-banda:focus-visible { outline-color: var(--sol); }
+.aviso-maqueta { background: var(--hielo); color: var(--tinta-suave); font-size: 13px; }
+.aviso-maqueta .gutter { padding-block: 6px; display: flex; gap: 8px; align-items: center; }
+.aviso-maqueta i { width: 10px; height: 10px; border-radius: 50%; background: var(--rosa); display: inline-block; flex: none; }
+
+main.gutter { padding-block: 18px 28px; }
+.vista { display: flex; flex-direction: column; gap: 16px; }
+
+/* ---------- Barra de acciones ---------- */
+.acciones { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.btn-probar {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--azul); color: var(--blanco); border: 0;
+  font-family: var(--f-display); font-weight: 600; font-size: 21px;
+  padding: 13px 26px 13px 20px; border-radius: 999px;
+  box-shadow: 0 4px 0 #060962;
+  transition: transform .08s ease, box-shadow .08s ease;
+}
+.btn-probar svg.ico { width: 26px; height: 26px; }
+.btn-probar:hover { background: var(--azul-2); }
+.btn-probar:active { transform: translateY(3px); box-shadow: 0 1px 0 #060962; }
+.btn-probar.corriendo { background: var(--blanco); color: var(--azul); box-shadow: 0 4px 0 var(--borde); outline: 2px solid var(--azul); outline-offset: -2px; }
+.btn-sec {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--blanco); color: var(--azul); border: 2px solid var(--celeste);
+  font-weight: 600; padding: 10px 16px; border-radius: 999px;
+}
+.btn-sec:hover { background: var(--hielo); }
+.btn-sec:disabled { opacity: .45; cursor: default; }
+.velocidad {
+  display: flex; align-items: center; gap: 10px; margin-left: auto;
+  background: var(--blanco); border: 2px solid var(--hielo); padding: 8px 16px; border-radius: 999px;
+  font-size: 13px; color: var(--tinta-suave);
+}
+.velocidad input { accent-color: var(--azul); width: 120px; }
+.velocidad output { font-family: var(--f-display); font-weight: 600; font-size: 17px; color: var(--azul); min-width: 3ch; font-variant-numeric: tabular-nums; }
+.chip-estado { display: inline-flex; align-items: center; gap: 8px; font-weight: 500; color: var(--tinta-suave); }
+.chip-estado i { width: 12px; height: 12px; border-radius: 50%; background: var(--celeste); box-shadow: 0 0 0 4px var(--hielo); }
+.chip-estado.vivo i { background: #2BB673; box-shadow: 0 0 0 4px #D5F5E6; }
+
+/* ---------- Tarjetas ---------- */
+.card { background: var(--blanco); border: 2px solid var(--hielo); border-radius: var(--radio); display: flex; flex-direction: column; min-width: 0; }
+.card > header { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 2px solid var(--hielo); flex-wrap: wrap; }
+.card h2 { font-family: var(--f-display); font-weight: 600; font-size: 19px; margin: 0; display: flex; align-items: center; gap: 8px; }
+.card h2 svg.ico { color: var(--azul); }
+.chip { font-size: 12.5px; background: var(--hielo); color: var(--azul); padding: 3px 10px; border-radius: 999px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.header-der { margin-left: auto; display: flex; gap: 8px; }
+.btn-mini { border: 0; background: var(--hielo); color: var(--azul); font-size: 13px; font-weight: 600; padding: 6px 12px; border-radius: 999px; display: inline-flex; align-items: center; gap: 6px; }
+.btn-mini:hover { background: #C9EBFF; }
+.btn-mini svg.ico { width: 16px; height: 16px; }
+
+/* ---------- Vista Programar ---------- */
+.grid-programar { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.12fr); gap: 16px; align-items: start; }
+.col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+.editor { font-family: var(--f-codigo); font-size: 14px; line-height: 1.7; padding: 10px 0; overflow-x: auto; max-height: 470px; overflow-y: auto; }
+.linea { display: grid; grid-template-columns: 46px max-content; padding-right: 16px; min-width: 100%; }
+.linea .n { color: #9AA6C9; text-align: right; padding-right: 14px; user-select: none; font-variant-numeric: tabular-nums; }
+.linea .c { white-space: pre; }
+.linea.mal { background: var(--error-fondo); box-shadow: inset 4px 0 0 var(--error); }
+.linea.mal .n { color: var(--error); font-weight: 600; }
+.t-kw { color: var(--azul); font-weight: 600; }
+.t-fn { color: #0B6FA8; }
+.t-tipo { color: #7A2E8E; }
+.t-num { color: #B4234A; }
+.t-str { color: #8A5A00; }
+.t-com { color: #6B7699; font-style: italic; }
+.t-pre { color: #7A2E8E; font-weight: 600; }
+
+.burbuja { display: flex; gap: 14px; align-items: flex-start; margin: 0 14px 14px; padding: 14px 16px; background: var(--error-fondo); border-radius: 16px; border: 2px solid #FFC6D0; }
+.burbuja svg.mascota { width: 56px; height: 56px; flex: none; }
+.burbuja h3 { font-family: var(--f-display); font-weight: 600; font-size: 18px; margin: 0 0 2px; color: var(--error); }
+.burbuja p { margin: 0 0 10px; }
+.burbuja code { font-family: var(--f-codigo); background: var(--blanco); padding: 1px 6px; border-radius: 6px; font-weight: 600; }
+.burbuja .btn-mini { background: var(--blanco); color: var(--error); }
+
+.consola { font-family: var(--f-codigo); font-size: 13px; padding: 10px 16px; height: 150px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
+.consola div { display: flex; gap: 12px; }
+.consola .t { color: #9AA6C9; min-width: 7ch; font-variant-numeric: tabular-nums; }
+.consola .sis { color: var(--tinta-suave); font-family: var(--f-texto); font-size: 13px; }
+.logro { display: flex; align-items: center; gap: 10px; margin: 0 14px 14px; padding: 10px 14px; background: var(--sol); color: var(--sol-tinta); border-radius: 14px; font-weight: 600; }
+.logro svg.ico { width: 22px; height: 22px; }
+.logro.mal { background: var(--error-fondo); color: var(--error); }
+
+.lienzo-caja { position: relative; padding: 12px; }
+canvas.lienzo { width: 100%; aspect-ratio: 4 / 3; display: block; border-radius: 14px; background: #EAF5FD; touch-action: none; }
+.pista-pie { display: flex; gap: 14px; padding: 0 16px 12px; font-size: 12.5px; color: var(--tinta-suave); flex-wrap: wrap; }
+.pista-pie span { display: inline-flex; align-items: center; gap: 6px; }
+.pista-pie i { width: 12px; height: 12px; border-radius: 4px; display: inline-block; }
+
+.sensores { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+.sensor { background: var(--hielo); border-radius: 18px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.sensor.ancho { grid-column: 1 / -1; }
+.sensor h3 { margin: 0; font-family: var(--f-display); font-weight: 600; font-size: 16px; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.sensor h3 small { font-family: var(--f-texto); font-weight: 500; font-size: 11.5px; color: var(--tinta-suave); letter-spacing: .4px; }
+.sensor .valor { font-family: var(--f-display); font-weight: 600; font-size: 30px; color: var(--azul); line-height: 1.1; font-variant-numeric: tabular-nums; }
+.sensor .valor small { font-size: 15px; color: var(--tinta-suave); }
+.sensor .sub { font-size: 12.5px; color: var(--tinta-suave); font-variant-numeric: tabular-nums; }
+.sensor .como { align-self: flex-start; border: 0; background: var(--blanco); color: var(--azul); font-size: 12.5px; font-weight: 600; padding: 4px 10px; border-radius: 999px; }
+.sensor pre { margin: 0; font-family: var(--f-codigo); font-size: 12px; background: var(--blanco); border-radius: 10px; padding: 8px 10px; overflow-x: auto; white-space: pre; }
+
+.qtr { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; align-items: end; height: 92px; position: relative; }
+.qtr .barra { background: var(--blanco); border-radius: 8px; height: 100%; position: relative; overflow: hidden; }
+.qtr .barra b { position: absolute; left: 0; right: 0; bottom: 0; background: var(--celeste); border-radius: 8px; }
+.qtr .barra.ve b { background: var(--azul); }
+.qtr-num { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; font-family: var(--f-codigo); font-size: 10.5px; text-align: center; color: var(--tinta-suave); font-variant-numeric: tabular-nums; }
+.qtr-pos { position: relative; height: 22px; background: var(--blanco); border-radius: 999px; }
+.qtr-pos b { position: absolute; top: 3px; width: 16px; height: 16px; margin-left: -8px; border-radius: 50%; background: var(--sol); border: 3px solid var(--azul); }
+.fila-qtr { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+
+.medidor { height: 12px; background: var(--blanco); border-radius: 999px; overflow: hidden; }
+.medidor b { display: block; height: 100%; background: var(--celeste); border-radius: 999px; }
+.muestra { display: flex; gap: 12px; align-items: center; }
+.muestra i { width: 52px; height: 52px; border-radius: 14px; border: 3px solid var(--blanco); box-shadow: 0 0 0 2px var(--borde); flex: none; }
+.rgbc { display: grid; grid-template-columns: repeat(4, auto); gap: 2px 10px; font-family: var(--f-codigo); font-size: 11.5px; color: var(--tinta-suave); font-variant-numeric: tabular-nums; }
+.brujula { display: flex; gap: 12px; align-items: center; }
+.brujula svg { width: 64px; height: 64px; flex: none; }
+.motores { display: grid; grid-template-columns: auto 1fr auto; gap: 6px 10px; align-items: center; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.motor { height: 14px; background: var(--blanco); border-radius: 999px; position: relative; }
+.motor::after { content: ""; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 2px; background: var(--borde); }
+.motor b { position: absolute; top: 0; bottom: 0; background: var(--azul); border-radius: 999px; }
+
+/* ---------- Vista Construir pista ---------- */
+.grid-pista { display: grid; grid-template-columns: 240px minmax(0, 1fr) 260px; gap: 16px; align-items: start; }
+.paleta { padding: 12px 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.paleta h3 { margin: 6px 0 0; font-size: 12px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--tinta-suave); font-weight: 600; }
+.piezas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.pieza { border: 2px solid var(--hielo); background: var(--blanco); border-radius: 14px; padding: 8px 6px 6px; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 12.5px; font-weight: 500; }
+.pieza canvas { width: 64px; height: 64px; border-radius: 8px; box-shadow: 0 0 0 1px var(--hielo); }
+.pieza:hover { border-color: var(--celeste); }
+.pieza[aria-pressed="true"] { border-color: var(--azul); background: var(--hielo); }
+.paleta-grupos { display: flex; flex-direction: column; gap: 10px; }
+.pieza.tuyas { border-style: dashed; border-color: var(--rosa); color: var(--tinta-suave); cursor: default; justify-content: center; text-align: center; grid-column: 1 / -1; padding: 10px; font-size: 12px; }
+.pieza.tuyas b { color: var(--tinta); font-family: var(--f-display); font-size: 14px; font-weight: 600; }
+.props { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 14px; }
+.props .bloque { display: flex; flex-direction: column; gap: 8px; }
+.props .etq { font-size: 12px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--tinta-suave); font-weight: 600; }
+.props .grande { font-family: var(--f-display); font-weight: 600; font-size: 20px; }
+.fila-botones { display: flex; gap: 8px; flex-wrap: wrap; }
+.ayuda-teclas { font-size: 12.5px; color: var(--tinta-suave); background: var(--hielo); border-radius: 12px; padding: 10px 12px; }
+.ayuda-teclas kbd { font-family: var(--f-codigo); background: var(--blanco); border-radius: 6px; padding: 1px 6px; border: 1px solid var(--borde); }
+
+.barra-pestanas { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; padding: 8px 12px; border-bottom: 2px solid var(--hielo); }
+.pestana { border: 0; background: transparent; color: var(--tinta-suave); font-family: var(--f-codigo); font-size: 13px; font-weight: 600; padding: 6px 12px; border-radius: 10px; display: inline-flex; gap: 7px; align-items: center; }
+.pestana:hover { background: var(--nube); }
+.pestana[aria-selected="true"] { background: var(--hielo); color: var(--azul); }
+.pestana i { width: 8px; height: 8px; border-radius: 50%; background: var(--celeste); flex: none; }
+.pestana[data-ext="h"] i, .pestana[data-ext="hpp"] i { background: var(--rosa); }
+.pestana[data-ext="cpp"] i, .pestana[data-ext="c"] i { background: var(--sol); }
+.pestana-nueva { border: 2px dashed var(--borde); background: transparent; color: var(--azul); width: 32px; height: 30px; border-radius: 10px; font-weight: 700; font-size: 16px; line-height: 1; }
+.pestana-nueva:hover { border-color: var(--celeste); background: var(--nube); }
+.consola-caja { position: relative; }
+.pildora-nuevos { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); background: var(--azul); color: var(--blanco); border: 0; border-radius: 999px; padding: 6px 14px; font-size: 12.5px; font-weight: 600; box-shadow: 0 4px 12px rgba(11, 15, 152, .25); }
+.t-aj { background: #FFF1CC; color: var(--sol-tinta); border-radius: 6px; padding: 0 4px; font-style: normal; font-weight: 600; }
+.linea.nueva { background: #FFF4D6; box-shadow: inset 4px 0 0 var(--sol); }
+.btn-ajustar { border-color: var(--azul); background: var(--hielo); }
+.btn-ajustar:hover { background: #C9EBFF; }
+
+/* ---------- Ventana Ajustar parámetros ---------- */
+.ventana-fondo {
+  position: fixed; inset: 0; z-index: 30; background: rgba(11, 15, 152, .3); overflow-y: auto; display: flex;
+  padding: calc(16px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+}
+.ventana { background: var(--nube); border-radius: 26px; width: 100%; max-width: 1420px; margin: auto; overflow: hidden; box-shadow: 0 24px 60px rgba(11, 15, 152, .28); }
+.ventana-cab { background: var(--azul); color: var(--blanco); padding: 16px 22px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.ventana-cab > svg { width: 54px; height: 54px; flex: none; }
+.ventana-tit { flex: 1; min-width: 220px; }
+.ventana-tit h2 { font-family: var(--f-display); font-weight: 700; font-size: 27px; margin: 0; line-height: 1.1; }
+.ventana-tit p { margin: 4px 0 0; opacity: .88; max-width: 62ch; }
+.ventana-cuerpo { padding: 18px; display: grid; grid-template-columns: 310px minmax(0, 1fr) 300px; gap: 16px; align-items: start; }
+.pids { padding: 12px 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+.pid { background: var(--hielo); border-radius: 16px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.pid header { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.pid h3 { margin: 0; font-family: var(--f-display); font-weight: 600; font-size: 17px; }
+.pid header small { color: var(--tinta-suave); font-size: 11.5px; }
+.pid .chip.ok { margin-left: auto; background: var(--blanco); color: #1B7A4B; }
+.pid.falta { background: var(--blanco); border: 2px dashed var(--borde); }
+.pid.falta p { margin: 0; font-size: 13px; color: var(--tinta-suave); }
+.pid pre { margin: 0; font-family: var(--f-codigo); font-size: 12px; background: var(--nube); border-radius: 10px; padding: 8px 10px; overflow-x: auto; }
+.param { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; background: var(--blanco); border-radius: 12px; padding: 8px 10px; }
+.param-val { font-family: var(--f-display); font-weight: 600; font-size: 20px; color: var(--azul); font-variant-numeric: tabular-nums; }
+.param-ayuda { grid-column: 1 / -1; font-size: 12.5px; color: var(--tinta-suave); }
+.param-rango { grid-column: 1 / -1; font-size: 12.5px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+.param-rango input { width: 62px; }
+.interruptor { display: inline-flex; align-items: center; gap: 8px; font-family: var(--f-codigo); font-weight: 600; font-size: 15px; }
+.interruptor input { width: 18px; height: 18px; accent-color: var(--azul); }
+.ventana input[type="number"], .ventana select { border: 2px solid var(--hielo); background: var(--blanco); border-radius: 10px; padding: 5px 8px; font-variant-numeric: tabular-nums; }
+.entreno { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 12px; }
+.ajustes-entreno { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-end; }
+.ajustes-entreno label, .ajustes-entreno .dato { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--tinta-suave); font-weight: 500; }
+.ajustes-entreno input { width: 100px; }
+.ajustes-entreno .dato b { font-family: var(--f-display); font-size: 20px; color: var(--azul); line-height: 1.5; }
+.progreso { height: 12px; background: var(--hielo); border-radius: 999px; overflow: hidden; }
+.progreso b { display: block; height: 100%; width: 0; background: var(--azul); border-radius: 999px; }
+.leyenda { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12.5px; color: var(--tinta-suave); }
+.leyenda span { display: inline-flex; align-items: center; gap: 6px; }
+.leyenda .lp { width: 10px; height: 10px; border-radius: 50%; background: #2C93D3; }
+.leyenda .ll { width: 18px; height: 2px; background: #4049D8; border-radius: 2px; }
+.leyenda .lr { width: 12px; height: 12px; border-radius: 50%; background: var(--sol); box-shadow: 0 0 0 2px var(--blanco), 0 0 0 3px var(--borde); }
+.grafico-caja { position: relative; min-width: 0; }
+#aj-grafico { width: 100%; display: block; }
+.g-grid { stroke: #E3EEF8; stroke-width: 1; }
+.g-eje { fill: var(--tinta-suave); font-family: var(--f-texto); font-size: 11px; font-variant-numeric: tabular-nums; }
+.g-punto { fill: #2C93D3; stroke: #FFFFFF; stroke-width: 2; }
+.g-linea { fill: none; stroke: #4049D8; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.g-record { fill: var(--sol); stroke: #FFFFFF; stroke-width: 2; }
+.g-valor { fill: var(--tinta); font-family: var(--f-texto); font-weight: 600; font-size: 12px; font-variant-numeric: tabular-nums; }
+.g-vacio { fill: var(--tinta-suave); font-family: var(--f-texto); font-size: 13px; }
+.g-foco { fill: none; stroke: var(--tinta); stroke-width: 2; }
+.tip { position: absolute; transform: translate(-50%, calc(-100% - 12px)); background: var(--tinta); color: var(--blanco); font-size: 12px; padding: 6px 10px; border-radius: 10px; pointer-events: none; max-width: 260px; font-variant-numeric: tabular-nums; z-index: 2; }
+.nota { margin: 0; font-size: 12.5px; color: var(--tinta-suave); }
+.mejor { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 12px; }
+.valor-grande { font-family: var(--f-display); font-weight: 700; font-size: 44px; color: var(--azul); line-height: 1; font-variant-numeric: tabular-nums; }
+.comparar { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.comparar th, .comparar td { text-align: left; padding: 7px 6px; border-bottom: 1px solid var(--hielo); }
+.comparar thead th { font-size: 11.5px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--tinta-suave); font-weight: 600; }
+.comparar tbody th { font-family: var(--f-codigo); font-weight: 600; }
+.comparar tbody th small { display: block; font-family: var(--f-texto); font-weight: 400; font-size: 11px; color: var(--tinta-suave); }
+.comparar td.mejora { font-weight: 600; color: var(--azul); }
+canvas.mini { width: 100%; aspect-ratio: 4 / 3; display: block; border-radius: 12px; }
+.btn-usar { display: flex; align-items: center; justify-content: center; gap: 8px; background: var(--sol); color: var(--tinta); border: 0; font-family: var(--f-display); font-weight: 600; font-size: 18px; padding: 12px 18px; border-radius: 999px; box-shadow: 0 4px 0 #D9A93A; }
+.btn-usar:hover { background: #FFDB85; }
+.btn-usar:disabled { opacity: .5; cursor: default; box-shadow: none; }
+@media (max-width: 1100px) { .ventana-cuerpo { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---------- Juez virtual y propiedades de baldosas ---------- */
+.juez-cuerpo { padding: 12px 16px 14px; display: flex; flex-direction: column; gap: 12px; }
+.hitos { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 6px; }
+.hito { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px; border-radius: 12px; background: var(--nube); color: var(--tinta-suave); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.hito b { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--blanco); border: 2px solid var(--borde); color: var(--tinta-suave); font-family: var(--f-display); font-size: 15px; }
+.hito.ok { background: #FFF4D6; color: var(--sol-tinta); }
+.hito.ok b { background: var(--sol); border-color: var(--sol); color: var(--azul); }
+.juez-datos { display: flex; gap: 22px; align-items: center; flex-wrap: wrap; }
+.juez-datos .etq { display: block; font-size: 11.5px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--tinta-suave); font-weight: 600; }
+.juez-datos b { font-family: var(--f-display); font-size: 24px; color: var(--azul); font-variant-numeric: tabular-nums; }
+.juez-datos .btn-mini { margin-left: auto; }
+.btn-mini:disabled { opacity: .5; cursor: default; }
+.opcion { display: flex; gap: 8px; align-items: flex-start; font-size: 13.5px; }
+.opcion input { width: 18px; height: 18px; accent-color: var(--azul); flex: none; margin: 1px 0 0; }
+.opcion-rango, .opcion-sel { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.props input[type="range"] { accent-color: var(--azul); width: 100%; }
+.props select { border: 2px solid var(--hielo); border-radius: 10px; padding: 6px 8px; background: var(--blanco); }
+.nota-props, .val { font-size: 12.5px; color: var(--tinta-suave); }
+.val { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--azul); }
+.accion { background: var(--hielo); border-radius: 10px; padding: 8px 10px; font-size: 13px; }
+.accion b { color: var(--azul); }
+@media (max-width: 640px) { .hitos { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+
+.toast {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  background: var(--tinta); color: var(--blanco); padding: 10px 18px; border-radius: 999px;
+  font-weight: 500; font-size: 14px; max-width: calc(100% - 32px); z-index: 20;
+  display: flex; gap: 10px; align-items: center;
+}
+.toast i { width: 10px; height: 10px; border-radius: 50%; background: var(--sol); flex: none; }
+
+@media (max-width: 1100px) {
+  .grid-programar { grid-template-columns: minmax(0, 1fr); }
+  .grid-pista { grid-template-columns: minmax(0, 1fr); }
+  .piezas { grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); }
+}
+@media (max-width: 640px) {
+  .velocidad { margin-left: 0; }
+  .btn-probar { font-size: 18px; }
+  .modo { font-size: 15px; padding: 8px 12px; }
+  .extra .btn-banda span { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn-probar { transition: none; }
+}
+</style>
+</head>
+<body style="margin:0">
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="mascota" viewBox="0 0 64 64">
+      <line x1="32" y1="4" x2="32" y2="13" stroke="#0B0F98" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="32" cy="5" r="4.5" fill="#FFD166" stroke="#0B0F98" stroke-width="2"/>
+      <rect x="8" y="13" width="48" height="40" rx="15" fill="#DDF4FF" stroke="#0B0F98" stroke-width="3"/>
+      <rect x="15" y="21" width="34" height="20" rx="9" fill="#0B0F98"/>
+      <circle cx="25" cy="31" r="4.2" fill="#65C7F7"/>
+      <circle cx="39" cy="31" r="4.2" fill="#65C7F7"/>
+      <circle cx="26.3" cy="29.6" r="1.4" fill="#FFFFFF"/>
+      <circle cx="40.3" cy="29.6" r="1.4" fill="#FFFFFF"/>
+      <circle cx="14.5" cy="46" r="3.6" fill="#FF9FAD"/>
+      <circle cx="49.5" cy="46" r="3.6" fill="#FF9FAD"/>
+      <path d="M27 46.5q5 3.5 10 0" fill="none" stroke="#0B0F98" stroke-width="2.4" stroke-linecap="round"/>
+      <rect x="2" y="27" width="6" height="12" rx="3" fill="#FF9FAD" stroke="#0B0F98" stroke-width="2"/>
+      <rect x="56" y="27" width="6" height="12" rx="3" fill="#FF9FAD" stroke="#0B0F98" stroke-width="2"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="banda">
+  <div class="gutter">
+    <div class="marca">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><use href="#mascota"/></svg>
+      <div><b>Dynamis</b><small>Simulador de robots</small></div>
+    </div>
+    <div class="modos" role="tablist" aria-label="Modo">
+      <button class="modo" role="tab" id="tab-programar" aria-selected="true" aria-controls="vista-programar">
+        <svg class="ico" viewBox="0 0 24 24"><path d="M8 6l-6 6 6 6M16 6l6 6-6 6"/></svg>Programar
+      </button>
+      <button class="modo" role="tab" id="tab-pista" aria-selected="false" aria-controls="vista-pista">
+        <svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>Construir pista
+      </button>
+    </div>
+    <div class="extra">
+      <button class="btn-banda" id="btn-ejemplos"><svg class="ico" viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5"/></svg><span>Ejemplos</span></button>
+      <button class="btn-banda" id="btn-ayuda"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.2a2.5 2.5 0 1 1 3.4 2.3c-.7.3-1 .9-1 1.7"/><circle cx="12" cy="16.8" r=".6"/></svg><span>Ayuda</span></button>
+    </div>
+  </div>
+</div>
+<div class="aviso-maqueta"><div class="gutter"><i></i>Maqueta de diseño: el movimiento del robot y las lecturas de los sensores son de ejemplo.</div></div>
+
+<main class="gutter">
+
+  <!-- ================= PROGRAMAR ================= -->
+  <section class="vista" id="vista-programar" role="tabpanel" aria-labelledby="tab-programar">
+    <div class="acciones">
+      <button class="btn-probar" id="btn-probar">
+        <svg class="ico relleno" viewBox="0 0 24 24" id="ico-probar"><path d="M7 4.5v15l12.5-7.5z"/></svg>
+        <span id="txt-probar">Probar mi robot</span>
+      </button>
+      <button class="btn-sec" id="btn-pausa"><svg class="ico relleno" viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1.2"/><rect x="14" y="5" width="4" height="14" rx="1.2"/></svg><span id="txt-pausa">Pausa</span></button>
+      <button class="btn-sec" id="btn-inicio"><svg class="ico" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>Volver al inicio</button>
+      <button class="btn-sec btn-ajustar" id="btn-ajustar"><svg class="ico" viewBox="0 0 24 24"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg>Ajustar parámetros</button>
+      <span class="chip-estado" id="estado"><i></i><span id="txt-estado">Listo para probar</span></span>
+      <label class="velocidad" for="vel">Lento
+        <input type="range" id="vel" min="0" max="4" step="1" value="2" aria-label="Velocidad de la simulación">
+        Rápido <output id="vel-out" for="vel">×1</output>
+      </label>
+    </div>
+
+    <div class="grid-programar">
+      <div class="col">
+        <article class="card">
+          <header>
+            <h2><svg class="ico" viewBox="0 0 24 24"><path d="M8 6l-6 6 6 6M16 6l6 6-6 6"/></svg>Mi programa</h2>
+            <span class="chip" id="chip-carpeta">Carpeta: seguidor</span>
+            <div class="header-der">
+              <button class="btn-mini" id="btn-carpeta"><svg class="ico" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Abrir carpeta</button>
+              <button class="btn-mini" id="btn-error">Ver un error de ejemplo</button>
+            </div>
+            <input type="file" id="in-carpeta" webkitdirectory multiple hidden>
+          </header>
+          <div class="barra-pestanas" id="pestanas" role="tablist" aria-label="Archivos del proyecto"></div>
+          <div class="editor" id="editor" aria-label="Código del programa"></div>
+          <div class="burbuja" id="burbuja" hidden>
+            <svg class="mascota" viewBox="0 0 64 64" aria-hidden="true"><use href="#mascota"/></svg>
+            <div>
+              <h3 id="burbuja-titulo">Ups, revisa la línea 20</h3>
+              <p>Falta un punto y coma <code>;</code> al final. En C++ cada instrucción termina con <code>;</code> para que el robot sepa dónde termina la orden.</p>
+              <button class="btn-mini" id="btn-ir-linea">Ir a esa línea</button>
+            </div>
+          </div>
+        </article>
+
+        <article class="card">
+          <header>
+            <h2><svg class="ico" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg>Mensajes del robot</h2>
+            <span class="chip">Serial · 115200</span>
+            <div class="header-der"><button class="btn-mini" id="btn-limpiar">Limpiar</button></div>
+          </header>
+          <div class="consola-caja">
+            <div class="consola" id="consola" aria-live="off"></div>
+            <button class="pildora-nuevos" id="pildora-nuevos" hidden>Mensajes nuevos ↓</button>
+          </div>
+          <div class="logro" id="logro">
+            <svg class="ico relleno" viewBox="0 0 24 24"><path d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.3 6.5 20.2l1-6.2L3 9.6l6.2-.9z"/></svg>
+            <span id="txt-logro">¡Tu programa se compiló sin errores!</span>
+          </div>
+        </article>
+      </div>
+
+      <div class="col">
+        <article class="card">
+          <header>
+            <h2><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>Pista</h2>
+            <span class="chip">8 × 6 baldosas de 30 cm</span>
+            <span class="chip" id="chip-tiempo">t = 0,0 s</span>
+          </header>
+          <div class="lienzo-caja"><canvas class="lienzo" id="lienzo-sim" aria-label="Vista de la pista con el robot"></canvas></div>
+          <div class="pista-pie">
+            <span><i style="background:#FFD166"></i>Sensor de línea detectando</span>
+            <span><i style="background:rgba(101,199,247,.55)"></i>Rayo del sensor de distancia</span>
+            <span><i style="background:#FF9FAD"></i>Camino recorrido</span>
+            <span><i style="background:linear-gradient(90deg,#DDF4FF,#65C7F7)"></i>Rampa: las flechas apuntan hacia arriba</span>
+          </div>
+        </article>
+
+        <article class="card">
+          <header>
+            <h2><svg class="ico" viewBox="0 0 24 24"><path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M9 20h6"/></svg>Juez virtual</h2>
+            <span class="chip">Bases Rescue Line FIRVI 2026</span>
+            <div class="header-der"><span class="chip" id="juez-tiempo">Quedan 5:00</span></div>
+          </header>
+          <div class="juez-cuerpo">
+            <div class="hitos" id="hitos" aria-label="Hitos alcanzados"></div>
+            <div class="juez-datos">
+              <div><span class="etq">Puntaje</span><b id="juez-pts">0</b></div>
+              <div><span class="etq">Reinicios</span><b id="juez-rein">0 de 3</b></div>
+              <button class="btn-mini" id="btn-ultimo-hito">Volver al último hito (−10)</button>
+            </div>
+          </div>
+        </article>
+
+        <div class="sensores" aria-label="Lo que siente el robot">
+          <section class="sensor ancho">
+            <div class="fila-qtr">
+              <h3>Sensor de línea <small>QTR-MX-8A · 8 sensores</small></h3>
+              <span class="sub">Línea en: <b id="qtr-pos-num">3500</b> <span>(0 a 7000)</span></span>
+            </div>
+            <div class="qtr" id="qtr"></div>
+            <div class="qtr-num" id="qtr-num"></div>
+            <div class="qtr-pos"><b id="qtr-pos" style="left:50%"></b></div>
+            <button class="como" data-snip="s-qtr">¿Cómo lo uso?</button>
+            <pre id="s-qtr" hidden>uint16_t valores[8];
+int pos = qtr.readLineBlack(valores);  // 0 a 7000</pre>
+          </section>
+
+          <section class="sensor">
+            <h3>Distancia <small>VL53L0X</small></h3>
+            <div class="valor" id="tof-val">— <small>mm</small></div>
+            <div class="medidor"><b id="tof-bar" style="width:0%"></b></div>
+            <div class="sub" id="tof-sub">Alcance hasta 1200 mm</div>
+            <button class="como" data-snip="s-tof">¿Cómo lo uso?</button>
+            <pre id="s-tof" hidden>int mm = distancia.readRangeContinuousMillimeters();</pre>
+          </section>
+
+          <section class="sensor">
+            <h3>Color <small>TCS34725</small></h3>
+            <div class="muestra"><i id="color-muestra" style="background:#fff"></i>
+              <div><div class="valor" id="color-nombre" style="font-size:24px">Blanco</div>
+                <div class="rgbc" id="color-rgbc"></div></div>
+            </div>
+            <button class="como" data-snip="s-tcs">¿Cómo lo uso?</button>
+            <pre id="s-tcs" hidden>uint16_t r, g, b, c;
+tcs.getRawData(&amp;r, &amp;g, &amp;b, &amp;c);</pre>
+          </section>
+
+          <section class="sensor">
+            <h3>Giro e inclinación <small>MPU6050</small></h3>
+            <div class="brujula">
+              <svg viewBox="0 0 64 64" aria-hidden="true">
+                <circle cx="32" cy="32" r="29" fill="#FFFFFF" stroke="#BFE3F8" stroke-width="3"/>
+                <g id="aguja"><path d="M32 8l6 24h-12z" fill="#0B0F98"/><path d="M32 56l6-24h-12z" fill="#FF9FAD"/></g>
+                <circle cx="32" cy="32" r="4" fill="#FFD166" stroke="#0B0F98" stroke-width="2"/>
+              </svg>
+              <div><div class="valor" id="mpu-rumbo" style="font-size:24px">0°</div>
+                <div class="sub" id="mpu-sub">gz 0 °/s · inclinación 0°</div></div>
+            </div>
+            <button class="como" data-snip="s-mpu">¿Cómo lo uso?</button>
+            <pre id="s-mpu" hidden>sensors_event_t a, g, temp;
+mpu.getEvent(&amp;a, &amp;g, &amp;temp);</pre>
+          </section>
+
+          <section class="sensor">
+            <h3>Motores <small>ESP32 · PWM</small></h3>
+            <div class="motores">
+              <span>Izq.</span><div class="motor"><b id="m-izq"></b></div><span id="m-izq-n">0%</span>
+              <span>Der.</span><div class="motor"><b id="m-der"></b></div><span id="m-der-n">0%</span>
+            </div>
+            <div class="sub">Hacia atrás ← 0 → hacia adelante</div>
+            <button class="como" data-snip="s-mot">¿Cómo lo uso?</button>
+            <pre id="s-mot" hidden>analogWrite(PWM_IZQ, 150);  // 0 a 255</pre>
+          </section>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= CONSTRUIR PISTA ================= -->
+  <section class="vista" id="vista-pista" role="tabpanel" aria-labelledby="tab-pista" hidden>
+    <div class="acciones">
+      <button class="btn-sec" id="btn-guardar"><svg class="ico" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Guardar pista</button>
+      <button class="btn-sec" id="btn-abrir"><svg class="ico" viewBox="0 0 24 24"><path d="M12 20V9M7 14l5-5 5 5M5 4h14"/></svg>Abrir pista</button>
+      <button class="btn-sec" id="btn-nueva"><svg class="ico" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M12 8v8M8 12h8"/></svg>Pista nueva</button>
+      <span class="chip-estado"><i></i>Los cambios se guardan solos en este navegador</span>
+    </div>
+    <div class="grid-pista">
+      <article class="card">
+        <header><h2>Piezas</h2></header>
+        <div class="paleta">
+          <div id="paleta-baldosas" class="paleta-grupos"></div>
+          <h3>Objetos</h3>
+          <div class="piezas" id="piezas-objetos"></div>
+          <div class="pieza tuyas"><b>Bases Rescue Line FIRVI 2026</b>Escenario de 2,4 × 1,8 m, cinta de 19 mm, cortes de hasta 4 cm y rampas de hasta 35°.</div>
+        </div>
+      </article>
+
+      <article class="card">
+        <header>
+          <h2>Mi pista</h2>
+          <span class="chip">2,4 m × 1,8 m</span>
+          <span class="chip" id="chip-herr">Pieza: Recta</span>
+        </header>
+        <div class="lienzo-caja"><canvas class="lienzo" id="lienzo-editor" aria-label="Editor de la pista"></canvas></div>
+      </article>
+
+      <article class="card">
+        <header><h2>Baldosa elegida</h2></header>
+        <div class="props">
+          <div class="bloque">
+            <span class="etq">Tipo</span>
+            <span class="grande" id="sel-tipo">Recta</span>
+            <span class="sub" id="sel-pos" style="color:var(--tinta-suave);font-size:13px">Columna 2, fila 1 · 0°</span>
+          </div>
+          <div id="sel-props" class="props" style="padding:0"></div>
+          <div class="bloque">
+            <span class="etq">Girar</span>
+            <div class="fila-botones">
+              <button class="btn-sec" id="btn-girar-izq"><svg class="ico" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>Izquierda</button>
+              <button class="btn-sec" id="btn-girar-der"><svg class="ico" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg>Derecha</button>
+            </div>
+          </div>
+          <div class="bloque">
+            <span class="etq">Quitar</span>
+            <button class="btn-sec" id="btn-borrar"><svg class="ico" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>Dejar vacía</button>
+          </div>
+          <div class="ayuda-teclas">Elige una pieza y haz clic en la pista. <kbd>R</kbd> gira la baldosa elegida y <kbd>Supr</kbd> la deja vacía.</div>
+        </div>
+      </article>
+    </div>
+  </section>
+</main>
+
+<div class="ventana-fondo" id="ventana-ajuste" hidden>
+  <div class="ventana" role="dialog" aria-modal="true" aria-labelledby="aj-titulo">
+    <div class="ventana-cab">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><use href="#mascota"/></svg>
+      <div class="ventana-tit">
+        <h2 id="aj-titulo">Ajustar parámetros</h2>
+        <p>Tu robot practica muchas veces en la pista y va aprendiendo qué valores de kp, ki y kd le funcionan mejor.</p>
+      </div>
+      <button class="btn-banda" id="aj-cerrar">Volver a mi programa</button>
+    </div>
+    <div class="ventana-cuerpo">
+      <article class="card">
+        <header><h2>¿Qué quieres ajustar?</h2></header>
+        <div class="pids" id="aj-pids"></div>
+      </article>
+
+      <article class="card">
+        <header><h2>Entrenamiento</h2><span class="chip" id="aj-chip">Sin empezar</span></header>
+        <div class="entreno">
+          <div class="ajustes-entreno">
+            <label for="aj-pruebas">Pruebas<input type="number" id="aj-pruebas" value="200" min="10" max="2000" step="10"></label>
+            <label for="aj-duracion">Cada prueba dura<select id="aj-duracion"><option>10 s</option><option selected>20 s</option><option>30 s</option></select></label>
+            <div class="dato">Robots practicando a la vez<b>6</b></div>
+            <div class="dato">Pista<b>Mi pista</b></div>
+          </div>
+          <div class="fila-botones">
+            <button class="btn-probar" id="aj-empezar">
+              <svg class="ico relleno" viewBox="0 0 24 24" id="aj-ico"><path d="M7 4.5v15l12.5-7.5z"/></svg>
+              <span id="aj-empezar-txt">Empezar a entrenar</span>
+            </button>
+          </div>
+          <div class="progreso"><b id="aj-barra"></b></div>
+          <div class="sub" id="aj-progreso" style="color:var(--tinta-suave);font-size:13px">Aún no hay pruebas.</div>
+          <div class="leyenda"><span><i class="lp"></i>Cada prueba</span><span><i class="ll"></i>Mejor hasta ahora</span><span><i class="lr"></i>Nuevo récord</span></div>
+          <div class="grafico-caja" id="aj-grafico-caja">
+            <svg id="aj-grafico" role="img" aria-label="Recompensa obtenida en cada prueba"></svg>
+            <div class="tip" id="aj-tip" hidden></div>
+          </div>
+          <p class="nota">La recompensa es el puntaje de cada prueba: mientras más alto, mejor lo hizo el robot.</p>
+        </div>
+      </article>
+
+      <article class="card">
+        <header><h2>Mejor resultado</h2></header>
+        <div class="mejor">
+          <div class="valor-grande" id="aj-mejor-r">—</div>
+          <div class="sub" id="aj-mejor-sub" style="color:var(--tinta-suave);font-size:13px">Todavía no hay un mejor resultado.</div>
+          <table class="comparar"><thead><tr><th scope="col">Valor</th><th scope="col">Ahora</th><th scope="col">Mejor</th></tr></thead><tbody id="aj-tabla"></tbody></table>
+          <canvas class="mini" id="aj-mini" aria-label="Recorrido de la mejor prueba"></canvas>
+          <button class="btn-sec" id="aj-ver" disabled style="justify-content:center">Ver esta prueba en la pista</button>
+          <button class="btn-usar" id="aj-usar" disabled>
+            <svg class="ico relleno" viewBox="0 0 24 24"><path d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.3 6.5 20.2l1-6.2L3 9.6l6.2-.9z"/></svg>Usar estos valores
+          </button>
+        </div>
+      </article>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden><i></i><span id="toast-txt"></span></div>
+
+<script>
+(() => {
+  // ---------------- Pista (mm) · Bases Rescue Line FIRVI 2026: 2,4 × 1,8 m, baldosas de 30 cm, cinta de 19 mm ----------------
+  const TILE = 300, COLS = 8, ROWS = 6, W = COLS * TILE, H = ROWS * TILE, LINEA = 19;
+  const C = { azul: '#0B0F98', celeste: '#65C7F7', hielo: '#DDF4FF', sol: '#FFD166', rosa: '#FF9FAD', linea: '#11131F', verde: '#1FA35B' };
+  const NOMBRES = { vacia: 'Vacía', recta: 'Recta', curva: 'Giro suave', giroL: 'Giro en L', segmentada: 'Línea con cortes',
+    cruce: 'Cruce +', te: 'Unión en T', rampa: 'Rampa', f1: 'Cuadrado F1', f2: 'Indicador F2', partida: 'Partida', meta: 'Meta',
+    obstaculo: 'Obstáculo', bache: 'Bache', hito: 'Hito', inicio: 'Inicio del robot' };
+  const PROPS_BASE = { rampa: { angulo: 20 }, segmentada: { guion: 50, espacio: 40 }, f1: { correcto: 'izq' }, f2: { lado: 'izq' } };
+
+  const pista = { baldosas: [], objetos: [], inicio: { x: 300, y: 150 } };
+  const set = (c, r, tipo, rot = 0, props = {}, nivel = 0) => { pista.baldosas[r * COLS + c] = { tipo, rot, nivel, props: { ...(PROPS_BASE[tipo] || {}), ...props } }; };
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) set(c, r, 'vacia');
+  set(0, 0, 'curva', 0); set(7, 0, 'curva', 90); set(7, 5, 'curva', 180); set(0, 5, 'curva', 270);
+  for (let c = 1; c <= 6; c++) { set(c, 0, 'recta', 0); set(c, 5, 'recta', 0); }
+  for (let r = 1; r <= 4; r++) { set(0, r, 'recta', 90); set(7, r, 'recta', 90); }
+  set(1, 0, 'partida', 0); set(3, 0, 'segmentada', 0); set(4, 0, 'segmentada', 0);
+  // Rampa de 20°: sube, plataforma y baja (como la figura 3 de las bases)
+  set(7, 1, 'rampa', 90); set(7, 2, 'recta', 90, {}, Math.round(TILE * Math.tan(20 * Math.PI / 180))); set(7, 3, 'rampa', 270);
+  // Cruce con marcas después del cruce (el robot debe ignorarlas y seguir derecho) y rama hacia la meta
+  set(4, 5, 'cruce', 180, { marcas: { di: true, dd: true } }); set(4, 4, 'meta', 270);
+  pista.objetos = [
+    { tipo: 'obstaculo', x: 2340, y: 150, w: 100, h: 100 },
+    { tipo: 'bache', x: 2250, y: 1290, largo: 300, ang: 0 },
+    { tipo: 'bache', x: 2250, y: 1420, largo: 300, ang: 45 },
+  ];
+
+  // ---------------- Dibujo compartido ----------------
+  // Coordenadas locales de cada baldosa: 0…300 mm; el robot entra por la izquierda (x = 0) avanzando hacia +x.
+  function seg(ctx, x1, y1, x2, y2) { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); }
+  function dibujarMarcas(ctx, m) {
+    if (!m) return; const s = 25, a = 150 - LINEA / 2 - s, d = 150 + LINEA / 2;
+    ctx.fillStyle = C.verde;
+    if (m.ai) ctx.fillRect(a, a, s, s); if (m.ad) ctx.fillRect(a, d, s, s);
+    if (m.di) ctx.fillRect(d, a, s, s); if (m.dd) ctx.fillRect(d, d, s, s);
+  }
+  function dibujarBaldosa(ctx, b) {
+    const p = b.props || {};
+    ctx.fillStyle = p.invertida ? C.linea : '#FFFFFF'; ctx.fillRect(0, 0, TILE, TILE);
+    ctx.strokeStyle = p.invertida ? '#FFFFFF' : C.linea; ctx.lineWidth = LINEA; ctx.lineCap = 'butt'; ctx.lineJoin = 'miter';
+    switch (b.tipo) {
+      case 'recta': case 'rampa': seg(ctx, 0, 150, 300, 150); break;
+      case 'curva': ctx.beginPath(); ctx.arc(300, 300, 150, Math.PI, 1.5 * Math.PI); ctx.stroke(); break;
+      case 'giroL': ctx.beginPath(); ctx.moveTo(0, 150); ctx.lineTo(150, 150); ctx.lineTo(150, 300); ctx.stroke(); break;
+      case 'segmentada': for (let x = 0; x < 300; x += p.guion + p.espacio) seg(ctx, x, 150, Math.min(300, x + p.guion), 150); break;
+      case 'cruce': seg(ctx, 0, 150, 300, 150); seg(ctx, 150, 0, 150, 300); dibujarMarcas(ctx, p.marcas); break;
+      case 'te': seg(ctx, 0, 150, 300, 150); seg(ctx, 150, 150, 150, 300); dibujarMarcas(ctx, p.marcas); break;
+      case 'partida': seg(ctx, 0, 150, 300, 150); seg(ctx, 60, 70, 60, 230); break;
+      case 'meta': seg(ctx, 0, 150, 200, 150); seg(ctx, 200 + LINEA / 2, 70, 200 + LINEA / 2, 230); break;
+      case 'f1': seg(ctx, 0, 150, 45, 150); seg(ctx, 255, 150, 300, 150); ctx.strokeRect(45, 45, 210, 210); break;
+      case 'f2': seg(ctx, 0, 150, 300, 150); seg(ctx, 100, 85, 100, 215);
+        if (p.lado === 'der') seg(ctx, 190, 150, 190, 215); else seg(ctx, 190, 85, 190, 150); break;
+    }
+  }
+  // Objetos: solo pantalla. No cambian el color del suelo que ven los sensores.
+  function dibujarObjeto(ctx, o) {
+    if (o.tipo === 'obstaculo') {
+      ctx.fillStyle = 'rgba(11,15,152,.16)'; roundRect(ctx, o.x - o.w / 2 + 10, o.y - o.h / 2 + 12, o.w, o.h, 10); ctx.fill();
+      ctx.fillStyle = '#A9B4E0'; roundRect(ctx, o.x - o.w / 2, o.y - o.h / 2, o.w, o.h, 10); ctx.fill();
+      ctx.fillStyle = '#C9D2F2'; roundRect(ctx, o.x - o.w / 2 + 12, o.y - o.h / 2 + 12, o.w - 24, o.h - 24, 6); ctx.fill();
+    }
+    if (o.tipo === 'bache') {
+      ctx.save(); ctx.translate(o.x, o.y); ctx.rotate(o.ang * Math.PI / 180);
+      const g = o.grosor || 12;
+      ctx.fillStyle = 'rgba(11,15,152,.18)'; roundRect(ctx, -o.largo / 2, -g / 2 + 4, o.largo, g, g / 2); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.3)'; roundRect(ctx, -o.largo / 2, -g / 2, o.largo, g, g / 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(11,15,152,.55)'; ctx.lineWidth = Math.max(2.5, g / 5); ctx.stroke();
+      ctx.restore();
+    }
+    if (o.tipo === 'hito') {
+      const r = o.r || 34;
+      ctx.fillStyle = C.sol; ctx.beginPath(); ctx.arc(o.x, o.y, r, 0, 7); ctx.fill();
+      ctx.strokeStyle = C.azul; ctx.lineWidth = r / 7; ctx.stroke();
+      ctx.fillStyle = C.azul; ctx.font = `600 ${Math.round(r * 1.15)}px Fredoka, system-ui, sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(o.n), o.x, o.y + r * 0.06);
+    }
+  }
+  function enBaldosa(ctx, i, fn) {
+    const c = i % COLS, r = Math.floor(i / COLS);
+    ctx.save(); ctx.translate(c * TILE + 150, r * TILE + 150); ctx.rotate(pista.baldosas[i].rot * Math.PI / 180); ctx.translate(-150, -150);
+    fn(); ctx.restore();
+  }
+  function dibujarPista(ctx) { pista.baldosas.forEach((b, i) => enBaldosa(ctx, i, () => dibujarBaldosa(ctx, b))); }
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+  }
+
+  // Relieve: nivel de cada baldosa + rampa (sube a lo largo de su x local) + baches (medio cilindro de 6 mm de radio)
+  const altoRampa = b => TILE * Math.tan((b.props.angulo || 20) * Math.PI / 180);
+  function altura(x, y) {
+    let h = 0; const c = Math.floor(x / TILE), r = Math.floor(y / TILE);
+    if (c >= 0 && r >= 0 && c < COLS && r < ROWS) {
+      const b = pista.baldosas[r * COLS + c]; h = b.nivel || 0;
+      if (b.tipo === 'rampa') {
+        const a = -b.rot * Math.PI / 180, dx = x - (c * TILE + 150), dy = y - (r * TILE + 150);
+        h += altoRampa(b) * Math.max(0, Math.min(1, (dx * Math.cos(a) - dy * Math.sin(a) + 150) / TILE));
+      }
+    }
+    for (const o of pista.objetos) {
+      if (o.tipo !== 'bache') continue;
+      const a = o.ang * Math.PI / 180, dx = x - o.x, dy = y - o.y;
+      const u = dx * Math.cos(a) + dy * Math.sin(a), v = -dx * Math.sin(a) + dy * Math.cos(a);
+      if (Math.abs(u) <= o.largo / 2 && Math.abs(v) < 6) h += Math.sqrt(36 - v * v);
+    }
+    return h;
+  }
+  function inclinacion(p) {
+    const c = Math.cos(p.th), s = Math.sin(p.th);
+    return Math.atan2(altura(p.x + c * 25, p.y + s * 25) - altura(p.x - c * 25, p.y - s * 25), 50) * 180 / Math.PI;
+  }
+  // Solo pantalla: degradado y flechas en rampas, tinte en baldosas elevadas, y los objetos
+  function dibujarRelieveBaldosa(ctx, b) {
+    if (b.tipo === 'rampa') {
+      const g = ctx.createLinearGradient(0, 0, TILE, 0);
+      g.addColorStop(0, 'rgba(101,199,247,0.04)'); g.addColorStop(1, 'rgba(101,199,247,0.5)');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, TILE, TILE);
+      ctx.strokeStyle = 'rgba(11,15,152,0.5)'; ctx.lineWidth = 10; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      for (const y of [64, 236]) for (const x of [86, 166, 246]) { ctx.beginPath(); ctx.moveTo(x - 18, y - 22); ctx.lineTo(x + 4, y); ctx.lineTo(x - 18, y + 22); ctx.stroke(); }
+    } else if (b.nivel > 0) { ctx.fillStyle = 'rgba(101,199,247,0.3)'; ctx.fillRect(0, 0, TILE, TILE); }
+  }
+  function dibujarRelieves(ctx) {
+    pista.baldosas.forEach((b, i) => { if (b.tipo === 'rampa' || b.nivel > 0) enBaldosa(ctx, i, () => dibujarRelieveBaldosa(ctx, b)); });
+    pista.objetos.forEach(o => dibujarObjeto(ctx, o));
+  }
+
+  // Mapa a 1 px = 1 mm: lo que muestrean los sensores (las mismas funciones que dibujan la pantalla)
+  const mapa = document.createElement('canvas'); mapa.width = W; mapa.height = H;
+  const mctx = mapa.getContext('2d', { willReadFrequently: true });
+  let pix = null;
+  function renderMapa() { dibujarPista(mctx); pix = mctx.getImageData(0, 0, W, H).data; }
+  function muestrear(x, y) {
+    const xi = Math.max(0, Math.min(W - 1, Math.round(x))), yi = Math.max(0, Math.min(H - 1, Math.round(y)));
+    const k = (yi * W + xi) * 4; return { r: pix[k], g: pix[k + 1], b: pix[k + 2] };
+  }
+
+  // ---------------- Recorrido de ejemplo (en la app real lo calcula tu modelo de dinámica) ----------------
+  const R = 150;
+  const SEG = [
+    { L: [300, 150, 2100, 150] }, { A: [2100, 300, -90, 0] },
+    { L: [2250, 300, 2250, 1500] }, { A: [2100, 1500, 0, 90] },
+    { L: [2100, 1650, 300, 1650] }, { A: [300, 1500, 90, 180] },
+    { L: [150, 1500, 150, 300] }, { A: [300, 300, 180, 270] },
+  ].map(s => ({ ...s, len: s.L ? Math.hypot(s.L[2] - s.L[0], s.L[3] - s.L[1]) : Math.PI / 2 * R }));
+  const TOTAL = SEG.reduce((a, s) => a + s.len, 0);
+  // 8 hitos a lo largo del recorrido, con el puntaje de las bases
+  const HITOS_S = [600, 1500, 2336, 2936, 3971, 4771, 5807, 6407], PUNTOS = [5, 10, 20, 20, 10, 15, 15, 20];
+  HITOS_S.forEach((sh, i) => { const p = poseBase(sh); pista.objetos.push({ tipo: 'hito', n: i + 1, x: p.x + 108 * Math.sin(p.th), y: p.y - 108 * Math.cos(p.th) }); });
+  function poseBase(s) {
+    s = ((s % TOTAL) + TOTAL) % TOTAL;
+    for (const g of SEG) {
+      if (s <= g.len) {
+        const f = s / g.len;
+        if (g.L) { const [ax, ay, bx, by] = g.L; return { x: ax + (bx - ax) * f, y: ay + (by - ay) * f, th: Math.atan2(by - ay, bx - ax) }; }
+        const [cx, cy, a0, a1] = g.A; const a = (a0 + (a1 - a0) * f) * Math.PI / 180;
+        return { x: cx + R * Math.cos(a), y: cy + R * Math.sin(a), th: a + Math.PI / 2 };
+      }
+      s -= g.len;
+    }
+  }
+  function pose(s) {
+    const p = poseBase(s), d = 9 * Math.sin(s / 85), dd = 9 / 85 * Math.cos(s / 85);
+    const x = p.x + d * Math.cos(p.th + Math.PI / 2), y = p.y + d * Math.sin(p.th + Math.PI / 2);
+    return { x, y, th: p.th + Math.atan(dd), z: altura(x, y) };
+  }
+  const aMundo = (p, lx, ly) => ({ x: p.x + lx * Math.cos(p.th) - ly * Math.sin(p.th), y: p.y + lx * Math.sin(p.th) + ly * Math.cos(p.th) });
+
+  // Posición de los sensores en el robot (mm; x hacia adelante, y hacia la derecha)
+  const QTR_X = 92, QTR_PASO = 9.5, TOF = { x: 92, y: 0 }, TCS = { x: 40, y: 46 }, TROCHA = 140, VMAX = 400, V = 180;
+
+  function raycast(x, y, th, max) {
+    const dx = Math.cos(th), dy = Math.sin(th); let mejor = max;
+    for (const o of pista.objetos) {
+      if (o.tipo !== 'obstaculo') continue;
+      const x0 = o.x - o.w / 2, x1 = o.x + o.w / 2, y0 = o.y - o.h / 2, y1 = o.y + o.h / 2;
+      let tmin = -Infinity, tmax = Infinity;
+      for (const [p, d, lo, hi] of [[x, dx, x0, x1], [y, dy, y0, y1]]) {
+        if (Math.abs(d) < 1e-9) { if (p < lo || p > hi) { tmin = Infinity; } continue; }
+        let t1 = (lo - p) / d, t2 = (hi - p) / d; if (t1 > t2) [t1, t2] = [t2, t1];
+        tmin = Math.max(tmin, t1); tmax = Math.min(tmax, t2);
+      }
+      if (tmin <= tmax && tmin > 0 && tmin < mejor) mejor = tmin;
+    }
+    return mejor;
+  }
+
+  let ruido = 1;
+  const rnd = () => { ruido = (ruido * 16807) % 2147483647; return ruido / 2147483647 - 0.5; };
+  let ultimaPos = 3500;
+  function leerSensores(p, pPrev, dt) {
+    const qtr = [];
+    for (let i = 0; i < 8; i++) {
+      const w = aMundo(p, QTR_X, (i - 3.5) * QTR_PASO), m = muestrear(w.x, w.y);
+      const lum = (0.299 * m.r + 0.587 * m.g + 0.114 * m.b) / 255;
+      qtr.push(Math.max(0, Math.min(4095, Math.round(180 + (1 - lum) * 3800 + rnd() * 60))));
+    }
+    let suma = 0, pond = 0;
+    qtr.forEach((v, i) => { const cal = Math.max(0, Math.min(1000, (v - 180) / 3.8)); if (cal > 120) { suma += cal; pond += cal * i * 1000; } });
+    if (suma > 0) ultimaPos = Math.round(pond / suma);
+    const t = aMundo(p, TOF.x, TOF.y), dist = raycast(t.x, t.y, p.th, 1200);
+    const cpos = aMundo(p, TCS.x, TCS.y), col = muestrear(cpos.x, cpos.y);
+    let dth = p.th - pPrev.th; while (dth > Math.PI) dth -= 2 * Math.PI; while (dth < -Math.PI) dth += 2 * Math.PI;
+    const w = dt > 0 ? dth / dt : 0;
+    return {
+      qtr, pos: ultimaPos,
+      mm: dist >= 1200 ? 8190 : Math.round(dist + rnd() * 4),
+      color: col,
+      gz: w * 180 / Math.PI, pitch: inclinacion(p),
+      izq: Math.max(-100, Math.min(100, (V + w * TROCHA / 2) / VMAX * 100)),
+      der: Math.max(-100, Math.min(100, (V - w * TROCHA / 2) / VMAX * 100)),
+    };
+  }
+
+  // ---------------- Robot ----------------
+  function dibujarRobot(ctx, p, lec) {
+    ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.th);
+    const escala = 1 + (p.z || 0) / 600; ctx.scale(escala, escala);
+    if (lec) {
+      const largo = lec.mm >= 8190 ? 1200 : lec.mm;
+      const g = ctx.createLinearGradient(TOF.x, 0, TOF.x + largo, 0);
+      g.addColorStop(0, 'rgba(101,199,247,.55)'); g.addColorStop(1, 'rgba(101,199,247,.08)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(TOF.x, -4); ctx.lineTo(TOF.x + largo, -10 - largo * 0.03); ctx.lineTo(TOF.x + largo, 10 + largo * 0.03); ctx.lineTo(TOF.x, 4); ctx.fill();
+      if (lec.mm < 8190) { ctx.fillStyle = C.celeste; ctx.beginPath(); ctx.arc(TOF.x + largo, 0, 9, 0, 7); ctx.fill(); }
+    }
+    ctx.fillStyle = '#23285E'; roundRect(ctx, -32, -82, 64, 18, 6); ctx.fill(); roundRect(ctx, -32, 64, 64, 18, 6); ctx.fill();
+    ctx.fillStyle = C.azul; roundRect(ctx, -64, -66, 156, 132, 30); ctx.fill();
+    ctx.fillStyle = C.hielo; roundRect(ctx, 22, -42, 50, 84, 20); ctx.fill();
+    ctx.fillStyle = C.azul; ctx.beginPath(); ctx.arc(52, -17, 9, 0, 7); ctx.arc(52, 17, 9, 0, 7); ctx.fill();
+    ctx.fillStyle = '#FFFFFF'; ctx.beginPath(); ctx.arc(56, -19, 3.4, 0, 7); ctx.arc(56, 15, 3.4, 0, 7); ctx.fill();
+    ctx.fillStyle = C.rosa; ctx.beginPath(); ctx.arc(30, -34, 6, 0, 7); ctx.arc(30, 34, 6, 0, 7); ctx.fill();
+    ctx.fillStyle = C.sol; ctx.beginPath(); ctx.arc(-38, 0, 10, 0, 7); ctx.fill();
+    ctx.fillStyle = '#060962'; roundRect(ctx, QTR_X - 8, -42, 16, 84, 6); ctx.fill();
+    for (let i = 0; i < 8; i++) {
+      const ve = lec && lec.qtr[i] > 1800;
+      ctx.fillStyle = ve ? C.sol : '#3A3F8C';
+      ctx.beginPath(); ctx.arc(QTR_X, (i - 3.5) * QTR_PASO, 3.8, 0, 7); ctx.fill();
+    }
+    if (lec) { ctx.fillStyle = `rgb(${lec.color.r},${lec.color.g},${lec.color.b})`; ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 3;
+      roundRect(ctx, TCS.x - 9, TCS.y - 9, 18, 18, 5); ctx.fill(); ctx.stroke(); }
+    ctx.fillStyle = C.celeste; roundRect(ctx, TOF.x - 4, -7, 8, 14, 3); ctx.fill();
+    ctx.restore();
+  }
+
+  // ---------------- Lienzos ----------------
+  function prepararLienzo(cv) {
+    const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+    if (r.width === 0) return null;
+    const w = Math.round(r.width * dpr), h = Math.round(r.height * dpr);
+    if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+    const ctx = cv.getContext('2d'), m = 14 * dpr, k = Math.min((w - 2 * m) / W, (h - 2 * m) / H);
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#EAF5FD'; ctx.fillRect(0, 0, w, h);
+    ctx.setTransform(k, 0, 0, k, (w - W * k) / 2, (h - H * k) / 2);
+    return { ctx, k, ox: (w - W * k) / 2, oy: (h - H * k) / 2, dpr };
+  }
+  function rejilla(ctx, k, fuerte) {
+    ctx.save(); ctx.strokeStyle = fuerte ? 'rgba(11,15,152,.22)' : 'rgba(101,199,247,.45)'; ctx.lineWidth = (fuerte ? 1.6 : 1) / k * (window.devicePixelRatio || 1);
+    ctx.setLineDash(fuerte ? [] : [6 / k, 6 / k]);
+    ctx.beginPath(); for (let c = 1; c < COLS; c++) { ctx.moveTo(c * TILE, 0); ctx.lineTo(c * TILE, H); }
+    for (let r = 1; r < ROWS; r++) { ctx.moveTo(0, r * TILE); ctx.lineTo(W, r * TILE); } ctx.stroke();
+    ctx.setLineDash([]); ctx.strokeStyle = C.azul; ctx.lineWidth = 3 / k; ctx.strokeRect(0, 0, W, H); ctx.restore();
+  }
+  function marcaInicio(ctx, k) {
+    const { x, y } = pista.inicio; ctx.save(); ctx.strokeStyle = C.rosa; ctx.lineWidth = 6; ctx.setLineDash([14, 10]);
+    ctx.beginPath(); ctx.arc(x, y, 70, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = C.rosa; ctx.beginPath(); ctx.moveTo(x + 40, y); ctx.lineTo(x + 10, y - 18); ctx.lineTo(x + 10, y + 18); ctx.fill(); ctx.restore();
+  }
+
+  // ---------------- Simulación de ejemplo ----------------
+  const lienzoSim = document.getElementById('lienzo-sim');
+  const VELS = [0.25, 0.5, 1, 2, 4];
+  let s = 0, tSim = 0, corriendo = false, pausado = false, mult = 1, rastro = [], lec = null, pPrev = pose(0), proxSerial = 0;
+  const reducir = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function dibujarSim() {
+    const L = prepararLienzo(lienzoSim); if (!L) return;
+    const { ctx, k } = L;
+    ctx.drawImage(mapa, 0, 0); dibujarRelieves(ctx); rejilla(ctx, k, false);
+    if (rastro.length > 1) { ctx.strokeStyle = 'rgba(255,159,173,.8)'; ctx.lineWidth = 6; ctx.lineJoin = 'round';
+      ctx.beginPath(); rastro.forEach((q, i) => i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y)); ctx.stroke(); }
+    dibujarRobot(ctx, pose(s), lec);
+  }
+
+  const $ = id => document.getElementById(id);
+  const qtrBox = $('qtr'), qtrNum = $('qtr-num');
+  for (let i = 0; i < 8; i++) { qtrBox.insertAdjacentHTML('beforeend', '<div class="barra"><b></b></div>'); qtrNum.insertAdjacentHTML('beforeend', '<span>0</span>'); }
+  const fmt = (n, d = 0) => n.toLocaleString('es-CL', { minimumFractionDigits: d, maximumFractionDigits: d });
+  function nombreColor({ r, g, b }) {
+    const lum = (r + g + b) / 3;
+    if (g > r + 40 && g > b + 20) return 'Verde';
+    if (lum < 70) return 'Negro'; if (lum > 215) return 'Blanco'; return 'Gris';
+  }
+  function pintarPaneles() {
+    if (!lec) return;
+    [...qtrBox.children].forEach((el, i) => { el.firstChild.style.height = (lec.qtr[i] / 4095 * 100) + '%'; el.classList.toggle('ve', lec.qtr[i] > 1800); });
+    [...qtrNum.children].forEach((el, i) => { el.textContent = lec.qtr[i]; });
+    $('qtr-pos').style.left = (lec.pos / 7000 * 100) + '%'; $('qtr-pos-num').textContent = fmt(lec.pos);
+    if (lec.mm >= 8190) { $('tof-val').innerHTML = 'Nada cerca'; $('tof-bar').style.width = '0%'; $('tof-sub').textContent = 'Lectura 8190: fuera de alcance'; }
+    else { $('tof-val').innerHTML = `${fmt(lec.mm)} <small>mm</small>`; $('tof-bar').style.width = (100 - lec.mm / 12) + '%'; $('tof-sub').textContent = lec.mm < 150 ? '¡Hay algo muy cerca!' : 'Alcance hasta 1200 mm'; }
+    const c = lec.color; $('color-muestra').style.background = `rgb(${c.r},${c.g},${c.b})`; $('color-nombre').textContent = nombreColor(c);
+    const raw = [c.r * 9 + 40, c.g * 9 + 45, c.b * 9 + 38]; raw.push(Math.round((raw[0] + raw[1] + raw[2]) * .85));
+    $('color-rgbc').innerHTML = ['R', 'G', 'B', 'C'].map((n, i) => `<span>${n} ${raw[i]}</span>`).join('');
+    const rumbo = ((pose(s).th * 180 / Math.PI) % 360 + 360) % 360;
+    $('aguja').setAttribute('transform', `rotate(${rumbo + 90} 32 32)`);
+    $('mpu-rumbo').textContent = `${fmt(rumbo)}°`; const pi = lec.pitch || 0;
+    $('mpu-sub').innerHTML = `Girando a ${fmt(lec.gz)} °/s<br>Inclinación ${fmt(Math.abs(pi))}°${pi > 2 ? ', subiendo' : pi < -2 ? ', bajando' : ''}`;
+    for (const [lado, v] of [['izq', lec.izq], ['der', lec.der]]) {
+      const b = $('m-' + lado); b.style.left = v >= 0 ? '50%' : (50 + v / 2) + '%'; b.style.width = Math.abs(v / 2) + '%'; $('m-' + lado + '-n').textContent = fmt(v) + '%';
+    }
+    $('chip-tiempo').textContent = `t = ${fmt(tSim, 1)} s`;
+    pintarJuez();
+  }
+
+  // Mensajes: si estás mirando el final, lo nuevo empuja lo anterior hacia arriba.
+  // Si subiste a leer algo antiguo, no te movemos la vista: aparece «Mensajes nuevos ↓».
+  const consola = $('consola'), pildora = $('pildora-nuevos');
+  const alFinal = () => consola.scrollHeight - consola.scrollTop - consola.clientHeight < 24;
+  function serial(txt, sis) {
+    const pegado = alFinal(), d = document.createElement('div');
+    d.innerHTML = sis ? `<span class="sis">${txt}</span>` : `<span class="t">${fmt(tSim, 2)} s</span><span>${txt}</span>`;
+    consola.append(d); while (consola.children.length > 500) consola.firstChild.remove();
+    if (pegado) consola.scrollTop = consola.scrollHeight; else pildora.hidden = false;
+  }
+  consola.addEventListener('scroll', () => { if (alFinal()) pildora.hidden = true; });
+  pildora.addEventListener('click', () => { consola.scrollTop = consola.scrollHeight; pildora.hidden = true; });
+
+  let tPrevReal = null;
+  function cuadro(ts) {
+    if (tPrevReal == null) tPrevReal = ts;
+    const dtReal = Math.min(0.05, (ts - tPrevReal) / 1000); tPrevReal = ts;
+    if (corriendo && !pausado) {
+      const dt = dtReal * mult; pPrev = pose(s); s += V * dt; tSim += dt; revisarHitos();
+      const p = pose(s); lec = leerSensores(p, pPrev, dt);
+      rastro.push({ x: p.x, y: p.y }); if (rastro.length > 260) rastro.shift();
+      if (tSim >= proxSerial) { serial(String(lec.pos)); proxSerial = tSim + 0.25; }
+      pintarPaneles();
+    }
+    dibujarSim();
+    if (!vistaPista.hidden) dibujarEditor();
+    requestAnimationFrame(cuadro);
+  }
+
+  const btnProbar = $('btn-probar');
+  function ponerEstado(txt, vivo) { $('txt-estado').textContent = txt; $('estado').classList.toggle('vivo', !!vivo); }
+  function arrancar() {
+    if (modoError) { avisar('Primero arregla el error de la línea marcada'); return; }
+    corriendo = true; pausado = false; btnProbar.classList.add('corriendo');
+    $('txt-probar').textContent = 'Detener'; $('ico-probar').innerHTML = '<rect x="6" y="6" width="12" height="12" rx="2"/>';
+    $('txt-pausa').textContent = 'Pausa'; ponerEstado('El robot está corriendo', true);
+    serial(`Compilando ${Object.keys(PROYECTO).length} archivos… listo. Robot encendido.`, true);
+  }
+  function detener() {
+    corriendo = false; btnProbar.classList.remove('corriendo');
+    $('txt-probar').textContent = 'Probar mi robot'; $('ico-probar').innerHTML = '<path d="M7 4.5v15l12.5-7.5z"/>';
+    ponerEstado('Robot detenido');
+  }
+  btnProbar.addEventListener('click', () => corriendo ? detener() : arrancar());
+  $('btn-pausa').addEventListener('click', () => {
+    if (!corriendo) return; pausado = !pausado; $('txt-pausa').textContent = pausado ? 'Seguir' : 'Pausa';
+    ponerEstado(pausado ? 'En pausa' : 'El robot está corriendo', !pausado);
+  });
+  $('btn-inicio').addEventListener('click', () => { s = 0; tSim = 0; juez.alcanzados = 0; juez.reinicios = 0; rastro = []; proxSerial = 0; pPrev = pose(0); lec = leerSensores(pose(0), pPrev, 0); pintarPaneles(); serial('Robot de vuelta en la partida.', true); });
+  $('vel').addEventListener('input', e => { mult = VELS[+e.target.value]; $('vel-out').textContent = '×' + String(mult).replace('.', ','); });
+  $('btn-limpiar').addEventListener('click', () => { consola.innerHTML = ''; pildora.hidden = true; });
+  document.querySelectorAll('.como').forEach(b => b.addEventListener('click', () => { const p = $(b.dataset.snip); p.hidden = !p.hidden; b.textContent = p.hidden ? '¿Cómo lo uso?' : 'Ocultar'; }));
+
+  // ---------------- Editor de código (maqueta) ----------------
+  const CODIGO = [
+    '#include <QTRSensors.h>', '#include <VL53L0X.h>', '#include "pines.h"', '',
+    'QTRSensors qtr;', 'VL53L0X distancia;', 'uint16_t valores[8];', '',
+    '// Control PID del siguelíneas',
+    'float kp = 0.08;  // @ajustar siguelineas', 'float ki = 0;     // @ajustar siguelineas', 'float kd = 0.6;   // @ajustar siguelineas',
+    'long integral = 0;', 'int errorAnterior = 0;', '',
+    'void setup() {', '  Serial.begin(115200);', '  qtr.setTypeAnalog();',
+    '  qtr.setSensorPins(PINES_QTR, 8);',
+    '  distancia.init();', '  distancia.startContinuous();', '}', '',
+    'void loop() {', '  int pos = qtr.readLineBlack(valores);  // 0 a 7000', '  int error = pos - 3500;',
+    '  integral += error;', '  float giro = kp * error + ki * integral + kd * (error - errorAnterior);', '  errorAnterior = error;', '',
+    '  int mm = distancia.readRangeContinuousMillimeters();',
+    '  if (mm < 100) {', '    mover(0, 0);  // ¡Obstáculo! Me detengo', '  } else {',
+    '    mover(120 + giro, 120 - giro);', '  }', '  Serial.println(pos);', '}', '',
+    'void mover(int izq, int der) {', '  analogWrite(PWM_IZQ, izq);', '  analogWrite(PWM_DER, der);', '}',
+  ];
+  const PINES = [
+    '// pines.h · Conexiones del robot', '#pragma once', '',
+    '// Motores (driver TB6612FNG)', '#define PWM_IZQ 18', '#define PWM_DER 19',
+    '#define AIN1 16', '#define AIN2 17', '#define BIN1 4', '#define BIN2 5', '',
+    '// Sensor de línea QTR-MX-8A (8 entradas analógicas)', 'const uint8_t PINES_QTR[8] = {36, 39, 34, 35, 32, 33, 25, 26};', '',
+    '// Bus I2C: VL53L0X, MPU6050 y TCS34725', '#define PIN_SDA 21', '#define PIN_SCL 22',
+  ];
+  // El proyecto es una carpeta: cada archivo es una pestaña. La principal (.ino con el nombre de la carpeta) va primero.
+  const PROYECTO = { 'seguidor.ino': CODIGO, 'pines.h': PINES };
+  let archivo = 'seguidor.ino', nArchivoNuevo = 1;
+  const LINEA_ERR = CODIGO.findIndex(l => l.includes('int error'));
+  const KW = new Set(['void', 'int', 'if', 'else', 'return', 'const', 'for', 'while', 'float', 'bool', 'true', 'false', 'uint16_t', 'uint8_t', 'long', 'unsigned']);
+  const esc = t => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  function resaltar(l) {
+    const re = /(\/\/.*$)|(#\w+)|(<[\w.]+>)|("(?:[^"\\]|\\.)*")|(\b\d+\b)|(\b[A-Za-z_]\w*\b)(?=\s*\()|(\b[A-Za-z_]\w*\b)/g;
+    let out = '', last = 0, m;
+    while ((m = re.exec(l))) {
+      out += esc(l.slice(last, m.index)); const t = m[0]; let cls = null;
+      if (m[1]) cls = 'com'; else if (m[2]) cls = 'pre'; else if (m[3] || m[4]) cls = 'str'; else if (m[5]) cls = 'num';
+      else if (m[6]) cls = KW.has(t) ? 'kw' : 'fn'; else if (m[7]) cls = KW.has(t) ? 'kw' : (/^[A-Z]/.test(t) ? 'tipo' : null);
+      const cuerpo = cls === 'com' ? esc(t).replace(/@ajustar \w+/, x => `<span class="t-aj">${x}</span>`) : esc(t);
+      out += cls ? `<span class="t-${cls}">${cuerpo}</span>` : cuerpo; last = m.index + t.length;
+    }
+    return out + esc(l.slice(last));
+  }
+  let modoError = false, nuevas = new Set();
+  function pintarCodigo() {
+    const lineas = PROYECTO[archivo] || [], conError = modoError && lineas === CODIGO;
+    $('editor').innerHTML = lineas.map((l, i) => {
+      const txt = conError && i === LINEA_ERR ? l.replace(';', '') : l;
+      return `<div class="linea${conError && i === LINEA_ERR ? ' mal' : ''}${nuevas.has(archivo + ':' + i) ? ' nueva' : ''}" id="l${i + 1}"><span class="n">${i + 1}</span><span class="c">${resaltar(txt) || ' '}</span></div>`;
+    }).join('');
+  }
+  $('burbuja-titulo').textContent = `Ups, revisa la línea ${LINEA_ERR + 1} de seguidor.ino`;
+
+  function pintarPestanas() {
+    $('pestanas').innerHTML = Object.keys(PROYECTO).map(n =>
+      `<button class="pestana" role="tab" aria-selected="${n === archivo}" data-archivo="${esc(n)}" data-ext="${esc(n.split('.').pop().toLowerCase())}"><i></i>${esc(n)}</button>`).join('') +
+      '<button class="pestana-nueva" id="btn-nuevo-archivo" aria-label="Nuevo archivo" title="Nuevo archivo">+</button>';
+  }
+  function abrirArchivo(n) { archivo = n; pintarPestanas(); pintarCodigo(); $('editor').scrollTop = 0; }
+  $('pestanas').addEventListener('click', e => {
+    const b = e.target.closest('[data-archivo]'); if (b) { abrirArchivo(b.dataset.archivo); return; }
+    if (e.target.closest('#btn-nuevo-archivo')) {
+      let n; do { n = `nuevo${nArchivoNuevo++}.h`; } while (PROYECTO[n]);
+      PROYECTO[n] = ['// ' + n, '#pragma once', '', '// Escribe aquí tus constantes o funciones'];
+      abrirArchivo(n); avisar(`Creamos ${n}. Inclúyelo con #include "${n}"`);
+    }
+  });
+  // Abrir una carpeta del computador: cada .ino, .h o .cpp queda en su pestaña
+  $('btn-carpeta').addEventListener('click', () => $('in-carpeta').click());
+  $('in-carpeta').addEventListener('change', async e => {
+    const files = [...e.target.files].filter(f => /\.(ino|h|hpp|c|cpp)$/i.test(f.name));
+    e.target.value = '';
+    if (!files.length) { avisar('No encontramos archivos .ino, .h o .cpp en esa carpeta'); return; }
+    const carpeta = (files[0].webkitRelativePath || '').split('/')[0] || 'proyecto', leidos = {};
+    for (const f of files) {
+      const ruta = (f.webkitRelativePath || f.name).split('/').slice(1).join('/') || f.name;
+      leidos[ruta] = (await f.text()).replace(/\r\n?/g, '\n').split('\n');
+    }
+    const nombres = Object.keys(leidos);
+    const principal = nombres.find(n => n === carpeta + '.ino') || nombres.find(n => n.endsWith('.ino')) || nombres[0];
+    for (const k of Object.keys(PROYECTO)) delete PROYECTO[k];
+    [principal, ...nombres.filter(n => n !== principal).sort()].forEach(n => { PROYECTO[n] = leidos[n]; });
+    modoError = false; $('burbuja').hidden = true; $('btn-error').textContent = 'Ver un error de ejemplo';
+    $('chip-carpeta').textContent = 'Carpeta: ' + carpeta; abrirArchivo(principal);
+    avisar(`Abrimos ${nombres.length} archivo${nombres.length === 1 ? '' : 's'} de «${carpeta}»`);
+  });
+
+  $('btn-error').addEventListener('click', () => {
+    if (PROYECTO['seguidor.ino'] !== CODIGO) { avisar('El error de ejemplo usa el programa de muestra'); return; }
+    modoError = !modoError; if (modoError) archivo = 'seguidor.ino'; pintarPestanas(); pintarCodigo(); $('burbuja').hidden = !modoError;
+    $('btn-error').textContent = modoError ? 'Arreglar el error' : 'Ver un error de ejemplo';
+    $('logro').classList.toggle('mal', modoError);
+    $('txt-logro').textContent = modoError ? 'Encontramos 1 error. Arréglalo y vuelve a probar.' : '¡Tu programa se compiló sin errores!';
+    if (modoError && corriendo) detener();
+  });
+  $('btn-ir-linea').addEventListener('click', () => { const el = $('l' + (LINEA_ERR + 1)); el.scrollIntoView({ block: 'center', behavior: reducir ? 'auto' : 'smooth' }); });
+
+  // ---------------- Editor de pista ----------------
+  const vistaProg = $('vista-programar'), vistaPista = $('vista-pista'), lienzoEd = $('lienzo-editor');
+  const PALETA = [
+    { grupo: 'Líneas', piezas: [{ tipo: 'vacia' }, { tipo: 'recta' }, { tipo: 'curva' }, { tipo: 'giroL' }, { tipo: 'segmentada' }] },
+    { grupo: 'Cruces y marcas de color', piezas: [
+      { tipo: 'cruce', nombre: 'Cruce + sin marcas' },
+      { tipo: 'cruce', nombre: 'Marca a la izquierda', props: { marcas: { ai: true } } },
+      { tipo: 'cruce', nombre: 'Marca a la derecha', props: { marcas: { ad: true } } },
+      { tipo: 'cruce', nombre: 'Marcas a ambos lados', props: { marcas: { ai: true, ad: true } } },
+      { tipo: 'cruce', nombre: 'Marcas en las 4 puntas', props: { marcas: { ai: true, ad: true, di: true, dd: true } } },
+      { tipo: 'te' }] },
+    { grupo: 'Desafíos', piezas: [{ tipo: 'rampa' }, { tipo: 'f2' }, { tipo: 'f1' }] },
+    { grupo: 'Partida y meta', piezas: [{ tipo: 'partida' }, { tipo: 'meta' }] },
+  ];
+  const PALETA_OBJ = [{ tipo: 'obstaculo', nombre: 'Obstáculo de 10 cm' }, { tipo: 'bache', nombre: 'Bache recto', ang: 0 },
+    { tipo: 'bache', nombre: 'Bache diagonal', ang: 45 }, { tipo: 'hito' }, { tipo: 'inicio' }];
+  const DIRECCIONALES = new Set(['cruce', 'te', 'f1', 'f2', 'partida', 'meta', 'rampa']);
+  const ACCION = m => (m.ai && m.ad) ? 'Dar la vuelta (180°)' : m.ai ? 'Girar a la izquierda' : m.ad ? 'Girar a la derecha' : 'Seguir derecho';
+  const propsNuevas = (tipo, props) => ({ ...(PROPS_BASE[tipo] || {}), ...JSON.parse(JSON.stringify(props || {})) });
+  let herr = { clase: 'baldosa', tipo: 'recta' }, sel = { c: 4, r: 5 }, hover = null;
+
+  function miniatura(e, objeto) {
+    const cv = document.createElement('canvas'), dpr = window.devicePixelRatio || 1; cv.width = cv.height = 64 * dpr;
+    const ctx = cv.getContext('2d'); ctx.scale(64 * dpr / TILE, 64 * dpr / TILE);
+    if (!objeto) { const b = { tipo: e.tipo, rot: 0, nivel: 0, props: propsNuevas(e.tipo, e.props) }; dibujarBaldosa(ctx, b); dibujarRelieveBaldosa(ctx, b); return cv; }
+    ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, TILE, TILE);
+    if (e.tipo === 'inicio') { ctx.save(); ctx.translate(150, 150); ctx.scale(1.3, 1.3); ctx.translate(-14, 0); dibujarRobot(ctx, { x: 0, y: 0, th: 0 }, null); ctx.restore(); }
+    else if (e.tipo === 'bache') { ctx.strokeStyle = C.linea; ctx.lineWidth = LINEA * 1.6; seg(ctx, 150, 0, 150, 300); dibujarObjeto(ctx, { tipo: 'bache', x: 150, y: 150, largo: 260, ang: e.ang, grosor: 44 }); }
+    else if (e.tipo === 'hito') dibujarObjeto(ctx, { tipo: 'hito', n: 1, x: 150, y: 150, r: 95 });
+    else dibujarObjeto(ctx, { tipo: e.tipo, x: 150, y: 150, w: 170, h: 170 });
+    return cv;
+  }
+  function botonPieza(e, objeto) {
+    const b = document.createElement('button'), nombre = e.nombre || NOMBRES[e.tipo];
+    b.className = 'pieza'; b.setAttribute('aria-pressed', String(!objeto && !e.nombre && e.tipo === herr.tipo));
+    b.append(miniatura(e, objeto), document.createTextNode(nombre));
+    b.addEventListener('click', () => {
+      herr = { clase: objeto ? 'objeto' : 'baldosa', ...e };
+      document.querySelectorAll('.pieza[aria-pressed]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+      $('chip-herr').textContent = 'Pieza: ' + nombre;
+    });
+    return b;
+  }
+  PALETA.forEach(g => {
+    const h = document.createElement('h3'), cont = document.createElement('div');
+    h.textContent = g.grupo; cont.className = 'piezas'; g.piezas.forEach(e => cont.append(botonPieza(e, false)));
+    $('paleta-baldosas').append(h, cont);
+  });
+  PALETA_OBJ.forEach(e => $('piezas-objetos').append(botonPieza(e, true)));
+
+  let geoEd = null;
+  function dibujarEditor() {
+    const L = prepararLienzo(lienzoEd); if (!L) return; geoEd = L;
+    const { ctx, k } = L;
+    ctx.drawImage(mapa, 0, 0); dibujarRelieves(ctx); rejilla(ctx, k, true); marcaInicio(ctx, k);
+    if (hover) { ctx.fillStyle = 'rgba(101,199,247,.22)'; ctx.fillRect(hover.c * TILE, hover.r * TILE, TILE, TILE); }
+    if (sel) {
+      const i = sel.r * COLS + sel.c;
+      if (DIRECCIONALES.has(pista.baldosas[i].tipo)) enBaldosa(ctx, i, () => {
+        ctx.fillStyle = C.rosa; ctx.beginPath(); ctx.moveTo(6, 108); ctx.lineTo(52, 150); ctx.lineTo(6, 192); ctx.closePath(); ctx.fill();
+      });
+      ctx.strokeStyle = C.azul; ctx.lineWidth = 4 / k * L.dpr; ctx.setLineDash([]); ctx.strokeRect(sel.c * TILE + 4, sel.r * TILE + 4, TILE - 8, TILE - 8);
+      ctx.fillStyle = C.sol; ctx.beginPath(); ctx.arc(sel.c * TILE + TILE - 22, sel.r * TILE + 22, 12, 0, 7); ctx.fill();
+    }
+  }
+  function aPista(ev) {
+    if (!geoEd) return null; const r = lienzoEd.getBoundingClientRect(), d = geoEd.dpr;
+    const x = ((ev.clientX - r.left) * d - geoEd.ox) / geoEd.k, y = ((ev.clientY - r.top) * d - geoEd.oy) / geoEd.k;
+    if (x < 0 || y < 0 || x >= W || y >= H) return null; return { x, y, c: Math.floor(x / TILE), r: Math.floor(y / TILE) };
+  }
+  const textoVal = (prop, b) => prop === 'angulo' ? `${b.props.angulo}° · sube ${fmt(altoRampa(b) / 10, 1)} cm` : `${fmt(b.props[prop] / 10, 1)} cm`;
+  function propsHtml(b) {
+    const p = b.props || {}; let h = '';
+    if (b.tipo === 'cruce' || b.tipo === 'te') {
+      const m = p.marcas || {};
+      const caja = (k, t) => `<label class="opcion" for="pr-${k}"><input type="checkbox" id="pr-${k}" data-marca="${k}" ${m[k] ? 'checked' : ''}>${t}</label>`;
+      h += `<div class="bloque"><span class="etq">Marcas de color</span>${caja('ai', 'Antes del cruce, a la izquierda')}${caja('ad', 'Antes del cruce, a la derecha')}${caja('di', 'Después del cruce, a la izquierda')}${caja('dd', 'Después del cruce, a la derecha')}
+        <span class="nota-props">Izquierda y derecha se miran desde la flecha rosada, que muestra por dónde entra el robot.</span>
+        <span class="accion">El robot debe: <b>${ACCION(m)}</b></span></div>`;
+    }
+    if (b.tipo === 'rampa') h += `<div class="bloque"><span class="etq">Inclinación</span><input type="range" id="pr-angulo" data-prop="angulo" min="5" max="35" step="1" value="${p.angulo}" aria-label="Inclinación de la rampa"><span class="val">${textoVal('angulo', b)}</span><span class="nota-props">Las bases permiten hasta 35°, de subida y de bajada.</span></div>`;
+    if (b.tipo === 'segmentada') h += `<div class="bloque"><span class="etq">Cortes</span>
+      <label class="opcion-rango" for="pr-espacio">Espacio entre trazos<input type="range" id="pr-espacio" data-prop="espacio" min="10" max="40" step="5" value="${p.espacio}"><span class="val">${textoVal('espacio', b)}</span></label>
+      <label class="opcion-rango" for="pr-guion">Largo de cada trazo<input type="range" id="pr-guion" data-prop="guion" min="20" max="80" step="5" value="${p.guion}"><span class="val">${textoVal('guion', b)}</span></label>
+      <span class="nota-props">Las bases permiten cortes de hasta 4 cm.</span></div>`;
+    const opciones = (val, a, b2) => `<option value="izq" ${val === 'izq' ? 'selected' : ''}>${a}</option><option value="der" ${val === 'der' ? 'selected' : ''}>${b2}</option>`;
+    if (b.tipo === 'f1') h += `<div class="bloque"><label class="opcion-sel" for="pr-correcto"><span class="etq">Camino correcto</span><select id="pr-correcto" data-prop="correcto">${opciones(p.correcto, 'Por la izquierda', 'Por la derecha')}</select></label><span class="nota-props">Solo uno de los dos caminos es correcto. Lo indica el F2 que va antes.</span></div>`;
+    if (b.tipo === 'f2') h += `<div class="bloque"><label class="opcion-sel" for="pr-lado"><span class="etq">Indica girar a la</span><select id="pr-lado" data-prop="lado">${opciones(p.lado, 'Izquierda', 'Derecha')}</select></label><span class="nota-props">La primera línea avisa; la segunda, más corta, muestra hacia dónde girar en el cuadrado F1.</span></div>`;
+    if (b.tipo !== 'vacia') h += `<div class="bloque"><label class="opcion" for="pr-invertida"><input type="checkbox" id="pr-invertida" data-prop="invertida" ${p.invertida ? 'checked' : ''}>Línea blanca sobre fondo negro</label></div>`;
+    return h;
+  }
+  function pintarSel() {
+    const b = pista.baldosas[sel.r * COLS + sel.c];
+    $('sel-tipo').textContent = NOMBRES[b.tipo];
+    $('sel-pos').textContent = `Columna ${sel.c + 1}, fila ${sel.r + 1} · ${b.rot}°` + (b.nivel ? ` · a ${fmt(b.nivel / 10, 1)} cm de altura` : '');
+    $('sel-props').innerHTML = propsHtml(b);
+  }
+  $('sel-props').addEventListener('input', e => {
+    const el = e.target, b = pista.baldosas[sel.r * COLS + sel.c];
+    if (el.dataset.marca) b.props.marcas = { ...(b.props.marcas || {}), [el.dataset.marca]: el.checked };
+    else if (el.dataset.prop) b.props[el.dataset.prop] = el.type === 'checkbox' ? el.checked : el.type === 'range' ? +el.value : el.value;
+    else return;
+    renderMapa();
+    if (el.type === 'range') el.nextElementSibling.textContent = textoVal(el.dataset.prop, b); else pintarSel();
+  });
+  lienzoEd.addEventListener('pointermove', e => { const p = aPista(e); hover = p ? { c: p.c, r: p.r } : null; });
+  lienzoEd.addEventListener('pointerleave', () => { hover = null; });
+  lienzoEd.addEventListener('click', e => {
+    const p = aPista(e); if (!p) return; sel = { c: p.c, r: p.r };
+    if (herr.clase === 'baldosa') {
+      const i = p.r * COLS + p.c, act = pista.baldosas[i];
+      pista.baldosas[i] = { tipo: herr.tipo, rot: act.tipo === herr.tipo ? act.rot : 0, nivel: act.nivel || 0, props: propsNuevas(herr.tipo, herr.props) };
+      renderMapa();
+    }
+    else if (herr.tipo === 'inicio') pista.inicio = { x: p.c * TILE + 150, y: p.r * TILE + 150 };
+    else if (herr.tipo === 'obstaculo') pista.objetos.push({ tipo: 'obstaculo', x: Math.round(p.x), y: Math.round(p.y), w: 100, h: 100 });
+    else if (herr.tipo === 'bache') pista.objetos.push({ tipo: 'bache', x: Math.round(p.x), y: Math.round(p.y), largo: 300, ang: herr.ang || 0 });
+    else if (herr.tipo === 'hito') pista.objetos.push({ tipo: 'hito', n: pista.objetos.filter(o => o.tipo === 'hito').length + 1, x: Math.round(p.x), y: Math.round(p.y) });
+    pintarSel();
+  });
+  function girar(d) { const b = pista.baldosas[sel.r * COLS + sel.c]; b.rot = (b.rot + d + 360) % 360; renderMapa(); pintarSel(); }
+  function vaciar() {
+    pista.baldosas[sel.r * COLS + sel.c] = { tipo: 'vacia', rot: 0, nivel: 0, props: {} };
+    pista.objetos = pista.objetos.filter(o => Math.floor(o.x / TILE) !== sel.c || Math.floor(o.y / TILE) !== sel.r); renderMapa(); pintarSel();
+  }
+  $('btn-girar-izq').addEventListener('click', () => girar(-90)); $('btn-girar-der').addEventListener('click', () => girar(90));
+  $('btn-borrar').addEventListener('click', vaciar);
+  document.addEventListener('keydown', e => {
+    if (vistaPista.hidden || !fondoAj.hidden || e.target.closest('input, select')) return;
+    if (e.key === 'r' || e.key === 'R') girar(90); if (e.key === 'Delete' || e.key === 'Backspace') vaciar();
+  });
+
+  // ---------------- Pestañas, avisos ----------------
+  const toast = $('toast'); let toastT = null;
+  function avisar(txt) { $('toast-txt').textContent = txt; toast.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { toast.hidden = true; }, 2600); }
+  function cambiar(aPistaVista) {
+    vistaProg.hidden = aPistaVista; vistaPista.hidden = !aPistaVista;
+    $('tab-programar').setAttribute('aria-selected', String(!aPistaVista)); $('tab-pista').setAttribute('aria-selected', String(aPistaVista));
+    if (!aPistaVista) { consola.scrollTop = consola.scrollHeight; pildora.hidden = true; }
+    try { localStorage.setItem('dyn-maqueta-vista', aPistaVista ? 'pista' : 'programar'); } catch (_) {}
+  }
+  $('tab-programar').addEventListener('click', () => cambiar(false));
+  $('tab-pista').addEventListener('click', () => cambiar(true));
+  $('btn-guardar').addEventListener('click', () => avisar('En la app se descargará tu pista como archivo .json'));
+  $('btn-abrir').addEventListener('click', () => avisar('En la app podrás abrir un archivo .json de pista'));
+  $('btn-nueva').addEventListener('click', () => avisar('En la app esto crea una pista vacía (con confirmación)'));
+  $('btn-ejemplos').addEventListener('click', () => avisar('Ejemplos: mover motores, leer la línea, seguidor de línea, esquivar obstáculos'));
+  $('btn-ayuda').addEventListener('click', () => avisar('Ayuda: guía de cada sensor con ejemplos de código'));
+
+  // ---------------- Juez virtual (puntaje según las bases FIRVI 2026) ----------------
+  const juez = { alcanzados: 0, reinicios: 0 };
+  $('hitos').innerHTML = PUNTOS.map((p, i) => `<div class="hito" id="hito-${i + 1}"><b>${i + 1}</b>+${p}</div>`).join('') + '<div class="hito" id="hito-meta"><b>M</b>+15</div>';
+  function pintarJuez() {
+    for (let i = 1; i <= 8; i++) $('hito-' + i).classList.toggle('ok', i <= juez.alcanzados);
+    const pts = PUNTOS.slice(0, juez.alcanzados).reduce((a, b) => a + b, 0) - 10 * juez.reinicios;
+    $('juez-pts').textContent = fmt(pts); $('juez-rein').textContent = `${juez.reinicios} de 3`;
+    const resta = Math.max(0, 300 - tSim);
+    $('juez-tiempo').textContent = `Quedan ${Math.floor(resta / 60)}:${String(Math.floor(resta % 60)).padStart(2, '0')}`;
+    $('btn-ultimo-hito').disabled = juez.reinicios >= 3 || juez.alcanzados === 0;
+  }
+  function revisarHitos() {
+    while (juez.alcanzados < 8 && s >= HITOS_S[juez.alcanzados]) {
+      juez.alcanzados++; avisar(`¡Hito ${juez.alcanzados} alcanzado! +${PUNTOS[juez.alcanzados - 1]} puntos`);
+    }
+  }
+  $('btn-ultimo-hito').addEventListener('click', () => {
+    if (juez.reinicios >= 3 || !juez.alcanzados) return;
+    juez.reinicios++; s = HITOS_S[juez.alcanzados - 1]; pPrev = pose(s); rastro = [];
+    lec = leerSensores(pose(s), pPrev, 0); pintarPaneles();
+    avisar(`Reinicio desde el hito ${juez.alcanzados} (−10 puntos)`); serial(`Reinicio desde el hito ${juez.alcanzados}.`, true);
+  });
+
+  // ---------------- Ajustar parámetros (maqueta: en la app, el agente y la recompensa los programa el profe) ----------------
+  const fondoAj = $('ventana-ajuste'), svgG = $('aj-grafico'), tipG = $('aj-tip');
+  const GRUPOS = [
+    { id: 'siguelineas', nombre: 'Siguelíneas', sensor: 'QTR-MX-8A' },
+    { id: 'giroscopio', nombre: 'Giroscopio', sensor: 'MPU6050' },
+    { id: 'distancia', nombre: 'Distancia', sensor: 'VL53L0X' },
+    { id: 'posicion', nombre: 'Posición', sensor: 'Posición del robot' },
+  ];
+  const RANGOS = { kp: [0, 0.5, 3], ki: [0, 0.01, 4], kd: [0, 3, 2] };
+  const AYUDA = { kp: 'Qué tan fuerte corrige', ki: 'Corrige el error que se va acumulando', kd: 'Frena los zigzags' };
+  const RE_AJ = /^\s*(?:float|double|int|long)\s+(\w+)\s*=\s*(-?[\d.]+)\s*;\s*\/\/\s*@ajustar\s+(\w+)/;
+  const fmtN = (v, d) => v.toLocaleString('es-CL', { maximumFractionDigits: d });
+  const rndn = () => { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+  const nombreGrupo = id => (GRUPOS.find(g => g.id === id) || { nombre: id }).nombre;
+  let params = [], ent = null, timerAj = null, geoG = null;
+
+  function leerParametros() {
+    const out = [];
+    Object.entries(PROYECTO).forEach(([arch, lineas]) => lineas.forEach((l, i) => {
+      const m = l.match(RE_AJ); if (!m) return;
+      const id = m[3] + '.' + m[1], previo = params.find(p => p.id === id);
+      const [mn, mx, dec] = RANGOS[m[1]] || [0, Math.max(1, parseFloat(m[2]) * 4), 3];
+      out.push({ id, nombre: m[1], grupo: m[3], valor: parseFloat(m[2]), archivo: arch, linea: i, dec,
+        min: previo ? previo.min : mn, max: previo ? previo.max : mx, ajustar: previo ? previo.ajustar : true });
+    }));
+    return out;
+  }
+  function pintarPids() {
+    params = leerParametros();
+    const extra = [...new Set(params.map(p => p.grupo))].filter(g => !GRUPOS.some(x => x.id === g)).map(g => ({ id: g, nombre: g, sensor: 'Grupo propio' }));
+    $('aj-pids').innerHTML = [...GRUPOS, ...extra].map(g => {
+      const ps = params.filter(p => p.grupo === g.id);
+      const cab = `<header><h3>${g.nombre}</h3><small>${g.sensor}</small>${ps.length ? '<span class="chip ok">En tu código</span>' : ''}</header>`;
+      if (!ps.length) return `<section class="pid falta">${cab}<p>Todavía no está en tu código. Marca sus variables así:</p><pre>float kp = 1.0;  // @ajustar ${g.id}</pre></section>`;
+      return `<section class="pid">${cab}${ps.map(p => `
+        <div class="param">
+          <label class="interruptor" for="aj-${g.id}-${p.nombre}"><input type="checkbox" id="aj-${g.id}-${p.nombre}" data-id="${p.id}" ${p.ajustar ? 'checked' : ''}><span>${p.nombre}</span></label>
+          <span class="param-val">${fmtN(p.valor, p.dec)}</span>
+          <span class="param-ayuda">${AYUDA[p.nombre] || 'Valor ajustable'}</span>
+          <span class="param-rango">Buscar de
+            <input type="number" step="any" id="aj-${g.id}-${p.nombre}-min" aria-label="Mínimo de ${p.nombre}" data-id="${p.id}" data-lim="min" value="${p.min}"> a
+            <input type="number" step="any" id="aj-${g.id}-${p.nombre}-max" aria-label="Máximo de ${p.nombre}" data-id="${p.id}" data-lim="max" value="${p.max}"></span>
+        </div>`).join('')}</section>`;
+    }).join('');
+  }
+  $('aj-pids').addEventListener('change', e => {
+    const el = e.target, p = params.find(x => x.id === el.dataset.id); if (!p) return;
+    if (el.type === 'checkbox') p.ajustar = el.checked; else { const v = parseFloat(el.value); if (!isNaN(v)) p[el.dataset.lim] = v; }
+    pintarMejor();
+  });
+
+  // Recompensa y agente de ejemplo (búsqueda aleatoria alrededor del mejor)
+  function recompensaDe(v, conRuido = true) {
+    const g = (x, c, s) => ((x - c) / s) ** 2;
+    const d = g(v['siguelineas.kp'] ?? 0.08, 0.14, 0.11) + g(v['siguelineas.ki'] ?? 0, 0.0025, 0.004) + g(v['siguelineas.kd'] ?? 0.6, 1.15, 0.9);
+    return Math.max(0, Math.round(960 * Math.exp(-d) + 40 + (conRuido ? rndn() * 28 : 0)));
+  }
+  function proponer() {
+    const v = {}, explorar = !ent.mejor || Math.random() < 0.25;
+    params.forEach(p => {
+      if (!p.ajustar) { v[p.id] = p.valor; return; }
+      const x = explorar ? p.min + Math.random() * (p.max - p.min) : ent.mejor.v[p.id] + rndn() * 0.1 * (p.max - p.min);
+      v[p.id] = Math.min(p.max, Math.max(p.min, x));
+    });
+    return v;
+  }
+  function empezarEntreno() {
+    if (timerAj) { pararEntreno('Entrenamiento detenido'); return; }
+    if (!params.some(p => p.ajustar)) { avisar('Elige al menos un valor para ajustar'); return; }
+    ent = { total: Math.max(10, Math.min(2000, +$('aj-pruebas').value || 200)), pruebas: [], mejor: null, records: [] };
+    $('aj-empezar').classList.add('corriendo'); $('aj-empezar-txt').textContent = 'Detener entrenamiento';
+    $('aj-ico').innerHTML = '<rect x="6" y="6" width="12" height="12" rx="2"/>';
+    timerAj = setInterval(pasoEntreno, 60); pintarAjuste();
+  }
+  function pararEntreno(msg) {
+    clearInterval(timerAj); timerAj = null;
+    $('aj-empezar').classList.remove('corriendo'); $('aj-empezar-txt').textContent = 'Empezar a entrenar';
+    $('aj-ico').innerHTML = '<path d="M7 4.5v15l12.5-7.5z"/>';
+    if (msg) avisar(msg); pintarAjuste();
+  }
+  function pasoEntreno() {
+    for (let k = 0; k < 3 && ent.pruebas.length < ent.total; k++) {
+      const v = proponer(), r = recompensaDe(v), i = ent.pruebas.length + 1;
+      ent.pruebas.push({ i, r, v });
+      if (!ent.mejor || r > ent.mejor.r) { ent.mejor = { i, r, v }; ent.records.push(i); }
+    }
+    if (ent.pruebas.length >= ent.total) pararEntreno(`¡Entrenamiento terminado! Mejor recompensa: ${fmt(ent.mejor.r)}`);
+    else pintarAjuste();
+  }
+  function pintarAjuste() {
+    const n = ent ? ent.pruebas.length : 0, total = ent ? ent.total : (+$('aj-pruebas').value || 200);
+    $('aj-barra').style.width = (n / total * 100) + '%';
+    $('aj-progreso').textContent = !ent ? 'Aún no hay pruebas.' : timerAj ? `Prueba ${fmt(n)} de ${fmt(total)}` : `${fmt(n)} pruebas hechas`;
+    $('aj-chip').textContent = !ent ? 'Sin empezar' : timerAj ? 'Practicando…' : 'Terminado';
+    pintarGrafico(); pintarMejor();
+  }
+  function pintarGrafico() {
+    const Wc = $('aj-grafico-caja').clientWidth; if (!Wc) return;
+    const Hc = 260, m = { l: 48, r: 50, t: 28, b: 42 }, pw = Wc - m.l - m.r, ph = Hc - m.t - m.b;
+    const total = ent ? ent.total : (+$('aj-pruebas').value || 200);
+    const yMax = Math.max(1000, Math.ceil((ent && ent.mejor ? ent.mejor.r : 0) / 250) * 250);
+    const X = i => m.l + (total > 1 ? (i - 1) / (total - 1) : 0) * pw, Y = r => m.t + (1 - r / yMax) * ph;
+    geoG = { m, pw, total, X, Y };
+    let s = `<text x="${m.l - 8}" y="${m.t - 14}" class="g-eje">Recompensa</text>`;
+    for (let t = 0; t <= yMax; t += 250) s += `<line x1="${m.l}" x2="${Wc - m.r}" y1="${Y(t)}" y2="${Y(t)}" class="g-grid"/><text x="${m.l - 8}" y="${Y(t) + 4}" text-anchor="end" class="g-eje">${fmt(t)}</text>`;
+    const ticks = [...new Set([1, Math.round(total / 4), Math.round(total / 2), Math.round(total * 3 / 4), total])];
+    s += ticks.map(t => `<text x="${X(t)}" y="${Hc - m.b + 18}" text-anchor="middle" class="g-eje">${fmt(t)}</text>`).join('');
+    s += `<text x="${m.l + pw / 2}" y="${Hc - 4}" text-anchor="middle" class="g-eje">Número de prueba</text>`;
+    if (!ent || !ent.pruebas.length) {
+      s += `<text x="${m.l + pw / 2}" y="${m.t + ph / 2 - 8}" text-anchor="middle" class="g-vacio"><tspan x="${m.l + pw / 2}">Presiona «Empezar a entrenar»</tspan><tspan x="${m.l + pw / 2}" dy="18">para ver cómo mejora tu robot</tspan></text>`;
+    } else {
+      s += ent.pruebas.map(p => `<circle cx="${X(p.i).toFixed(1)}" cy="${Y(p.r).toFixed(1)}" r="4" class="g-punto"/>`).join('');
+      let best = -1, d = '';
+      ent.pruebas.forEach((p, k) => { if (p.r > best) { best = p.r; d += k ? `H${X(p.i).toFixed(1)}V${Y(best).toFixed(1)}` : `M${X(p.i).toFixed(1)} ${Y(best).toFixed(1)}`; } });
+      const ult = ent.pruebas[ent.pruebas.length - 1];
+      s += `<path d="${d}H${X(ult.i).toFixed(1)}" class="g-linea"/>`;
+      s += ent.records.map(i => `<circle cx="${X(i).toFixed(1)}" cy="${Y(ent.pruebas[i - 1].r).toFixed(1)}" r="6" class="g-record"/>`).join('');
+      s += `<text x="${(X(ult.i) + 8).toFixed(1)}" y="${(Y(best) + 4).toFixed(1)}" class="g-valor">${fmt(best)}</text>`;
+    }
+    s += '<circle id="aj-foco" r="8" class="g-foco" style="display:none"/>';
+    svgG.setAttribute('viewBox', `0 0 ${Wc} ${Hc}`); svgG.setAttribute('height', Hc); svgG.innerHTML = s;
+  }
+  svgG.addEventListener('pointermove', e => {
+    if (!geoG || !ent || !ent.pruebas.length) return;
+    const r = svgG.getBoundingClientRect(), x = e.clientX - r.left;
+    const i = Math.max(1, Math.min(ent.pruebas.length, Math.round((x - geoG.m.l) / geoG.pw * (geoG.total - 1)) + 1));
+    const p = ent.pruebas[i - 1], cx = geoG.X(p.i), cy = geoG.Y(p.r);
+    tipG.hidden = false;
+    tipG.innerHTML = `<b>Prueba ${fmt(p.i)}</b> · recompensa ${fmt(p.r)}<br>` + params.filter(q => q.ajustar).map(q => `${q.nombre} ${fmtN(p.v[q.id], q.dec)}`).join(' · ');
+    tipG.style.left = Math.min(r.width - 90, Math.max(90, cx)) + 'px'; tipG.style.top = cy + 'px';
+    const f = $('aj-foco'); f.setAttribute('cx', cx); f.setAttribute('cy', cy); f.style.display = '';
+  });
+  svgG.addEventListener('pointerleave', () => { tipG.hidden = true; const f = $('aj-foco'); if (f) f.style.display = 'none'; });
+
+  function pintarMejor() {
+    const m = ent && ent.mejor, actual = {};
+    params.forEach(p => { actual[p.id] = p.valor; });
+    const base = recompensaDe(actual, false);
+    $('aj-mejor-r').textContent = m ? fmt(m.r) : '—';
+    $('aj-mejor-sub').textContent = m ? `Recompensa de la prueba ${fmt(m.i)}` + (m.r > base ? `: ${fmt(Math.round((m.r / base - 1) * 100))} % más que con tus valores (${fmt(base)})` : '') : `Con tus valores actuales la recompensa es cerca de ${fmt(base)}.`;
+    $('aj-tabla').innerHTML = params.filter(p => p.ajustar).map(p => `<tr><th scope="row">${p.nombre}<small>${nombreGrupo(p.grupo)}</small></th><td>${fmtN(p.valor, p.dec)}</td><td class="${m ? 'mejora' : ''}">${m ? fmtN(m.v[p.id], p.dec) : '—'}</td></tr>`).join('');
+    $('aj-ver').disabled = $('aj-usar').disabled = !m || !!timerAj;
+    const L = prepararLienzo($('aj-mini')); if (!L) return;
+    L.ctx.drawImage(mapa, 0, 0); dibujarRelieves(L.ctx);
+    if (m) {
+      L.ctx.strokeStyle = 'rgba(255,209,102,.95)'; L.ctx.lineWidth = 18; L.ctx.lineJoin = 'round'; L.ctx.beginPath();
+      for (let q = 0; q <= TOTAL; q += 20) { const o = pose(q); q ? L.ctx.lineTo(o.x, o.y) : L.ctx.moveTo(o.x, o.y); }
+      L.ctx.stroke();
+    }
+    dibujarRobot(L.ctx, pose(0), null);
+  }
+
+  function abrirAjuste() { pintarPids(); fondoAj.hidden = false; document.body.style.overflow = 'hidden'; pintarAjuste(); $('aj-cerrar').focus(); }
+  function cerrarAjuste() { fondoAj.hidden = true; document.body.style.overflow = ''; tipG.hidden = true; }
+  $('btn-ajustar').addEventListener('click', abrirAjuste);
+  $('aj-cerrar').addEventListener('click', () => { cerrarAjuste(); $('btn-ajustar').focus(); });
+  fondoAj.addEventListener('click', e => { if (e.target === fondoAj) cerrarAjuste(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !fondoAj.hidden) cerrarAjuste(); });
+  window.addEventListener('resize', () => { if (!fondoAj.hidden) pintarAjuste(); });
+  $('aj-empezar').addEventListener('click', empezarEntreno);
+  $('aj-ver').addEventListener('click', () => {
+    cerrarAjuste(); cambiar(false); $('btn-inicio').click(); if (!corriendo) arrancar();
+    avisar(`Repitiendo la mejor prueba (recompensa ${fmt(ent.mejor.r)})`);
+  });
+  $('aj-usar').addEventListener('click', () => {
+    const m = ent.mejor; nuevas = new Set();
+    const cambiados = params.filter(p => p.ajustar && m.v[p.id] != null && PROYECTO[p.archivo]);
+    cambiados.forEach(p => {
+      const lineas = PROYECTO[p.archivo];
+      lineas[p.linea] = lineas[p.linea].replace(/=\s*-?[\d.]+\s*;/, `= ${+m.v[p.id].toFixed(p.dec)};`); nuevas.add(p.archivo + ':' + p.linea);
+    });
+    if (!cambiados.length) return;
+    cerrarAjuste(); cambiar(false); abrirArchivo(cambiados[0].archivo);
+    $('logro').classList.remove('mal'); $('txt-logro').textContent = '¡Tu robot aprendió! Cambiamos los valores marcados en tu código.';
+    avisar('Valores nuevos guardados en tu código');
+    const primera = $('l' + (Math.min(...cambiados.filter(p => p.archivo === archivo).map(p => p.linea)) + 1)); if (primera) primera.scrollIntoView({ block: 'center', behavior: reducir ? 'auto' : 'smooth' });
+    setTimeout(() => { nuevas = new Set(); pintarCodigo(); }, 6000);
+  });
+
+  // ---------------- Arranque: estado de trabajo realista ----------------
+  renderMapa(); pintarPestanas(); pintarCodigo(); pintarSel();
+  s = 0; pPrev = pose(0); lec = leerSensores(pose(0), pPrev, 0); pintarPaneles();
+  serial('Conecta tu programa y presiona «Probar mi robot».', true);
+  try { if (localStorage.getItem('dyn-maqueta-vista') === 'pista') cambiar(true); } catch (_) {}
+  if (!reducir) arrancar();
+  requestAnimationFrame(cuadro);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "nombre": "Práctica FIRVI",
+  "tamanoBaldosa": 300,
+  "columnas": 8,
+  "filas": 6,
+  "ambiente": { "luz": "normal" },
+  "baldosas": [
+    { "c": 0, "r": 1, "rot": 0, "tipo": "partida" },
+    { "c": 1, "r": 1, "rot": 0, "tipo": "recta" },
+    { "c": 2, "r": 1, "rot": 0, "tipo": "recta" },
+    { "c": 3, "r": 1, "rot": 0, "tipo": "giroSuave" },
+    { "c": 3, "r": 2, "rot": 90, "tipo": "recta" },
+    { "c": 3, "r": 3, "rot": 180, "tipo": "giroSuave" },
+    { "c": 4, "r": 3, "rot": 0, "tipo": "recta" },
+    { "c": 5, "r": 3, "rot": 0, "tipo": "recta" },
+    { "c": 6, "r": 3, "rot": 0, "tipo": "meta" }
+  ],
+  "objetos": [
+    { "tipo": "hito", "x": 750, "y": 450, "rot": 0, "props": { "numero": 1, "yaw": 0 } },
+    { "tipo": "hito", "x": 1050, "y": 750, "rot": 0, "props": { "numero": 2, "yaw": 90 } }
+  ],
+  "inicio": { "x": 150, "y": 450, "yaw": 0 }
+}

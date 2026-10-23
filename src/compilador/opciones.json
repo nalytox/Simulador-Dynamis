@@ -1,0 +1,5 @@
+{
+  "cpp": ["--target=wasm32-wasip1", "-O1", "-fno-exceptions", "-std=gnu++17"],
+  "c": ["--target=wasm32-wasip1", "-O1", "-std=gnu11"],
+  "enlace": ["--target=wasm32-wasip1", "-mexec-model=reactor", "-Wl,--stack-first", "-Wl,-z,stack-size=8192", "-Wl,--max-memory=524288"]
+}
