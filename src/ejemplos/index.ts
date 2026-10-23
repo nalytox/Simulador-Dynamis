@@ -31,7 +31,12 @@ export const PISTA_INICIAL: Pista = PISTAS_DE_EJEMPLO[0].pista;
 type Ficha = Omit<EjemploProyecto, 'proyecto'>;
 
 /** Los proyectos de src/ejemplos/proyectos/<id>/, en el orden en que se muestran. Cada carpeta necesita su ficha. */
-const FICHAS: Ficha[] = [];
+const FICHAS: Ficha[] = [
+  { id: 'mover-motores', nombre: 'Mover los motores', descripcion: 'Avanza, gira y retrocede: así se mueven los motores.', pista: 'practica' },
+  { id: 'leer-linea', nombre: 'Leer la línea', descripcion: 'Calibra el sensor de línea y muestra dónde ve la línea.', pista: 'practica' },
+  { id: 'seguidor-pid', nombre: 'Seguidor de línea con PID', descripcion: 'Sigue la línea con un control PID: P, I y D.', pista: 'practica' },
+  { id: 'leer-giroscopio', nombre: 'Leer el giroscopio', descripcion: 'Gira 90° midiendo el giro con el MPU6050.', pista: 'practica' },
+];
 
 const archivos = import.meta.glob('./proyectos/*/*', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
 
