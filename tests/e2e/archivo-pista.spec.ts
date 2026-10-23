@@ -26,7 +26,7 @@ test('Guardar pista descarga el JSON de la pista', async ({ page }) => {
   await clicCelda(page, 6, 0);
   const [descarga] = await Promise.all([page.waitForEvent('download'), page.locator('#btn-guardar').click()]);
   const pista = await pistaEditor(page);
-  expect(descarga.suggestedFilename()).toBe('Practica.json');
+  expect(descarga.suggestedFilename()).toBe('Practica FIRVI.json');
   const leida = leerPista(readFileSync(await descarga.path(), 'utf8'));
   expect(leida).toEqual({ ok: true, pista });
 });

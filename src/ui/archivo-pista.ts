@@ -19,7 +19,7 @@ export function nombreArchivoPista(nombre: string): string {
  * Guardar pista (descarga el .json), Abrir pista (lee un .json; si no sirve, muestra qué falla y
  * no cambia nada) y Pista nueva (con confirmación).
  */
-export function crearArchivoPista(raiz: Document, eventos: { pista(): Pista; alAbrir(p: Pista): void }, pistaInicial: Pista): void {
+export function crearArchivoPista(raiz: Document, eventos: { pista(): Pista; alAbrir(p: Pista): void }, sinCambios: Pista[]): { abrirEjemplo(p: Pista): Promise<boolean> } {
   const $ = <E extends HTMLElement>(id: string) => raiz.getElementById(id) as E;
   const entrada = $<HTMLInputElement>('in-pista');
   const caja = $('error-pista');
@@ -36,10 +36,10 @@ export function crearArchivoPista(raiz: Document, eventos: { pista(): Pista; alA
     }));
     caja.hidden = false;
   };
-  /** Reemplazar la pista pide confirmar, salvo que sea la del comienzo o una vacía sin tocar. */
+  /** Reemplazar la pista pide confirmar, salvo que sea una de ejemplo o una vacía sin tocar. */
   const firma = (p: Pista) => JSON.stringify(p);
   const puedeReemplazar = async () =>
-    [firma(pistaInicial), firma(pistaVacia())].includes(firma(eventos.pista()))
+    [...sinCambios, pistaVacia()].map(firma).includes(firma(eventos.pista()))
     || confirmar(raiz, { titulo: '¿Reemplazar tu pista? Si no la guardaste, se va a perder.', boton: 'Reemplazar' });
   const abrir = (p: Pista) => {
     ocultarError();
@@ -79,4 +79,12 @@ export function crearArchivoPista(raiz: Document, eventos: { pista(): Pista; alA
   });
 
   $('btn-cerrar-error-pista').addEventListener('click', ocultarError);
+
+  return {
+    async abrirEjemplo(p) {
+      if (!(await puedeReemplazar())) return false;
+      abrir(p);
+      return true;
+    },
+  };
 }

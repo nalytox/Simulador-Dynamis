@@ -13,6 +13,7 @@ import { crearEditorPista } from './editor-pista';
 import { crearPanelPista } from './panel-pista';
 import { crearArchivoPista } from './archivo-pista';
 import { crearVentanaRobot } from './mi-robot';
+import { crearVentanaEjemplos } from './ejemplos';
 import { crearVentanaAjuste, type PedidoEntrenamiento, type FinVentana } from './ajustar';
 import { crearAgente } from '../ajuste/agente.js';
 import { calcularRecompensa } from '../ajuste/recompensa.js';
@@ -29,7 +30,7 @@ import { normalizarRobot } from '../robot/archivo';
 import { abrirAlmacen, conRetardo, type Almacen, type DatosGuardados, type Preferencias } from '../proyecto/almacen';
 import type { Proyecto } from '../proyecto/proyecto';
 import type { Pista } from '../pista/tipos';
-import { PROYECTO_INICIAL, PISTA_INICIAL } from '../ejemplos';
+import { PROYECTO_INICIAL, PISTA_INICIAL, PISTAS_DE_EJEMPLO } from '../ejemplos';
 import { buscarAjustables, formatearValor } from '../compilador/ajustables';
 
 const SIN_AISLAMIENTO = 'Para usar el simulador, recarga la página o usa Chrome, Edge o Firefox recientes.';
@@ -112,13 +113,19 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
     alElegir: s => panelPista.mostrar(editorPista.pista(), s),
   });
   editorPista.mostrar(pista);
-  crearArchivoPista(raiz, {
+  const archivoPista = crearArchivoPista(raiz, {
     pista: () => pistaEditada,
     alAbrir: p => {
       editorPista.mostrar(p);
       alEditarPista(p);
     },
-  }, PISTA_INICIAL);
+  }, PISTAS_DE_EJEMPLO.map(e => e.pista));
+  const ventanaEjemplos = crearVentanaEjemplos(raiz, {
+    abrirProyecto: p => programa.abrirEjemplo(p),
+    abrirPista: p => archivoPista.abrirEjemplo(p),
+    alAbrir: () => vistas.mostrar('programar'),
+  });
+  $('btn-ejemplos').addEventListener('click', () => ventanaEjemplos.abrir());
   /** La pista editada se guarda y, si no corre una prueba, se ve al tiro en Programar. */
   function alEditarPista(p: Pista) {
     pistaEditada = p;

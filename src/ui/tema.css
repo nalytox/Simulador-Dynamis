@@ -402,3 +402,18 @@ button:disabled { opacity: .55; cursor: not-allowed; }
 .aj-error p { margin: 0; color: var(--error); font-weight: 600; }
 .aj-error pre { margin: 8px 0 0; font-size: 12px; white-space: pre-wrap; max-height: 200px; overflow: auto; }
 .pids input:disabled, .ajustes-entreno input:disabled, .ajustes-entreno select:disabled { opacity: .6; }
+
+/* Ventana Ejemplos */
+.ventana-ejemplos { padding: 0; border: 0; max-width: 1240px; width: calc(100% - 32px); max-height: calc(100% - 32px); overflow-y: auto; color: var(--tinta); }
+.ventana-ejemplos::backdrop { background: rgba(11, 15, 152, .3); }
+.ejemplos-cuerpo { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
+.ej-lista { list-style: none; margin: 0; padding: 12px; display: grid; gap: 10px; }
+.ej-tarjeta { border: 2px solid var(--hielo); border-radius: 14px; padding: 12px 14px; background: var(--blanco); }
+.ej-tarjeta h3 { font-family: var(--f-display); font-weight: 600; font-size: 19px; margin: 0 0 4px; }
+.ej-tarjeta p { margin: 0 0 6px; }
+.ej-tarjeta .ej-pista { font-size: 14px; opacity: .8; }
+.ej-tarjeta-pista { display: flex; gap: 14px; align-items: center; }
+.ej-miniatura { width: 160px; height: 120px; flex: none; border-radius: 10px; background: var(--nube); }
+.ej-acciones { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.ej-acciones button { min-height: 40px; }
+@media (max-width: 1100px) { .ejemplos-cuerpo { grid-template-columns: minmax(0, 1fr); } }

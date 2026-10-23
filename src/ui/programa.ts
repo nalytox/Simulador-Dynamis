@@ -7,7 +7,7 @@ import { archivoPrincipal, ordenarArchivos, type Proyecto } from '../proyecto/pr
 import { leerArrastre, leerCarpeta, leerInput, leerZip, proyectoDesdeArchivos, type ArchivoLeido } from '../proyecto/importar';
 import { guardarEnCarpeta, nombreZip, proyectoAZip, type CarpetaEscribible } from '../proyecto/exportar';
 import { firmaProyecto } from '../compilador/cliente';
-import { PROYECTO_INICIAL } from '../ejemplos';
+import { PROYECTOS_DE_EJEMPLO } from '../ejemplos';
 
 export interface OpcionesPrograma {
   proyecto: Proyecto;
@@ -29,6 +29,8 @@ export interface PanelPrograma {
    * "Usar estos valores" (decisión 12 de la fase 6): reescribe los números marcados con @ajustar, abre el
    * archivo del primer cambio y resalta sus líneas. El cambio en ese archivo se deshace con Ctrl+Z.
    */
+  /** Abre un proyecto de ejemplo; si el proyecto actual cambió, pide confirmar. Dice si lo abrió. */
+  abrirEjemplo(p: Proyecto): Promise<boolean>;
   aplicarAjustes(valores: Record<string, number>): { cambiadas: { archivo: string; linea: number }[]; faltan: string[] };
 }
 
@@ -99,9 +101,9 @@ export function crearPanelPrograma(raiz: Document, o: OpcionesPrograma): PanelPr
     $('chip-carpeta').textContent = `Carpeta: ${proyecto.nombre}`;
   }
 
-  /** El proyecto del navegador puede ser la única copia: antes de reemplazarlo se pregunta, salvo si es el ejemplo intacto. */
+  /** El proyecto del navegador puede ser la única copia: antes de reemplazarlo se pregunta, salvo si es un ejemplo intacto. */
   const puedeReemplazar = async () =>
-    firmaProyecto(proyecto) === firmaProyecto(PROYECTO_INICIAL)
+    PROYECTOS_DE_EJEMPLO.some(e => firmaProyecto(e.proyecto) === firmaProyecto(proyecto))
     || confirmar(raiz, { titulo: '¿Reemplazar tu proyecto? Si no lo descargaste, se va a perder.', boton: 'Reemplazar' });
 
   /** Reemplaza el proyecto por uno importado; si no sirve o no se confirma, deja el que estaba. Dice si lo abrió. */
@@ -192,6 +194,12 @@ export function crearPanelPrograma(raiz: Document, o: OpcionesPrograma): PanelPr
     abrir(p) {
       abrirProyecto(p);
       recordarCarpeta(null);
+    },
+    async abrirEjemplo(p) {
+      if (!(await puedeReemplazar())) return false;
+      abrirProyecto(p);
+      recordarCarpeta(null);
+      return true;
     },
     limpiarError: () => editor.marcarLinea(null),
     aplicarAjustes(valores) {
