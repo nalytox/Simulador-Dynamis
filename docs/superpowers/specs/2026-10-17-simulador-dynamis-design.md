@@ -104,9 +104,13 @@ El worker de simulación lee un bloque de control en `SharedArrayBuffer` (estado
 
 ```
 index.html
-vite.config.ts                 # cabeceras COOP/COEP en desarrollo
-public/coi-serviceworker.js
+vite.config.ts                 # cabeceras COOP/COEP en desarrollo; plugin que arma sw.js al construir
+public/                        # manifest.webmanifest e íconos de la app instalable
 scripts/construir-nucleo.mjs   # compila src/nucleo/*.cpp → nucleo.a con @yowasp/clang en Node
+scripts/plugin-pwa.ts          # construye el service worker (src/pwa/servicio.ts) como sw.js
+scripts/servir-dist.mjs        # sirve dist/ como GitHub Pages, para el e2e de producción
+scripts/revisar-dist.mjs       # revisa dist/ antes de publicar (límite de 100 MB por archivo)
+.github/workflows/publicar.yml # push a main → pruebas, build y GitHub Pages
 src/
   main.ts
   ui/                          # banda, acciones, editor, pestañas, mensajes, paneles, editor de pista,
@@ -345,7 +349,7 @@ export function leerTCS34725({ t, estado, sensor, tiempoIntegracionMs, ganancia,
 ```
 
 **Placeholders ideales (con `TODO`):**
-- Dinámica: cinemática diferencial (`v = (izq+der)/2 · vMax`, `ω = (der−izq) · vMax / trocha`). La altura y la inclinación salen del mundo. Ante una colisión, el robot no avanza.
+- Dinámica: cinemática diferencial (`v = (izq+der)/2 · vMax`, `ω = (der−izq) · vMax / trocha`). La altura y la inclinación salen de la altura del suelo bajo el frente y la cola del chasis y bajo cada rueda (desde la fase 7; antes, del gradiente en el centro): el robot empieza a inclinarse cuando su frente llega a una rampa y un bache de 6 mm lo inclina apenas unos grados. Ante una colisión, el robot no avanza.
 - QTR: `ADC = 180 + (1 − luminancia) · 3800`.
 - VL53L0X: distancia directa del `raycast`.
 - MPU6050: gravedad proyectada según la inclinación, más `gz = Δyaw/dt`.
@@ -621,10 +625,15 @@ Referencia visual: la maqueta en `docs/maqueta/`. Todo en **español (Chile)**, 
   - La pista editada se usa en la **próxima** prueba: si no corre una prueba, Programar la muestra al tiro; si corre, la prueba sigue con la suya y Programar cambia al volver al inicio o al probar de nuevo.
 - **Ajustar parámetros:** ventana superpuesta (§11.4).
 - **Ejemplos:**
-  - Proyectos: mover motores, leer la línea, seguidor de línea con PID, cruzar cortes, leer marcas de color en cruces, esquivar el obstáculo, subir la rampa (leer la inclinación) y leer el giroscopio.
-  - Pistas: Práctica FIRVI, Cruces con marcas, y Rampa y baches.
-- **Ayuda:** guía de cada sensor con fragmentos de código, "Conexiones de mi robot", un resumen de las bases (qué hace cada pieza de la pista y cómo se puntúa) y el aviso de la dirección I2C repetida.
-- **Primera visita:** un recorrido corto (4 pasos) con la mascota: "Este es tu código", "Presiona aquí para probar", "Aquí ves lo que siente tu robot" y "Aquí construyes la pista". Se puede saltar y volver a ver desde Ayuda.
+  - Proyectos: el seguidor de línea del comienzo, mover motores, leer la línea, seguidor de línea con PID, cruzar cortes, leer marcas de color en cruces, esquivar el obstáculo, subir la rampa (leer la inclinación) y leer el giroscopio. Cada uno es una carpeta Arduino real (`src/ejemplos/proyectos/<id>/`) que compila sin cambios en el Arduino IDE, y se prueba en Node, en su pista, con el juez.
+  - Pistas (8 × 6): Práctica FIRVI (la del comienzo); Cruces con marcas (cruces sin marcas, con marca a la izquierda y a la derecha, y una línea con cortes); y Rampa y baches (rampa de subida y bajada, baches y el obstáculo F4). Las dos últimas tienen 8 hitos y pasan la revisión de las bases.
+  - La ventana muestra cada proyecto con su pista ("Se prueba en la pista «X»", con un botón para abrirla) y cada pista con su miniatura. Abrir pide confirmar si el trabajo actual cambió; un ejemplo intacto se reemplaza sin preguntar.
+- **Ayuda:** cuatro pestañas.
+  - **Sensores:** una guía por sensor (QTR, VL53L0X, TCS34725, MPU6050 con Adafruit y con i2cdevlib, motores TB6612), con un programa completo que compila y un botón "Copiar". Las del VL53L0X y el TCS34725 traen el aviso de la dirección I2C repetida.
+  - **Conexiones de mi robot:** generada desde "Mi robot" cada vez que se abre, con el botón "Cambiar en Mi robot".
+  - **Las bases:** qué hace cada pieza y cómo se puntúa (con las mismas constantes del juez).
+  - **Primeros pasos:** "Ver el recorrido de nuevo", el uso sin internet e "Instalar en este computador".
+- **Primera visita:** un recorrido corto (4 pasos) con la mascota: "Este es tu código", "Presiona aquí para probar", "Aquí ves lo que siente tu robot" y "Aquí construyes la pista". Se puede saltar (o `Esc`) y volver a ver desde Ayuda. Que ya se vio se recuerda en `localStorage` (una comodidad del navegador, no un dato del trabajo).
 
 ### Mensajes del robot
 
@@ -687,7 +696,9 @@ Referencia visual: la maqueta en `docs/maqueta/`. Todo en **español (Chile)**, 
   - abrir una carpeta con `pines.h`;
   - editar la pista con una rampa;
   - el juez virtual: llegar a los hitos de la pista de prueba, "Volver al último hito" descuenta 10 puntos y la meta suma tiempo solo si el robot se detiene;
-  - "Ajustar parámetros" con pocas pruebas y "Usar estos valores".
+  - "Ajustar parámetros" con pocas pruebas y "Usar estos valores";
+  - cargar un ejemplo desde "Ejemplos", la Ayuda y el recorrido de la primera visita.
+- **La versión publicada (Playwright, `npm run e2e:produccion`):** `dist/` servido en `/Simulador-Dynamis/` sin COOP/COEP, como GitHub Pages: el service worker aísla la página, "Probar mi robot" funciona, funciona sin internet después de probar una vez, y sin internet antes de eso pide conectarse.
 
 ---
 
@@ -714,6 +725,13 @@ Referencia visual: la maqueta en `docs/maqueta/`. Todo en **español (Chile)**, 
 - **Un solo service worker** cumple dos funciones:
   - agrega las cabeceras COOP/COEP (técnica de `coi-serviceworker`), que habilitan `SharedArrayBuffer`;
   - guarda en caché la app y el compilador para el uso sin internet.
+- **Cómo funciona** (`src/pwa/`):
+  - lo genera al construir un plugin de Vite como `sw.js`, con la lista de archivos de esa versión;
+  - las navegaciones van primero a la red (una versión nueva llega apenas se publica) y, sin red, sale la copia guardada; los demás archivos (con hash en el nombre) salen primero de la caché;
+  - al instalarse guarda toda la app menos el compilador, que se guarda la primera vez que se usa; al activarse borra lo que no es de la versión nueva, pero conserva el compilador si su nombre no cambió;
+  - sin aislamiento, la página registra el service worker y se recarga una sola vez; si ni así, muestra el aviso de §14. Solo se registra en la versión construida.
+- **"Instalar en este computador":** un botón en la banda (y en Ayuda) que aparece cuando el navegador lo permite. Al instalar, también se prepara el compilador para que quede guardado.
+- **Sin internet antes de haber probado nunca:** el compilador no está guardado, así que la burbuja dice "Falta internet para la primera vez" con el botón "Reintentar".
 - El archivo más grande (`llvm.core.wasm`, ~75 MB) queda bajo el límite de 100 MB por archivo de GitHub Pages.
 
 ---
@@ -761,7 +779,7 @@ El alcance es grande. Se sugiere implementarlo en fases que dejen algo usable al
    - errores amigables.
 5. **UI Construir pista y "Mi robot":** editor de baldosas y objetos, propiedades, guardar y abrir; la ventana "Mi robot" (§8), que también edita el mundo (se movió desde la fase 4).
 6. **Ajustar parámetros:** `@ajustar`, pool de workers, registro, contratos del agente y la recompensa, ventana y "Usar estos valores".
-7. **Ejemplos, ayuda, despliegue** en GitHub Pages y pruebas extremo a extremo.
+7. **Ejemplos, ayuda, despliegue** en GitHub Pages y pruebas extremo a extremo. (Hecha: plan `docs/superpowers/plans/2026-10-23-fase-7-ejemplos-ayuda-despliegue.md`.)
 
 El catálogo FIRVI (§10.3) se implementa en la fase 2 (dibujo, relieve y superficie) y en la fase 5 (editor y propiedades). El **juez virtual** va en la fase 2 como lógica pura y en la fase 4 como tarjeta de la UI. La PWA y el uso sin internet van en la fase 7.
 
