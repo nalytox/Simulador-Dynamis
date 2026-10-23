@@ -367,3 +367,16 @@ export function dibujarFichaRobot(ctx: CanvasRenderingContext2D, v: Vista, robot
   ctx.stroke();
   ctx.restore();
 }
+
+/** El recorrido de una prueba (mm del mundo), como una línea amarilla sobre la pista ya dibujada. */
+export function dibujarTrayectoria(ctx: CanvasRenderingContext2D, v: Vista, puntos: { x: number; y: number }[]): void {
+  if (puntos.length < 2) return;
+  enMundo(ctx, v);
+  ctx.strokeStyle = 'rgba(255,209,102,.95)';
+  ctx.lineWidth = (5 * (globalThis.devicePixelRatio || 1)) / v.escala;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  puntos.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+  ctx.stroke();
+}

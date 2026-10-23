@@ -36,7 +36,7 @@ export function acotarPropuesta(valores: Record<string, number>, parametros: Par
 }
 
 /** El error para la ventana: FaltaImplementar se explica tal cual; lo demás es del profe (spec §14). */
-function describir(e: unknown, origen: string): NonNullable<FinEntrenamiento['error']> {
+export function describirError(e: unknown, origen: string): NonNullable<FinEntrenamiento['error']> {
   const error = e instanceof Error ? e : new Error(String(e));
   if (esFaltaImplementar(e)) return { mensaje: error.message, tecnico: '', faltaImplementar: true };
   const propio = (e as { tecnico?: unknown }).tecnico;
@@ -60,7 +60,7 @@ export function entrenar(o: OpcionesEntrenamiento): Promise<FinEntrenamiento> {
       o.pool.cerrar();
       resolver(fin);
     };
-    const fallar = (e: unknown, origen: string) => terminar({ motivo: 'error', error: describir(e, origen), mejor });
+    const fallar = (e: unknown, origen: string) => terminar({ motivo: 'error', error: describirError(e, origen), mejor });
 
     let agente: Agente;
     try {

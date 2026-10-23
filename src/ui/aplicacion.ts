@@ -13,7 +13,12 @@ import { crearEditorPista } from './editor-pista';
 import { crearPanelPista } from './panel-pista';
 import { crearArchivoPista } from './archivo-pista';
 import { crearVentanaRobot } from './mi-robot';
-import { crearVentanaAjuste } from './ajustar';
+import { crearVentanaAjuste, type PedidoEntrenamiento, type FinVentana } from './ajustar';
+import { crearAgente } from '../ajuste/agente.js';
+import { calcularRecompensa } from '../ajuste/recompensa.js';
+import type { CrearAgente, RegistroPrueba } from '../ajuste/contrato';
+import { describirError, entrenar } from '../ajuste/entrenamiento';
+import { crearPool } from '../ajuste/pool';
 import { ClienteCompilador } from '../compilador/cliente';
 import { primerError } from '../compilador/amigables';
 import { ClienteSimulacion } from '../simulacion/cliente';
@@ -133,8 +138,8 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
   $('btn-mi-robot').addEventListener('click', () => ventanaRobot.abrir());
   const ventanaAjuste = crearVentanaAjuste(raiz, {
     proyecto: () => programa.proyecto(),
-    nombrePista: () => pistaEditada.nombre,
-    entrenar: async () => ({ motivo: 'no-compila', mensaje: 'El entrenamiento llega en la próxima tarea.' }),
+    pista: () => pistaEditada,
+    entrenar: pedido => entrenarDesdeLaVentana(pedido),
     alVer: () => {},
     alUsar: () => {},
   });
@@ -152,14 +157,14 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
 
   // Simulación.
   let vivos = 0;
-  /** El worker de simulación, contando los vivos para las pruebas de punta a punta. */
-  const crearTrabajadorSimulacion = () => {
-    const w = new Worker(new URL('../simulacion/trabajador.ts', import.meta.url), { type: 'module' });
+  /** Cuenta los workers vivos (simulación y entrenamiento) para las pruebas de punta a punta. */
+  const contado = (w: Worker) => {
     vivos++;
     const terminar = w.terminate.bind(w);
     w.terminate = () => { vivos--; terminar(); };
     return w;
   };
+  const crearTrabajadorSimulacion = () => contado(new Worker(new URL('../simulacion/trabajador.ts', import.meta.url), { type: 'module' }));
   let ultima: Instantanea | null = null;
   let eventosVistos = 0;
   const simulacion = new ClienteSimulacion({
@@ -225,6 +230,37 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
     lienzo.mostrarPista(pista);
     juez.mostrarPista(pista);
     $('chip-pista').textContent = textoTamano(pista);
+  }
+
+  /**
+   * "Ajustar parámetros" (spec §11.2): primero el agente del profe (si falta, no se compila nada),
+   * después se compila una vez y se entrena con la pista y el robot editados.
+   */
+  async function entrenarDesdeLaVentana(pedido: PedidoEntrenamiento): Promise<FinVentana> {
+    let agente: ReturnType<CrearAgente>;
+    try {
+      agente = (crearAgente as CrearAgente)({ parametros: pedido.parametros, presupuesto: pedido.presupuesto });
+    } catch (e) {
+      return { motivo: 'error', error: describirError(e, 'el agente del profe'), mejor: null };
+    }
+    try {
+      await compilador.preparar(() => {});
+      compiladorListo = true;
+    } catch {
+      return { motivo: 'no-compila', mensaje: `${SIN_COMPILADOR.titulo}. ${SIN_COMPILADOR.mensaje}` };
+    }
+    const r = await compilador.compilar(programa.proyecto());
+    if (!r.ok) return { motivo: 'no-compila', mensaje: 'Tu programa tiene errores: pruébalo con «Probar mi robot» para verlos.' };
+    if (pedido.senal.aborted) return { motivo: 'detenido', mejor: null };
+    const pool = crearPool({
+      modulo: r.modulo, pista: pistaEditada, robot: robotEditado, duracionS: pedido.duracionS, tamano: pedido.robots,
+      crearTrabajador: () => contado(new Worker(new URL('../ajuste/trabajador.ts', import.meta.url), { type: 'module' })),
+      recompensaPrincipal: (registro: RegistroPrueba) => calcularRecompensa(registro),
+    });
+    return entrenar({
+      crearAgente: () => agente, parametros: pedido.parametros, presupuesto: pedido.presupuesto, pool,
+      semilla: () => crypto.getRandomValues(new Uint32Array(1))[0], senal: pedido.senal, alResultado: pedido.alResultado,
+    });
   }
 
   function dejarListo() {
