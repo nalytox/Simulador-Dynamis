@@ -57,7 +57,12 @@ subirlo al robot físico.
 4. **Probar los cambios:** `npm test` (unidad e integración), `npm run e2e` (la app en Chromium) y
    `npm run e2e:produccion` (la versión publicada, sin internet incluido).
 5. **Publicar en GitHub Pages:**
-   - la primera vez, en GitHub: **Settings → Pages → Source: "GitHub Actions"**;
+   - la primera vez, en GitHub: **Settings → Pages → Build and deployment → Source: "GitHub
+     Actions"** (solo puede hacerlo quien administra el repositorio; el workflow no puede activarlo
+     solo);
+   - si el paso `publicar` falla con `HttpError: Not Found` y «Ensure GitHub Pages has been
+     enabled», falta ese paso (o Source quedó en "Deploy from a branch"): actívalo y, en la
+     pestaña **Actions**, abre la ejecución fallida y usa **Re-run failed jobs**;
    - después, cada *push* a la rama `main` corre las pruebas, construye la app y la publica sola
      (workflow `.github/workflows/publicar.yml`). También se puede correr a mano desde la pestaña
      **Actions**;
