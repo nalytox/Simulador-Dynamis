@@ -29,6 +29,8 @@ ambito.onmessage = async ({ data }) => {
   if (!config || !latidos) return;
   const { modulo, pista, robot, duracionS, indice } = config;
   const contador = latidos;
+  // El primer latido avisa que el worker ya cargó: desde aquí corre la espera del ciclo sin fin.
+  Atomics.add(contador, indice, 1);
   let respuesta: MensajeDelAjuste;
   try {
     const resultado = await ejecutarPruebaDeAjuste({

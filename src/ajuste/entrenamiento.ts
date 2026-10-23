@@ -24,14 +24,21 @@ const ALGO_FALLO = 'Algo falló en el simulador, avisa a tu profe.';
 
 const acotar = (v: number, p: ParametroAgente) => Math.min(p.max, Math.max(p.min, v));
 
+/** Un entero se redondea dentro del rango: la prueba corre con el mismo valor que después se escribe en el código. */
+function acotarEntero(v: number, p: ParametroAgente): number {
+  const [bajo, alto] = [Math.ceil(p.min), Math.floor(p.max)];
+  return bajo <= alto ? Math.min(alto, Math.max(bajo, Math.round(v))) : Math.round(acotar(v, p));
+}
+
 /**
  * Lo que propone el agente, saneado (decisión 5 de la fase 6): solo los ids de los parámetros elegidos,
- * acotados a su rango; un valor que no es un número finito toma el valor del código.
+ * acotados a su rango, y los enteros redondeados; un valor que no es un número finito toma el valor del código.
  */
 export function acotarPropuesta(valores: Record<string, number>, parametros: ParametroAgente[]): Record<string, number> {
   return Object.fromEntries(parametros.map(p => {
     const v = valores?.[p.id];
-    return [p.id, acotar(typeof v === 'number' && Number.isFinite(v) ? v : p.valor, p)];
+    const propuesto = typeof v === 'number' && Number.isFinite(v) ? v : p.valor;
+    return [p.id, p.entero ? acotarEntero(propuesto, p) : acotar(propuesto, p)];
   }));
 }
 

@@ -92,6 +92,7 @@ export async function ejecutarPrueba(o: OpcionesPrueba): Promise<FinEjecucion> {
     };
     sim = await Simulador.crear({
       modulo: o.modulo, mundo, robot: o.robot, poseInicial: pose, semilla: o.semilla, ajustes: o.ajustes,
+      ambiente: o.pista.ambiente,
       alPasoFisica: (tUs, estado) => {
         juez.actualizar(tUs, estado);
         if (juez.termino) return sim.detener();

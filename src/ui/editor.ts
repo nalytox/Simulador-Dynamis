@@ -1,6 +1,6 @@
 import { basicSetup } from 'codemirror';
 import { cpp } from '@codemirror/lang-cpp';
-import { EditorView, Decoration, type DecorationSet } from '@codemirror/view';
+import { EditorView, Decoration, MatchDecorator, ViewPlugin, type DecorationSet, type ViewUpdate } from '@codemirror/view';
 import { EditorState, StateEffect, StateField } from '@codemirror/state';
 
 export interface EditorCodigo {
@@ -39,6 +39,17 @@ const campoAjustadas = StateField.define<DecorationSet>({
   provide: f => EditorView.decorations.from(f),
 });
 
+/** Las marcas `@ajustar grupo [min..max]` se destacan (spec §12), como en la maqueta. */
+const marcasAjustar = new MatchDecorator({
+  regexp: /@ajustar\b(?:[ \t]+[\p{L}_][\p{L}\p{N}_]*(?:[ \t]+[-+\d.,eE]+[ \t]*\.\.[ \t]*[-+\d.,eE]+)?)?/gu,
+  decoration: Decoration.mark({ class: 'marca-ajustar' }),
+});
+const destacarAjustar = ViewPlugin.fromClass(class {
+  marcas: DecorationSet;
+  constructor(vista: EditorView) { this.marcas = marcasAjustar.createDeco(vista); }
+  update(u: ViewUpdate) { this.marcas = marcasAjustar.updateDeco(u, this.marcas); }
+}, { decorations: v => v.marcas });
+
 const campoError = StateField.define<DecorationSet>({
   create: () => Decoration.none,
   update(marcas, tr) {
@@ -67,11 +78,12 @@ const tema = EditorView.theme({
   '&.cm-focused .cm-selectionBackground, .cm-selectionBackground': { backgroundColor: '#DDF4FF' },
   '.linea-error': { backgroundColor: '#FFE8EC', boxShadow: 'inset 4px 0 0 #C4314B' },
   '.linea-ajustada': { backgroundColor: '#FFF4D6', boxShadow: 'inset 4px 0 0 #FFD166' },
+  '.marca-ajustar, .marca-ajustar span': { backgroundColor: '#FFF1CC', color: '#5C4300', borderRadius: '6px', fontStyle: 'normal', fontWeight: '600' },
 });
 
 export function crearEditor(contenedor: HTMLElement, alCambiar: (texto: string) => void): EditorCodigo {
   const extensiones = [
-    basicSetup, cpp(), tema, campoError, campoAjustadas,
+    basicSetup, cpp(), tema, campoError, campoAjustadas, destacarAjustar,
     EditorView.contentAttributes.of({ 'aria-label': 'Código del programa' }),
     // setState (cambiar de pestaña) no pasa por aquí: solo lo que escribe el estudiante.
     EditorView.updateListener.of(u => { if (u.docChanged) alCambiar(u.state.doc.toString()); }),

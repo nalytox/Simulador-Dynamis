@@ -517,17 +517,18 @@ float ki = 0;     // @ajustar siguelineas 0..0.01
 ```
 
 - **En el ESP32 real** es un comentario, así que el código no cambia.
-- **En el simulador,** el preprocesador reemplaza el inicializador por `__dyn_ajustable("siguelineas", "kp", 0.08)`. En un `#define` el valor se reemplaza por `(__dyn_ajustable(...))`. Los números de línea se mantienen. Cada prueba fija sus valores antes de instanciar el módulo, **sin recompilar**.
+- **En el simulador,** el preprocesador reemplaza el inicializador por `__dyn_ajustable("siguelineas", "kp", 0.08)`. En un `#define` el valor se reemplaza por `((__typeof__(0.6))__dyn_ajustable(...))`, que conserva el tipo del número: un entero sigue siendo entero (`min(N, 255)`, `Serial.println(N)`). Los números de línea se mantienen. Cada prueba fija sus valores antes de instanciar el módulo, **sin recompilar**.
 - **Sintaxis:** `@ajustar grupo` o `@ajustar grupo min..max`, dentro del comentario `//` de la misma línea (puede haber texto antes). Vale en:
   - `[const|static|volatile|unsigned|signed|long|short ...] tipo nombre = número;`, con un tipo numérico de Arduino (`float`, `double`, `int`, `long`, `byte`, `uint8_t`… `int32_t`, `size_t`, `word`; `bool` no);
   - `#define NOMBRE número`.
 
-  El grupo son letras, números y `_`.
+  El grupo son letras, números y `_`; se lee sin tildes y en minúsculas (`Siguelíneas` es `siguelineas`). El rango acepta coma decimal (`0,05..0,1`); un rango que no se entiende da un aviso y la marca se usa sin rango.
 - Las marcas pueden estar en **cualquier archivo** del proyecto (por ejemplo `config.h`).
 - **Avisos** (la marca no se transforma): un `constexpr` marcado, que no puede leerse en tiempo de ejecución; una marca que no está junto a un número así; una marca sin grupo; dos marcas con el mismo nombre.
 - **Enteros y reales:** un parámetro es entero si su tipo es entero, o si es un `#define` cuyo número no tiene `.` ni `e`.
 - **Grupos con nombre e ícono amigables:** `siguelineas`, `giroscopio`, `distancia` y `posicion`. Cualquier otro nombre aparece como "grupo propio".
-- **Rango de búsqueda:** el `min..max` de la marca; si no tiene, `[0, 4·valor]` (`[4·valor, 0]` si el valor es negativo; `[0, 1]` si es 0). Se edita en la ventana; con `min ≥ max` no se puede empezar.
+- **Rango de búsqueda:** el `min..max` de la marca; si no tiene, `[0, 4·valor]` (`[4·valor, 0]` si el valor es negativo; `[0, 1]` si es 0). Se edita en la ventana; con `min ≥ max` no se puede empezar. Un rango que no se tocó en la ventana sigue al de la marca si esta cambia.
+- **En el editor,** las marcas `@ajustar` se destacan (§12).
 - **El ejemplo inicial** trae marcados `VELOCIDAD` (`@ajustar siguelineas 50..200`) y `KP` (`@ajustar siguelineas 0..0.1`), para que la ventana tenga algo que mostrar.
 - **"Usar estos valores":**
   - busca cada marca por su id en el código actual, aunque se haya movido de línea, y reescribe su número: los enteros redondeados, y los reales con 4 cifras significativas y siempre con punto decimal (`1.0`, no `1`);
@@ -542,13 +543,13 @@ float ki = 0;     // @ajustar siguelineas 0..0.01
   1. Crea una instancia nueva del módulo, con memoria y variables globales limpias.
   2. Fija los valores propuestos y pone el robot en la **partida** de la pista con una semilla nueva.
   3. Ejecuta `setup()` y luego `loop()` sin ritmo de tiempo real, hasta la duración máxima, hasta que `debeTerminar` lo indique o hasta que el juez dé la prueba por terminada.
-- **Valores propuestos por el agente:** solo se usan los ids de los parámetros elegidos, acotados a su rango; un valor que no es un número finito toma el valor del código. Los parámetros sin elegir usan el valor del código.
+- **Valores propuestos por el agente:** solo se usan los ids de los parámetros elegidos, acotados a su rango, y los enteros redondeados (la prueba usa el mismo valor que después se escribe); un valor que no es un número finito toma el valor del código. Los parámetros sin elegir usan el valor del código.
 - **Registro de la prueba:**
   - un paso cada 10 ms: `{ t, estado, lecturas, motores, eventos }`;
   - `eventos` son los del juez nuevos en ese paso (`'hito'`, `'meta'`, `'perdio-linea'`, `'toco-obstaculo'`, `'camino-equivocado'`, `'fin-tiempo'`), más `'colision'` (la huella toca un obstáculo) y `'fuera-de-pista'` (el centro sale de la grilla);
   - `fin.motivo` es `'tiempo' | 'termino' | 'juez' | 'error' | 'ciclo-sin-fin'` (`'termino'`: lo pidió `debeTerminar`; `'juez'`: el juez terminó la prueba), más la semilla y el estado final del juez.
 - **La recompensa se calcula en el worker,** y al hilo principal solo vuelven `{ valores, recompensa, resumen, trayectoria (diezmada), semilla }`.
-- **Ciclo sin fin:** un worker sin latido durante 2 s de tiempo real se reemplaza por uno nuevo; la prueba se registra con `fin.motivo = 'ciclo-sin-fin'` y sin pasos, y su recompensa la calcula el hilo principal con el mismo `calcularRecompensa`.
+- **Ciclo sin fin:** un worker sin latido durante 2 s de tiempo real, contados desde que tomó la prueba (cargar el worker no cuenta), se reemplaza por uno nuevo; la prueba se registra con `fin.motivo = 'ciclo-sin-fin'` y sin pasos, y su recompensa la calcula el hilo principal con el mismo `calcularRecompensa`.
 - **Errores:**
   - un error de ejecución del programa del estudiante termina esa prueba con `fin.motivo = 'error'`, y el entrenamiento sigue;
   - `FaltaImplementar` detiene el entrenamiento con "Para entrenar falta que tu profe programe {el agente | la recompensa} (`src/ajuste/…`).";
@@ -559,7 +560,7 @@ float ki = 0;     // @ajustar siguelineas 0..0.01
 
 ```js
 // agente.js  (corre en el hilo principal)
-export function crearAgente({ parametros /* [{ id, grupo, nombre, valor, min, max }] */, presupuesto /* nº de pruebas */ })
+export function crearAgente({ parametros /* [{ id, grupo, nombre, valor, entero, min, max }] */, presupuesto /* nº de pruebas */ })
   → {
       proponer(): { [id]: number },                        // puede llamarse varias veces antes de recibir resultados
       aprender(valores, recompensa, resumen): void,
@@ -567,7 +568,7 @@ export function crearAgente({ parametros /* [{ id, grupo, nombre, valor, min, ma
 
 // recompensa.js  (corre en los workers)
 export function calcularRecompensa(registro) → number
-export function debeTerminar(paso /* { t, estado, lecturas, motores, eventos } */, mundo) → false | string  // motivo
+export function debeTerminar(paso /* { t, estado, lecturas, motores, eventos } */, mundo) → false | string  // false (o nada): seguir; texto: motivo
 ```
 
 **Sin placeholders (cambio pedido por el usuario, 2026-10-22):** el profesor programa el agente y la recompensa desde cero. `agente.js` y `recompensa.js` quedan con el contrato en JSDoc y un `TODO(profe)`, y cada función lanza `FaltaImplementar` (de `contrato.ts`) con el nombre de la pieza y su archivo. La ventana lo detecta y explica qué falta, sin compilar ni dejar workers vivos. El detalle del contrato (el registro, el resumen y los errores) está en `src/ajuste/README.md`.

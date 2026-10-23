@@ -11,6 +11,18 @@ test('sin el agente del profe, Empezar explica qué falta y no deja workers', as
   await expect(page.locator('#btn-probar')).toBeEnabled();
 });
 
+test('si el entrenamiento no puede partir, la ventana lo explica y se puede volver a empezar', async ({ page }) => {
+  await usarAjusteDePrueba(page);
+  await page.route('**/src/ajuste/pool.ts*', r => r.fulfill({ contentType: 'text/javascript', body: 'export function crearPool() { throw new Error("sin workers"); }' }));
+  await page.goto('/');
+  await entrenar(page, 10);
+  await expect(page.locator('#aj-error')).toContainText('Algo falló en el simulador, avisa a tu profe.', { timeout: 120_000 });
+  await expect(page.locator('#aj-empezar-txt')).toHaveText('Empezar a entrenar');
+  await expect(page.locator('#aj-chip')).toHaveText('Sin terminar');
+  await page.locator('#aj-error-tecnico-btn').click();
+  await expect(page.locator('#aj-error-tecnico')).toContainText('sin workers');
+});
+
 test('con 10 pruebas, el gráfico y el mejor resultado se llenan', async ({ page }) => {
   test.setTimeout(300_000);
   await usarAjusteDePrueba(page);

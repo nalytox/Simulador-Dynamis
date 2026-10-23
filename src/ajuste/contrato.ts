@@ -16,6 +16,8 @@ export interface ParametroAgente {
   nombre: string;
   /** El valor que tiene hoy en el código. */
   valor: number;
+  /** Si es entero (un `int`, o un `#define` sin decimales): sus valores propuestos se redondean. */
+  entero: boolean;
   min: number;
   max: number;
 }

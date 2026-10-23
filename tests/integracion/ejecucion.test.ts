@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, vi } from 'vitest';
 import { compilarParaPrueba } from '../ayuda/compilar-prueba';
 import { cargarNucleoDesdeDisco } from '../../src/compilador/nucleo-node';
 import type { ArchivosNucleo } from '../../src/compilador/compilar';
@@ -99,6 +99,18 @@ describe('la prueba completa', { timeout: 120_000 }, () => {
     const r = sim.ejecutar(5_000_000);
     expect(r.motivo).toBe('detenido');
     expect(r.tiempoUs).toBeLessThan(2_000_000);
+  });
+
+  it('la luz de la pista llega a los modelos, igual que en el entrenamiento', async () => {
+    const crear = vi.spyOn(Simulador, 'crear');
+    const control = crearControl();
+    fijarVelocidad(control, 0);
+    await ejecutarPrueba({
+      modulo: await compilarParaPrueba({ 'p.ino': IR_Y_PARAR }, nucleo, 'p'), pista: { ...PISTA, ambiente: { luz: 'fuerte' } },
+      robot: ROBOT_POR_DEFECTO, desde: 'partida', semilla: 1, control, reloj: relojQueAvanza(), publicar: () => {},
+    });
+    expect(crear.mock.calls.at(-1)![0]).toMatchObject({ ambiente: { luz: 'fuerte' } });
+    crear.mockRestore();
   });
 
   it('medirParaVista no cambia lo que lee el programa', async () => {

@@ -13,7 +13,7 @@ Este proyecto implementa todo lo demás:
 | Archivo | Qué es | Dónde corre |
 |---|---|---|
 | `agente.js` | El agente de aprendizaje por refuerzo: decide qué valores probar y aprende de cada resultado. | En el hilo principal de la página. |
-| `recompensa.js` | Cuánto vale cada prueba (`calcularRecompensa`) y cuándo cortarla antes de tiempo (`debeTerminar`). | En el worker de cada prueba. |
+| `recompensa.js` | Cuánto vale cada prueba (`calcularRecompensa`) y cuándo cortarla antes de tiempo (`debeTerminar`). | En el worker de cada prueba: sin `window`, `document` ni `localStorage`. |
 
 Los dos archivos traen el contrato y un `TODO(profe)`. Mientras no estén programados, cada función
 lanza `FaltaImplementar` (de `contrato.ts`). La ventana lo detecta y le explica al estudiante qué
@@ -51,7 +51,7 @@ export function crearAgente({ parametros, presupuesto }) → { proponer(), apren
 
 | Parámetro | Qué es |
 |---|---|
-| `parametros` | Los valores que el estudiante eligió ajustar: `[{ id, grupo, nombre, valor, min, max }]`. `id` es `grupo.nombre` (por ejemplo, `siguelineas.kp`). `valor` es el que tiene hoy en el código; `min` y `max`, el rango de búsqueda que muestra la ventana (`min < max`). |
+| `parametros` | Los valores que el estudiante eligió ajustar: `[{ id, grupo, nombre, valor, entero, min, max }]`. `id` es `grupo.nombre` (por ejemplo, `siguelineas.kp`). `valor` es el que tiene hoy en el código; `entero`, si es un entero (un `int`, o un `#define` sin decimales); `min` y `max`, el rango de búsqueda que muestra la ventana (`min < max`). |
 | `presupuesto` | Cuántas pruebas se harán en total (de 10 a 2000). |
 | `proponer()` | Devuelve `{ [id]: número }` para una prueba nueva. |
 | `aprender(valores, recompensa, resumen)` | Los valores con que se hizo una prueba, su recompensa y su resumen (abajo). Los resultados llegan en el orden en que terminan las pruebas, que no es siempre el orden de `proponer()`. |
@@ -59,12 +59,13 @@ export function crearAgente({ parametros, presupuesto }) → { proponer(), apren
 **Qué hace el motor con lo que propones:**
 - solo usa los ids de `parametros`; los que sobran se ignoran;
 - acota cada valor a `[min, max]`;
+- redondea los valores de los parámetros `entero`;
 - un valor que falta, o que no es un número finito, toma el valor del código.
 
 Los valores que el estudiante no eligió ajustar quedan como están en su código.
 
-**Para enteros:** si la variable del estudiante es un `int`, el programa recibe el valor truncado,
-como en C. "Usar estos valores" escribe el número redondeado.
+**Para enteros:** la prueba corre con el valor redondeado, el mismo que reciben `aprender` y el
+registro, y el mismo que "Usar estos valores" escribe en el código.
 
 ## `recompensa.js`
 
@@ -72,6 +73,8 @@ como en C. "Usar estos valores" escribe el número redondeado.
 export function calcularRecompensa(registro) → number
 export function debeTerminar(paso, mundo) → false | string
 ```
+
+`debeTerminar` devuelve `false` (o nada) para seguir, y un texto con el motivo para terminar.
 
 ### `registro` (lo que recibe `calcularRecompensa`)
 

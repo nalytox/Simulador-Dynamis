@@ -25,16 +25,23 @@ export function rangoPorDefecto(a: Ajustable): [number, number] {
   return a.valor > 0 ? [0, extremo] : [extremo, 0];
 }
 
-/** Lo que el estudiante eligió para un valor: si lo ajusta y en qué rango buscar. */
-export interface EleccionParametro { id: string; ajustar: boolean; min: number; max: number }
+/**
+ * Lo que el estudiante eligió para un valor: si lo ajusta y en qué rango buscar. `base` es el rango
+ * por defecto del que partió (el de la marca), para saber si lo cambió en la ventana.
+ */
+export interface EleccionParametro { id: string; ajustar: boolean; min: number; max: number; base?: [number, number] }
 
-/** Las elecciones para los valores de hoy: se conservan las de los ids que siguen; los nuevos parten encendidos. */
+/**
+ * Las elecciones para los valores de hoy: se conservan las de los ids que siguen y los nuevos parten
+ * encendidos. Un rango que no se tocó en la ventana sigue al de la marca, aunque la marca haya cambiado.
+ */
 export function elecciones(parametros: Ajustable[], previas: EleccionParametro[]): EleccionParametro[] {
   return parametros.map(p => {
+    const base = rangoPorDefecto(p);
     const previa = previas.find(e => e.id === p.id);
-    if (previa) return { ...previa };
-    const [min, max] = rangoPorDefecto(p);
-    return { id: p.id, ajustar: true, min, max };
+    if (!previa) return { id: p.id, ajustar: true, min: base[0], max: base[1], base };
+    const sinTocar = previa.base !== undefined && previa.min === previa.base[0] && previa.max === previa.base[1];
+    return sinTocar ? { ...previa, min: base[0], max: base[1], base } : { ...previa, base };
   });
 }
 
@@ -52,5 +59,5 @@ export function paraElAgente(parametros: Ajustable[], eleccion: EleccionParametr
       return { ok: false, problema: `El rango de ${p.nombre} no sirve: el mínimo debe ser menor que el máximo.` };
     }
   }
-  return { ok: true, parametros: elegidos.map(({ p, e }) => ({ id: p.id, grupo: p.grupo, nombre: p.nombre, valor: p.valor, min: e.min, max: e.max })) };
+  return { ok: true, parametros: elegidos.map(({ p, e }) => ({ id: p.id, grupo: p.grupo, nombre: p.nombre, valor: p.valor, entero: p.entero, min: e.min, max: e.max })) };
 }

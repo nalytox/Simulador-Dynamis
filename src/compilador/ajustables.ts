@@ -24,19 +24,26 @@ export interface Ajustable {
 export interface AvisoAjustable { archivo: string; linea: number; mensaje: string }
 
 const NUMERO = String.raw`[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?[fFlLuU]*`;
-const NUMERO_SIMPLE = String.raw`[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?`;
+/** Un número del rango de la marca: acepta coma decimal (0,05..0,1), como se escribe en Chile. */
+const NUMERO_RANGO = String.raw`[-+]?(?:\d+(?:[.,]\d*)?|[.,]\d+)(?:[eE][-+]?\d+)?`;
 const MODIFICADORES = String.raw`(?:(?:const|static|volatile|unsigned|signed|long|short)\s+)*`;
 const TIPOS_REALES = new Set(['float', 'double']);
 const TIPO = String.raw`float|double|int|long|short|char|byte|word|size_t|u?int(?:8|16|32|64)_t|unsigned|signed`;
 const RE_VARIABLE = new RegExp(String.raw`^(\s*${MODIFICADORES}(${TIPO})\s+)([A-Za-z_]\w*)(\s*=\s*)(${NUMERO})(\s*;\s*)$`);
 const RE_DEFINE = new RegExp(String.raw`^(\s*#\s*define\s+)([A-Za-z_]\w*)(\s+)(${NUMERO})(\s*)$`);
 const RE_MARCA = /@ajustar\b/;
-const RE_GRUPO = new RegExp(String.raw`@ajustar\s+([A-Za-z_]\w*)(?:\s+(${NUMERO_SIMPLE})\s*\.\.\s*(${NUMERO_SIMPLE}))?`);
+const RE_GRUPO = new RegExp(String.raw`@ajustar\s+([\p{L}_][\p{L}\p{N}_]*)(?:\s+(${NUMERO_RANGO})\s*\.\.\s*(${NUMERO_RANGO}))?`, 'u');
+const RE_RANGO_INTENTADO = /@ajustar\s+\S+\s+\S*\.\./;
 const RE_CONSTEXPR = /\bconstexpr\b[^=]*?\b([A-Za-z_]\w*)\s*=/;
 const RE_SUFIJO = /[fFlLuU]+$/;
 
 const SIN_NUMERO = 'La marca @ajustar de esta línea debe ir junto a una variable con un número (float kp = 0.5;) o a un #define con un número.';
 const SIN_GRUPO = 'A la marca @ajustar le falta el grupo, por ejemplo: // @ajustar siguelineas';
+const SIN_RANGO = 'No entendí el rango de la marca @ajustar de esta línea: escríbelo como mínimo..máximo, por ejemplo 0..0.1.';
+
+/** El grupo sin tildes y en minúsculas: "Siguelíneas" y "siguelineas" son el mismo grupo. */
+const normalizarGrupo = (g: string) => g.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+const numeroDelRango = (texto: string | undefined) => (texto === undefined ? null : Number(texto.replace(',', '.')));
 const esConstexpr = (nombre: string) =>
   `${nombre} está marcado con @ajustar pero es constexpr: no puede cambiar mientras corre el programa. Quita constexpr para ajustarlo.`;
 
@@ -68,6 +75,8 @@ interface Marca {
   entero: boolean;
   min: number | null;
   max: number | null;
+  /** Un rango escrito que no se entendió: la marca vale, sin rango. */
+  avisoRango: string | null;
 }
 
 type Analisis = { marca: Marca } | { aviso: string } | null;
@@ -82,13 +91,16 @@ function analizarLinea(linea: string): Analisis {
   if (!grupo) return { aviso: SIN_GRUPO };
   const constexpr = RE_CONSTEXPR.exec(codigo);
   if (constexpr) return { aviso: esConstexpr(constexpr[1]) };
-  const rango = { min: grupo[2] === undefined ? null : Number(grupo[2]), max: grupo[3] === undefined ? null : Number(grupo[3]) };
+  const rango = {
+    grupo: normalizarGrupo(grupo[1]), min: numeroDelRango(grupo[2]), max: numeroDelRango(grupo[3]),
+    avisoRango: grupo[2] === undefined && RE_RANGO_INTENTADO.test(comentario) ? SIN_RANGO : null,
+  };
 
   const variable = RE_VARIABLE.exec(codigo);
   if (variable) {
     const [, tipoYModificadores, tipo, nombre, igual, numero, fin] = variable;
     return { marca: {
-      forma: 'variable', grupo: grupo[1], nombre, numero, entero: !TIPOS_REALES.has(tipo), ...rango,
+      forma: 'variable', nombre, numero, entero: !TIPOS_REALES.has(tipo), ...rango,
       antes: `${tipoYModificadores}${nombre}${igual}`, despues: `${fin}${comentario}`,
     } };
   }
@@ -96,7 +108,7 @@ function analizarLinea(linea: string): Analisis {
   if (define) {
     const [, directiva, nombre, espacio, numero, fin] = define;
     return { marca: {
-      forma: 'define', grupo: grupo[1], nombre, numero, entero: !/[.eE]/.test(numero.replace(RE_SUFIJO, '')), ...rango,
+      forma: 'define', nombre, numero, entero: !/[.eE]/.test(numero.replace(RE_SUFIJO, '')), ...rango,
       antes: `${directiva}${nombre}${espacio}`, despues: `${fin}${comentario}`,
     } };
   }
@@ -120,6 +132,7 @@ function recorrer(p: Proyecto): { encontradas: Encontrada[]; avisos: AvisoAjusta
         avisos.push({ archivo, linea: indice + 1, mensaje: a.aviso });
         return;
       }
+      if (a.marca.avisoRango) avisos.push({ archivo, linea: indice + 1, mensaje: a.marca.avisoRango });
       const id = `${a.marca.grupo}.${a.marca.nombre}`;
       const repetida = vistos.has(id);
       if (repetida) avisos.push({ archivo, linea: indice + 1, mensaje: `El valor ${id} está marcado dos veces: se usa el primero.` });
@@ -155,13 +168,17 @@ function agregar(cambios: Map<string, Map<number, string>>, archivo: string, ind
   cambios.get(archivo)!.set(indice, linea);
 }
 
-/** El proyecto que se compila: cada valor marcado pasa por __dyn_ajustable. Las líneas no cambian de número. */
+/**
+ * El proyecto que se compila: cada valor marcado pasa por __dyn_ajustable. Las líneas no cambian de número.
+ * Un #define conserva el tipo de su número (`__typeof__`): si no, un entero pasaría a double y
+ * `min(N, 255)` o `x % N` dejarían de compilar.
+ */
 export function conAjustables(p: Proyecto): Proyecto {
   const cambios = new Map<string, Map<number, string>>();
   for (const { archivo, indice, marca: m, repetida } of recorrer(p).encontradas) {
     if (repetida) continue;
     const llamada = `__dyn_ajustable(${JSON.stringify(m.grupo)}, ${JSON.stringify(m.nombre)}, ${m.numero})`;
-    agregar(cambios, archivo, indice, `${m.antes}${m.forma === 'define' ? `(${llamada})` : llamada}${m.despues}`);
+    agregar(cambios, archivo, indice, `${m.antes}${m.forma === 'define' ? `((__typeof__(${m.numero}))${llamada})` : llamada}${m.despues}`);
   }
   return conLineas(p, cambios);
 }

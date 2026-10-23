@@ -6,8 +6,8 @@ import { mundoPlano } from '../../src/mundo/plano';
 import { agenteDePrueba, recompensaDePrueba } from '../ayuda/ajuste-de-prueba';
 
 const PARAMETROS: ParametroAgente[] = [
-  { id: 'siguelineas.kp', grupo: 'siguelineas', nombre: 'kp', valor: 0.05, min: 0, max: 0.1 },
-  { id: 'siguelineas.VEL', grupo: 'siguelineas', nombre: 'VEL', valor: 100, min: 50, max: 200 },
+  { id: 'siguelineas.kp', grupo: 'siguelineas', nombre: 'kp', valor: 0.05, entero: false, min: 0, max: 0.1 },
+  { id: 'siguelineas.VEL', grupo: 'siguelineas', nombre: 'VEL', valor: 100, entero: true, min: 50, max: 200 },
 ];
 const PASO: PasoRegistro = {
   t: 0.01, estado: { x: 150, y: 150, z: 0, yaw: 0, pitch: 0, roll: 0 },

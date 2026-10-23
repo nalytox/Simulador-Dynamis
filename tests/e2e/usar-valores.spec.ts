@@ -23,6 +23,9 @@ test('Usar estos valores reescribe las marcas y se puede deshacer', async ({ pag
   test.setTimeout(300_000);
   await entrenarDiez(page);
   const mejorKp = await page.locator('#aj-tabla tr', { hasText: 'KP' }).locator('td').nth(1).textContent();
+  // Un entero se muestra, se prueba y se escribe igual: sin decimales.
+  const mejorVelocidad = await page.locator('#aj-tabla tr', { hasText: 'VELOCIDAD' }).locator('td').nth(1).textContent();
+  expect(mejorVelocidad).toMatch(/^\d+$/);
   await page.locator('#aj-usar').click();
   await expect(page.locator('#ventana-ajuste')).toBeHidden();
   await expect(page.locator('#vista-programar')).toBeVisible();
@@ -33,7 +36,7 @@ test('Usar estos valores reescribe las marcas y se puede deshacer', async ({ pag
   const kp = lineaDe(await guardado(page, 'seguidor.ino'), 'const float KP');
   expect(kp).toMatch(/^const float KP = \d+\.\d+;      \/\/ cuánto corrige por cada unidad de error · @ajustar siguelineas 0\.\.0\.1$/);
   expect(kp.match(/= ([\d.]+);/)![1].replace('.', ',')).toBe(mejorKp);
-  expect(lineaDe(await guardado(page, 'seguidor.ino'), 'const int VELOCIDAD')).toMatch(/^const int VELOCIDAD = \d+;/);
+  expect(lineaDe(await guardado(page, 'seguidor.ino'), 'const int VELOCIDAD')).toMatch(new RegExp(`^const int VELOCIDAD = ${mejorVelocidad};`));
   // Ctrl+Z vuelve a los valores de antes.
   await page.locator('#editor .cm-content').click();
   await page.keyboard.press('Control+z');

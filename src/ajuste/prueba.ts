@@ -116,7 +116,8 @@ export async function ejecutarPruebaDeAjuste(o: OpcionesPruebaAjuste): Promise<R
         const paso = registrar(tUs);
         try {
           const motivo = delProfe(() => o.recompensa.debeTerminar(paso, mundo));
-          if (motivo !== false) {
+          // false o nada (undefined, null) es seguir; un texto (u otro valor) es el motivo para terminar.
+          if (motivo !== false && motivo !== undefined && motivo !== null) {
             fin = { motivo: 'termino', detalle: String(motivo) };
             return sim.detener();
           }

@@ -22,7 +22,7 @@ export function calcularRecompensa(registro) {
  *
  * @param {import('./contrato').PasoRegistro} paso `{ t, estado, lecturas, motores, eventos }`
  * @param {import('../mundo/tipos').Mundo} mundo Las primitivas de la pista (ver src/modelos/README.md).
- * @returns {false | string} `false` para seguir, o el motivo para terminar.
+ * @returns {false | string} `false` (o nada) para seguir, o el motivo para terminar.
  */
 export function debeTerminar(paso, mundo) {
   // TODO(profe): decidir cuándo cortar una prueba antes de tiempo.

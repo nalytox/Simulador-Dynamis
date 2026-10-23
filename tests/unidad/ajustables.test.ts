@@ -58,8 +58,9 @@ it('conAjustables transforma sin cambiar la cantidad de líneas', () => {
   const lineas = t.archivos['robot.ino'].split('\n');
   expect(lineas[0]).toBe('float kp = __dyn_ajustable("siguelineas", "kp", 0.08);  // @ajustar siguelineas');
   expect(lineas[1]).toBe('const int VEL = __dyn_ajustable("siguelineas", "VEL", 100); // rápido @ajustar siguelineas 50..200');
-  expect(lineas[2]).toBe('#define KD (__dyn_ajustable("siguelineas", "KD", 0.6)) // @ajustar siguelineas');
-  expect(t.archivos['config.h'].split('\n')[1]).toBe('#define N (__dyn_ajustable("mio", "N", 3)) // @ajustar mio');
+  // Un #define conserva el tipo de su número: un entero sigue siendo entero (min(N, 255), Serial.println(N)).
+  expect(lineas[2]).toBe('#define KD ((__typeof__(0.6))__dyn_ajustable("siguelineas", "KD", 0.6)) // @ajustar siguelineas');
+  expect(t.archivos['config.h'].split('\n')[1]).toBe('#define N ((__typeof__(3))__dyn_ajustable("mio", "N", 3)) // @ajustar mio');
   for (const ruta of Object.keys(p.archivos)) expect(t.archivos[ruta].split('\n').length).toBe(p.archivos[ruta].split('\n').length);
   expect(t.archivos['util.cpp']).toBe(p.archivos['util.cpp']);
   expect(p.archivos['robot.ino']).toBe(INO);
@@ -90,6 +91,27 @@ it('reescribirAjustables encuentra una marca que cambió de línea e informa las
   expect(r.cambiadas).toEqual([{ archivo: 'robot.ino', linea: 3 }]);
   expect(r.faltan).toEqual(['siguelineas.KD']);
   expect(lineas.filter((l, i) => l !== editado.split('\n')[i])).toEqual([lineas[2]]);
+});
+
+it('el grupo se escribe con o sin tildes y mayúsculas, y el rango acepta coma decimal', () => {
+  const { parametros, avisos } = buscarAjustables(proyecto({ 'a.ino': [
+    'float a = 0.5; // @ajustar siguelíneas 0..0.1',
+    'float b = 0.5; // @ajustar Posición',
+    'float c = 0.5; // @ajustar siguelineas 0,05..0,1',
+    'float d = 0.5; // @ajustar giroscopio -1,5..2',
+  ].join('\n') }));
+  expect(avisos).toEqual([]);
+  expect(parametros.map(p => [p.id, p.min, p.max])).toEqual([
+    ['siguelineas.a', 0, 0.1], ['posicion.b', null, null], ['siguelineas.c', 0.05, 0.1], ['giroscopio.d', -1.5, 2],
+  ]);
+  expect(conAjustables(proyecto({ 'a.ino': 'float a = 0.5; // @ajustar siguelíneas 0..0.1' })).archivos['a.ino'])
+    .toBe('float a = __dyn_ajustable("siguelineas", "a", 0.5); // @ajustar siguelíneas 0..0.1');
+});
+
+it('un rango que no se entiende da un aviso y la marca se usa sin rango', () => {
+  const { parametros, avisos } = buscarAjustables(proyecto({ 'a.ino': 'float a = 0.5; // @ajustar siguelineas 0..x' }));
+  expect(parametros.map(p => [p.id, p.min, p.max])).toEqual([['siguelineas.a', null, null]]);
+  expect(avisos).toEqual([{ archivo: 'a.ino', linea: 1, mensaje: 'No entendí el rango de la marca @ajustar de esta línea: escríbelo como mínimo..máximo, por ejemplo 0..0.1.' }]);
 });
 
 it('formatearValor', () => {

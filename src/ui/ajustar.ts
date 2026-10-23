@@ -1,7 +1,7 @@
 import { buscarAjustables, formatearValor, type Ajustable, type AvisoAjustable } from '../compilador/ajustables';
 import { ayudaDe, elecciones, GRUPOS, paraElAgente, type EleccionParametro } from '../ajuste/parametros';
 import type { ParametroAgente } from '../ajuste/contrato';
-import type { FinEntrenamiento, ResultadoEntrenado } from '../ajuste/entrenamiento';
+import { describirError, type FinEntrenamiento, type ResultadoEntrenado } from '../ajuste/entrenamiento';
 import { geometria, type Geometria } from './grafico';
 import { dibujarPista, dibujarTrayectoria } from './dibujo';
 import { vistaInicial } from './vista';
@@ -35,8 +35,8 @@ const ALTO_GRAFICO = 260;
 const SVG = 'http://www.w3.org/2000/svg';
 
 const numero = (v: number, decimales = 6) => v.toLocaleString('es-CL', { maximumFractionDigits: decimales });
-/** Un valor ajustado, como se escribiría en el código (4 cifras), con coma decimal. */
-const valorAjustado = (v: number) => numero(Number(formatearValor(v, false)));
+/** Un valor ajustado, como se escribiría en el código (entero, o real con 4 cifras), con coma decimal. */
+const valorAjustado = (v: number, entero: boolean) => numero(Number(formatearValor(v, entero)));
 
 /** Cuántos robots pueden practicar a la vez: un worker por núcleo, dejando uno para la página (decisión 9). */
 export function maximoRobots(nucleos: number | undefined): number {
@@ -185,7 +185,7 @@ export function crearVentanaAjuste(raiz: Document, eventos: VentanaAjusteEventos
     $('aj-tabla').replaceChildren(...(actual?.parametros ?? []).map(p => {
       const nombre = el('th', undefined, p.nombre, el('small', undefined, GRUPOS.find(g => g.id === p.grupo)?.nombre ?? p.grupo));
       nombre.scope = 'row';
-      const mejor = el('td', m ? 'mejora' : undefined, m ? valorAjustado(m.valores[p.id]) : '—');
+      const mejor = el('td', m ? 'mejora' : undefined, m ? valorAjustado(m.valores[p.id], p.entero) : '—');
       return el('tr', undefined, nombre, el('td', undefined, numero(p.valor)), mejor);
     }));
     botonVer.disabled = botonUsar.disabled = !m || entrenando !== null;
@@ -232,7 +232,7 @@ export function crearVentanaAjuste(raiz: Document, eventos: VentanaAjusteEventos
     const cercano = resultados.reduce((a, b) => (Math.abs(geo!.x(b.indice) - xPuntero) < Math.abs(geo!.x(a.indice) - xPuntero) ? b : a));
     const cx = geo.x(cercano.indice);
     const cy = geo.y(cercano.recompensa);
-    const valores = (actual?.parametros ?? []).map(p => `${p.nombre} ${valorAjustado(cercano.valores[p.id])}`).join(' · ');
+    const valores = (actual?.parametros ?? []).map(p => `${p.nombre} ${valorAjustado(cercano.valores[p.id], p.entero)}`).join(' · ');
     tip.replaceChildren(el('b', undefined, `Prueba ${numero(cercano.indice)} · recompensa ${numero(cercano.recompensa, 2)}`), el('div', undefined, valores));
     tip.style.left = `${Math.min(caja.width - 90, Math.max(90, cx))}px`;
     tip.style.top = `${cy}px`;
@@ -269,16 +269,22 @@ export function crearVentanaAjuste(raiz: Document, eventos: VentanaAjusteEventos
     fijarEntrenando(true);
     $('aj-chip').textContent = 'Practicando…';
     pedirDibujo();
-    const fin = await eventos.entrenar({
-      parametros: listos.parametros, presupuesto, duracionS: Number(selectDuracion.value), robots: Number(selectRobots.value),
-      senal: control.signal,
-      alResultado: r => {
-        if (entrenando !== control || !actual) return;
-        actual.resultados.push(r);
-        if (r.record) actual.mejor = r;
-        pedirDibujo();
-      },
-    });
+    let fin: FinVentana;
+    try {
+      fin = await eventos.entrenar({
+        parametros: listos.parametros, presupuesto, duracionS: Number(selectDuracion.value), robots: Number(selectRobots.value),
+        senal: control.signal,
+        alResultado: r => {
+          if (entrenando !== control || !actual) return;
+          actual.resultados.push(r);
+          if (r.record) actual.mejor = r;
+          pedirDibujo();
+        },
+      });
+    } catch (e) {
+      // Si el entrenamiento no pudo partir (sin workers, por ejemplo), la ventana no queda entrenando.
+      fin = { motivo: 'error', error: describirError(e, 'el entrenamiento'), mejor: actual?.mejor ?? null };
+    }
     entrenando = null;
     fijarEntrenando(false);
     $('aj-chip').textContent = { completo: 'Terminado', detenido: 'Detenido', error: 'Sin terminar', 'no-compila': 'Sin empezar' }[fin.motivo];

@@ -74,6 +74,13 @@ describe('una prueba de entrenamiento', { timeout: 180_000 }, () => {
     expect(r.resumen.t).toBeCloseTo(0.5, 2);
   });
 
+  it('un debeTerminar que no devuelve nada deja seguir la prueba', async () => {
+    const recompensa = espia({ ...recompensaDePrueba, debeTerminar: paso => (paso.t > 99 ? 'nunca' : undefined) as unknown as false });
+    const r = await prueba(seguidor, {}, { recompensa });
+    expect(recompensa.registro!.fin).toEqual({ motivo: 'tiempo', detalle: null });
+    expect(r.resumen.t).toBeCloseTo(2, 2);
+  });
+
   it('la trayectoria tiene a lo más 200 puntos, con el primero y el último', async () => {
     const modulo = await compilarParaPrueba({ 'p.ino': AVANZAR }, nucleo, 'p');
     const recompensa = espia({ ...recompensaDePrueba, debeTerminar: () => false });

@@ -6,8 +6,8 @@ import type { CrearAgente, ParametroAgente } from '../../src/ajuste/contrato';
 import { crearAgente as agenteDelProfe } from '../../src/ajuste/agente.js';
 
 const PARAMETROS: ParametroAgente[] = [
-  { id: 'g.a', grupo: 'g', nombre: 'a', valor: 4, min: 0, max: 10 },
-  { id: 'g.b', grupo: 'g', nombre: 'b', valor: 4, min: 0, max: 10 },
+  { id: 'g.a', grupo: 'g', nombre: 'a', valor: 4, entero: false, min: 0, max: 10 },
+  { id: 'g.b', grupo: 'g', nombre: 'b', valor: 4, entero: false, min: 0, max: 10 },
 ];
 
 /** Pool que responde en orden, con las recompensas dadas (o con `fallar`). */
@@ -66,6 +66,15 @@ it('acotarPropuesta sanea lo que propone el agente', () => {
   expect(acotarPropuesta({}, PARAMETROS)).toEqual({ 'g.a': 4, 'g.b': 4 });
   expect(acotarPropuesta(null as unknown as Record<string, number>, PARAMETROS)).toEqual({ 'g.a': 4, 'g.b': 4 });
   expect(acotarPropuesta({ 'g.a': -3, 'g.b': '7' as unknown as number }, PARAMETROS)).toEqual({ 'g.a': 0, 'g.b': 4 });
+});
+
+it('acotarPropuesta redondea los enteros: la prueba usa el mismo valor que después se escribe', () => {
+  const enteros: ParametroAgente[] = [
+    { id: 'g.v', grupo: 'g', nombre: 'v', valor: 1, entero: true, min: 0, max: 5 },
+    { id: 'g.w', grupo: 'g', nombre: 'w', valor: 2, entero: true, min: 0.5, max: 3.5 },
+  ];
+  expect(acotarPropuesta({ 'g.v': 2.7, 'g.w': 3.6 }, enteros)).toEqual({ 'g.v': 3, 'g.w': 3 });
+  expect(acotarPropuesta({ 'g.v': 9.2, 'g.w': 0.6 }, enteros)).toEqual({ 'g.v': 5, 'g.w': 1 });
 });
 
 it('un agente que falta detiene el entrenamiento con faltaImplementar', async () => {

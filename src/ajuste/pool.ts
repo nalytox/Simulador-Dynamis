@@ -33,10 +33,20 @@ interface Pendiente {
   rechazar(e: Error): void;
 }
 
-interface Espacio { trabajador: Worker; actual: Pendiente | null; ultimoLatido: number; ultimoCambio: number }
+/** `arranco`: el worker ya latió en la prueba actual (cargar el worker no cuenta como ciclo sin fin). */
+interface Espacio { trabajador: Worker; actual: Pendiente | null; ultimoLatido: number; ultimoCambio: number; arranco: boolean }
 
 const REVISAR_CADA_MS = 500;
 const ESPERA_POR_DEFECTO_MS = 2000;
+/** Lo más que puede tardar un worker en cargar y tomar su prueba, incluso en un Chromebook lento. */
+const ESPERA_CARGA_MS = 20_000;
+
+/** El detalle técnico de un worker que no cargó: el error, el archivo y la línea (spec §14). */
+function detalleDeCarga(e: unknown): string {
+  const { message, filename, lineno } = (e ?? {}) as Partial<ErrorEvent>;
+  const donde = filename ? ` (${filename}${lineno ? `:${lineno}` : ''})` : '';
+  return `El worker de la prueba se detuvo: ${message || 'error al cargar'}${donde}`;
+}
 
 function errorCon(nombre: string, mensaje: string, tecnico?: string): Error {
   return Object.assign(new Error(mensaje), { name: nombre }, tecnico === undefined ? {} : { tecnico });
@@ -59,12 +69,12 @@ export function crearPool(o: OpcionesPool): PoolPruebas {
   const iniciar = (indice: number): Worker => {
     const trabajador = o.crearTrabajador();
     trabajador.onmessage = e => recibir(indice, trabajador, e.data as MensajeDelAjuste);
-    trabajador.onerror = () => reemplazar(indice, errorCon('ErrorSimulador', 'El worker de la prueba se detuvo.'));
+    trabajador.onerror = e => reemplazar(indice, errorCon('ErrorSimulador', 'El worker de la prueba se detuvo.', detalleDeCarga(e)));
     const mensaje: MensajeAlAjuste = { tipo: 'iniciar', modulo: o.modulo, pista: o.pista, robot: o.robot, duracionS: o.duracionS, latidos: latidosBuffer, indice };
     trabajador.postMessage(mensaje);
     return trabajador;
   };
-  const espacios: Espacio[] = Array.from({ length: o.tamano }, (_, i) => ({ trabajador: iniciar(i), actual: null, ultimoLatido: 0, ultimoCambio: 0 }));
+  const espacios: Espacio[] = Array.from({ length: o.tamano }, (_, i) => ({ trabajador: iniciar(i), actual: null, ultimoLatido: 0, ultimoCambio: 0, arranco: false }));
 
   const despachar = () => {
     espacios.forEach((espacio, indice) => {
@@ -73,6 +83,7 @@ export function crearPool(o: OpcionesPool): PoolPruebas {
       espacio.actual = p;
       espacio.ultimoLatido = Atomics.load(latidos, indice);
       espacio.ultimoCambio = Date.now();
+      espacio.arranco = false;
       const mensaje: MensajeAlAjuste = { tipo: 'probar', id: p.id, valores: p.valores, semilla: p.semilla };
       espacio.trabajador.postMessage(mensaje);
     });
@@ -122,8 +133,11 @@ export function crearPool(o: OpcionesPool): PoolPruebas {
       if (latido !== espacio.ultimoLatido) {
         espacio.ultimoLatido = latido;
         espacio.ultimoCambio = Date.now();
-      } else if (Date.now() - espacio.ultimoCambio >= espera) {
+        espacio.arranco = true;
+      } else if (espacio.arranco && Date.now() - espacio.ultimoCambio >= espera) {
         reemplazar(indice, null);
+      } else if (!espacio.arranco && Date.now() - espacio.ultimoCambio >= ESPERA_CARGA_MS) {
+        reemplazar(indice, errorCon('ErrorSimulador', 'El worker de la prueba no arrancó.'));
       }
     });
   }, REVISAR_CADA_MS);

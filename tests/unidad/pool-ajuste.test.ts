@@ -84,6 +84,39 @@ describe('pool de workers del entrenamiento', () => {
     expect(trabajadores[1].enviados[1]).toMatchObject({ tipo: 'probar', semilla: 22 });
   });
 
+  it('mientras un worker carga no cuenta como colgado; desde su primer latido, sí', async () => {
+    const { pool, trabajadores } = preparar(1);
+    const p = pool.probar({ 'g.a': 4 }, 21);
+    const latidos = new Int32Array(trabajadores[0].enviados[0].latidos as SharedArrayBuffer);
+    // Un Chromebook lento tarda en cargar el worker: 5 s sin latidos no es un ciclo sin fin.
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(trabajadores).toHaveLength(1);
+    Atomics.add(latidos, 0, 1);
+    await vi.advanceTimersByTimeAsync(2500);
+    expect(trabajadores).toHaveLength(2);
+    await expect(p).resolves.toMatchObject({ resumen: { motivo: 'ciclo-sin-fin' } });
+  });
+
+  it('un worker que nunca arranca se reemplaza y la prueba falla como error del simulador', async () => {
+    const { pool, trabajadores } = preparar(1);
+    const p = pool.probar({}, 1);
+    const rechazo = expect(p).rejects.toMatchObject({ name: 'ErrorSimulador', message: 'El worker de la prueba no arrancó.' });
+    await vi.advanceTimersByTimeAsync(20_500);
+    expect(trabajadores).toHaveLength(2);
+    await rechazo;
+  });
+
+  it('un worker que no carga deja en el detalle técnico el error, el archivo y la línea', async () => {
+    const { pool, trabajadores } = preparar(1);
+    const p = pool.probar({}, 1);
+    trabajadores[0].onerror?.({ message: 'Uncaught ReferenceError: window is not defined', filename: 'http://localhost/src/ajuste/recompensa.js', lineno: 3, colno: 1 });
+    const e = await p.catch((x: unknown) => x) as Error & { tecnico?: string };
+    expect(e.name).toBe('ErrorSimulador');
+    expect(e.tecnico).toContain('window is not defined');
+    expect(e.tecnico).toContain('recompensa.js:3');
+    expect(trabajadores).toHaveLength(2);
+  });
+
   it('cerrar termina todos los workers y cancela lo pendiente', async () => {
     const { pool, trabajadores } = preparar(1);
     const enCurso = pool.probar({}, 1);

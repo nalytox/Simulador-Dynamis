@@ -30,11 +30,21 @@ it('ayudaDe', () => {
 });
 
 it('elecciones conserva lo elegido para los ids que siguen y agrega los nuevos encendidos', () => {
-  const previas = [{ id: 'siguelineas.kp', ajustar: false, min: 0.01, max: 0.2 }, { id: 'siguelineas.viejo', ajustar: true, min: 0, max: 1 }];
+  const previas = [{ id: 'siguelineas.kp', ajustar: false, min: 0.01, max: 0.2, base: [0, 0.32] as [number, number] }, { id: 'siguelineas.viejo', ajustar: true, min: 0, max: 1, base: [0, 1] as [number, number] }];
   expect(elecciones([ajustable('kp', 0.08), ajustable('kd', 0.6)], previas)).toEqual([
-    { id: 'siguelineas.kp', ajustar: false, min: 0.01, max: 0.2 },
-    { id: 'siguelineas.kd', ajustar: true, min: 0, max: 2.4 },
+    { id: 'siguelineas.kp', ajustar: false, min: 0.01, max: 0.2, base: [0, 0.32] },
+    { id: 'siguelineas.kd', ajustar: true, min: 0, max: 2.4, base: [0, 2.4] },
   ]);
+});
+
+it('si cambia el rango de la marca, un rango que no se tocó en la ventana sigue a la marca', () => {
+  const [antes] = elecciones([ajustable('kp', 0.08, 0, 0.1)], []);
+  expect(antes).toEqual({ id: 'siguelineas.kp', ajustar: true, min: 0, max: 0.1, base: [0, 0.1] });
+  expect(elecciones([ajustable('kp', 0.08, 0, 0.5)], [{ ...antes, ajustar: false }]))
+    .toEqual([{ id: 'siguelineas.kp', ajustar: false, min: 0, max: 0.5, base: [0, 0.5] }]);
+  // Uno editado en la ventana se conserva.
+  expect(elecciones([ajustable('kp', 0.08, 0, 0.5)], [{ ...antes, max: 0.2 }]))
+    .toEqual([{ id: 'siguelineas.kp', ajustar: true, min: 0, max: 0.2, base: [0, 0.5] }]);
 });
 
 it('paraElAgente', () => {
@@ -47,5 +57,8 @@ it('paraElAgente', () => {
   expect(paraElAgente(ps, [{ id: 'siguelineas.kp', ajustar: true, min: NaN, max: 1 }, { id: 'siguelineas.kd', ajustar: false, min: 0, max: 1 }]))
     .toEqual({ ok: false, problema: 'El rango de kp no sirve: el mínimo debe ser menor que el máximo.' });
   expect(paraElAgente(ps, [{ id: 'siguelineas.kp', ajustar: true, min: 0, max: 0.5 }, { id: 'siguelineas.kd', ajustar: false, min: 0, max: 1 }]))
-    .toEqual({ ok: true, parametros: [{ id: 'siguelineas.kp', grupo: 'siguelineas', nombre: 'kp', valor: 0.08, min: 0, max: 0.5 }] });
+    .toEqual({ ok: true, parametros: [{ id: 'siguelineas.kp', grupo: 'siguelineas', nombre: 'kp', valor: 0.08, entero: false, min: 0, max: 0.5 }] });
+  const vel = { ...ajustable('VEL', 100, 50, 200), id: 'siguelineas.VEL', entero: true };
+  expect(paraElAgente([vel], [{ id: vel.id, ajustar: true, min: 50, max: 200 }]))
+    .toEqual({ ok: true, parametros: [{ id: 'siguelineas.VEL', grupo: 'siguelineas', nombre: 'VEL', valor: 100, entero: true, min: 50, max: 200 }] });
 });

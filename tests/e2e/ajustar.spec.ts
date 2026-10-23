@@ -35,6 +35,12 @@ test('Ajustar parámetros muestra los valores marcados del ejemplo', async ({ pa
   await expect(page.locator('#aj-pruebas')).toHaveValue('200');
 });
 
+test('las marcas @ajustar se destacan en el editor', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('#editor .marca-ajustar')).toHaveCount(2);
+  await expect(page.locator('#editor .marca-ajustar').first()).toHaveText('@ajustar siguelineas 50..200');
+});
+
 test('sin valores elegidos no se puede empezar', async ({ page }) => {
   await abrirAjuste(page);
   await ventana(page).getByLabel('KP', { exact: true }).uncheck();
