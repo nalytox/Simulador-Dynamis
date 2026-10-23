@@ -33,6 +33,8 @@ test('Conexiones de mi robot sigue a Mi robot', async ({ page }) => {
   await page.locator('#rb-motores-izq-pwm').fill('23');
   await page.locator('#rb-motores-izq-pwm').press('Enter');
   await page.locator('#robot-listo').click();
+  // El foco no se pierde: vuelve al botón Ayuda.
+  await expect(page.locator('#btn-ayuda')).toBeFocused();
   await abrirAyuda(page);
   await page.locator('#ay-tab-conexiones').click();
   await expect(fila(page, 'Motor izquierdo', 'PWM')).toContainText('23');

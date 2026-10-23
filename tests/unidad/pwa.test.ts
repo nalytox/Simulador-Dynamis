@@ -2,6 +2,62 @@ import { it, expect, vi } from 'vitest';
 import { readFileSync, existsSync } from 'node:fs';
 import { conAislamiento, esDelCompilador, estrategia, paraPrecachear, sobrantes } from '../../src/pwa/cache';
 import { prepararAislamiento } from '../../src/pwa/registrar';
+import { cachePrimero, redPrimero, type CacheMinima } from '../../src/pwa/respuestas';
+import { escucharInstalacion } from '../../src/pwa/instalar';
+
+/** Una caché de mentira y lo que la app manda a hacer en segundo plano. */
+function cacheFalsa(o: { guardado?: Response; put?: () => Promise<void>; falla?: boolean } = {}) {
+  const puestos: string[] = [];
+  const segundoPlano: Promise<unknown>[] = [];
+  const cache: CacheMinima = {
+    match: async (r: RequestInfo | URL) => (o.guardado && String(r instanceof Request ? r.url : r).endsWith('/') ? o.guardado.clone() : o.guardado?.clone()),
+    put: async (r: RequestInfo | URL) => { puestos.push(String(r instanceof Request ? r.url : r)); return o.put ? o.put() : undefined; },
+  };
+  return {
+    puestos, segundoPlano,
+    deps: (red: () => Promise<Response>) => ({
+      abrirCache: async () => { if (o.falla) throw new Error('sin Cache Storage'); return cache; },
+      red,
+      enSegundoPlano: (p: Promise<unknown>) => { segundoPlano.push(p); },
+    }),
+  };
+}
+const pedido = (ruta: string, modo: RequestMode = 'cors') => Object.assign(new Request(`https://escuela.github.io/Simulador-Dynamis/${ruta}`), { modoPrueba: modo });
+
+it('cachePrimero responde sin esperar a que termine de guardarse (la barra de progreso avanza)', async () => {
+  const f = cacheFalsa({ put: () => new Promise(() => {}) });
+  const r = await cachePrimero(pedido('assets/llvm.core-a.wasm'), f.deps(async () => new Response('wasm', { status: 200 })));
+  expect(await r.text()).toBe('wasm');
+  expect(r.headers.get('Cross-Origin-Embedder-Policy')).toBe('require-corp');
+  expect(f.segundoPlano).toHaveLength(1);
+});
+
+it('cachePrimero no guarda una respuesta que no es 200', async () => {
+  for (const status of [206, 404]) {
+    const f = cacheFalsa();
+    await cachePrimero(pedido('assets/x.js'), f.deps(async () => new Response('', { status })));
+    expect(f.puestos, String(status)).toEqual([]);
+  }
+});
+
+it('cachePrimero sigue con la red si la caché no funciona, y un error al guardar no rompe la respuesta', async () => {
+  const sinCache = cacheFalsa({ falla: true });
+  expect(await (await cachePrimero(pedido('assets/x.js'), sinCache.deps(async () => new Response('red')))).text()).toBe('red');
+  const llena = cacheFalsa({ put: () => Promise.reject(new DOMException('lleno', 'QuotaExceededError')) });
+  expect(await (await cachePrimero(pedido('assets/x.js'), llena.deps(async () => new Response('red')))).text()).toBe('red');
+  await expect(Promise.all(llena.segundoPlano)).resolves.toBeDefined();
+});
+
+it('redPrimero guarda solo páginas HTML como inicio y, sin red, responde la guardada', async () => {
+  const f = cacheFalsa();
+  const html = await redPrimero(pedido(''), './', f.deps(async () => new Response('<p>app</p>', { headers: { 'Content-Type': 'text/html; charset=utf-8' } })));
+  expect(html.headers.get('Cross-Origin-Opener-Policy')).toBe('same-origin');
+  await redPrimero(pedido('iconos/mascota.svg'), './', f.deps(async () => new Response('<svg/>', { headers: { 'Content-Type': 'image/svg+xml' } })));
+  expect(f.puestos).toEqual(['https://escuela.github.io/Simulador-Dynamis/']);
+  const sinRed = cacheFalsa({ guardado: new Response('<p>guardada</p>', { headers: { 'Content-Type': 'text/html' } }) });
+  const r = await redPrimero(pedido(''), './', sinRed.deps(async () => { throw new TypeError('Failed to fetch'); }));
+  expect(await r.text()).toBe('<p>guardada</p>');
+});
 
 it('esDelCompilador reconoce LLVM, sus recursos y el núcleo', () => {
   expect(esDelCompilador('assets/llvm.core-CL0Hro1L.wasm')).toBe(true);
@@ -94,6 +150,45 @@ it('prepararAislamiento: si no se puede registrar, explica que no hay aislamient
   const d = dobles({ registrarFalla: true });
   expect(await prepararAislamiento({ aislado: false, produccion: true, sw: d.sw, sesion: d.sesion, recargar: d.recargar })).toBe('sin-aislamiento');
   expect(d.recargar).not.toHaveBeenCalled();
+});
+
+it('prepararAislamiento: si el service worker falla al instalarse, no se queda esperando', async () => {
+  const d = dobles();
+  const trabajador = Object.assign(new EventTarget(), { state: 'installing' });
+  d.sw.register = vi.fn(async () => ({ installing: trabajador }) as unknown as ServiceWorkerRegistration);
+  (d.sw as { ready: Promise<ServiceWorkerRegistration> }).ready = new Promise(() => {});
+  const resultado = prepararAislamiento({ aislado: false, produccion: true, sw: d.sw, sesion: d.sesion, recargar: d.recargar });
+  await Promise.resolve();
+  trabajador.state = 'redundant';
+  trabajador.dispatchEvent(new Event('statechange'));
+  expect(await resultado).toBe('sin-aislamiento');
+  expect(d.recargar).not.toHaveBeenCalled();
+  expect(d.mapa.get('dynamis.recargado')).toBeUndefined();
+});
+
+it('prepararAislamiento: si el service worker no se activa a tiempo, no se queda esperando', async () => {
+  vi.useFakeTimers();
+  try {
+    const d = dobles();
+    (d.sw as { ready: Promise<ServiceWorkerRegistration> }).ready = new Promise(() => {});
+    const resultado = prepararAislamiento({ aislado: false, produccion: true, sw: d.sw, sesion: d.sesion, recargar: d.recargar });
+    await vi.advanceTimersByTimeAsync(20_000);
+    expect(await resultado).toBe('sin-aislamiento');
+    expect(d.recargar).not.toHaveBeenCalled();
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+it('Instalar: si el estudiante cancela el aviso, el botón se oculta (el aviso no se puede volver a pedir)', async () => {
+  const ventana = new EventTarget() as unknown as Window;
+  const avisos: ((() => Promise<boolean>) | null)[] = [];
+  escucharInstalacion(ventana, f => avisos.push(f));
+  ventana.dispatchEvent(Object.assign(new Event('beforeinstallprompt', { cancelable: true }), {
+    prompt: async () => {}, userChoice: Promise.resolve({ outcome: 'dismissed' }),
+  }));
+  expect(await avisos[0]!()).toBe(false);
+  expect(avisos.at(-1)).toBeNull();
 });
 
 /** Ancho y alto de un PNG, del bloque IHDR. */

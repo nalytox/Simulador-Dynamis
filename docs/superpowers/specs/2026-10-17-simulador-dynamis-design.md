@@ -137,9 +137,13 @@ src/
     mpu6050.js
     tcs34725.js
     parametros.js              # constantes físicas del robot que usen los modelos
-  ejemplos/                    # proyectos de ejemplo (carpetas con .ino y .h)
+  ejemplos/                    # catálogo (index.ts), el seguidor del comienzo y las pistas de ejemplo
+    proyectos/<id>/            # proyectos de ejemplo: carpetas Arduino con <id>.ino y pines.h
+  ayuda/                       # guías de los sensores, "Conexiones de mi robot" y el puntaje de las bases
+  pwa/                         # service worker (servicio.ts, cache.ts, respuestas.ts), registro e "Instalar"
+scripts/iconos.mjs             # hace los íconos de la app desde la mascota
 tests/
-  unidad/  integracion/  e2e/
+  unidad/  integracion/  e2e/  e2e-produccion/
 docs/
 ```
 
@@ -481,10 +485,10 @@ Las marcas **después** del cruce no cuentan. Por eso "4 puntas" equivale a "amb
   - **Tamaño:** de 2 a 16 columnas y de 2 a 12 filas. Al achicar se confirma si se quitan piezas, y el inicio se mueve adentro si queda fuera.
   - **Pista nueva:** 8 × 6 vacía, después de confirmar. El nombre de la pista se edita y da el nombre del `.json` (sin tildes).
   - **Números escritos a mano** (ángulo, altura, cortes, medidas) se acotan a su rango al confirmarlos.
-- **Pistas de ejemplo:**
-  - **Práctica FIRVI:** inspirada en la figura 1 de las bases (partida, curvas en S, línea con cortes, F2 y F1, obstáculo entre H4 y H5, meta y 8 hitos).
-  - **Cruces con marcas:** todas las variantes de marcas.
-  - **Rampa y baches.**
+- **Pistas de ejemplo** (fase 7, ver §12):
+  - **Práctica FIRVI:** la pista con que abre la app: partida, rectas, curvas suaves, meta y 2 hitos. Se quedó simple a propósito para que el primer "Probar mi robot" funcione con el seguidor del comienzo.
+  - **Cruces con marcas:** cruces sin marcas, con marca a la izquierda y a la derecha, y una línea con cortes; 8 hitos.
+  - **Rampa y baches:** rampa de subida y de bajada, baches y el obstáculo (F4); 8 hitos.
 
 **Limitación conocida:** la pista es un mapa de alturas sobre un plano 2D. Sirve para rampas, plataformas y baches, pero no para puentes ni túneles.
 

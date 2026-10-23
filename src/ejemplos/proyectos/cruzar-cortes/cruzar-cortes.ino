@@ -67,6 +67,8 @@ void loop() {
   } else {
     motores(0, 0);                  // se perdió de verdad: mejor detenerse
     Serial.println("Perdí la línea.");
+    // Este ejemplo sigue derecho en los cruces: no lee las marcas verdes que dicen hacia dónde girar.
+    Serial.println("Si había un cruce con marcas verdes, este ejemplo no las lee: mira el ejemplo «Leer marcas de color en cruces».");
     while (true) delay(1000);
   }
 }

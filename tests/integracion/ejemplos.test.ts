@@ -65,8 +65,10 @@ describe('proyectos de ejemplo', { timeout: 300_000 }, () => {
 
   it('Cruzar cortes pasa la línea cortada', async () => {
     const hito = hitoDespuesDe(pista('cruces'), b => b.tipo === 'cortes');
-    const { fin } = await correrEjemplo('cruzar-cortes');
+    const { fin, serial } = await correrEjemplo('cruzar-cortes');
     expect(fin.juez.hitos[hito - 1], `hito ${hito}`).toBe('alcanzado');
+    // En su pista hay cruces con marcas, que este ejemplo no lee: lo dice al perder la línea.
+    expect(serial).toContain('«Leer marcas de color en cruces»');
   });
 
   it('Leer marcas de color termina la pista de cruces', async () => {

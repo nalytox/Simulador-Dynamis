@@ -36,7 +36,11 @@ export class ClienteCompilador {
 
   /** Descarga y prepara LLVM y el núcleo. Si falla, rechaza con el mensaje; otra llamada vuelve a intentar. */
   preparar(alProgresar: (hecho: number, total: number) => void): Promise<void> {
-    if (this.preparacion) return this.preparacion.promesa;
+    if (this.preparacion) {
+      // Ya se está preparando (por ejemplo, al instalar la app): el avance le llega a quien pide ahora.
+      this.preparacion.alProgresar = alProgresar;
+      return this.preparacion.promesa;
+    }
     let resolver!: () => void;
     let rechazar!: (e: Error) => void;
     const promesa = new Promise<void>((res, rej) => { resolver = res; rechazar = rej; });

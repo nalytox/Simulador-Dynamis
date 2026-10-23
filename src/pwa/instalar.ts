@@ -15,9 +15,9 @@ export function escucharInstalacion(ventana: Window, alPoder: (instalar: (() => 
     alPoder(async () => {
       await evento.prompt();
       const { outcome } = await evento.userChoice;
-      if (outcome !== 'accepted') return false;
+      // El aviso se puede mostrar una sola vez por evento: aceptado o no, el botón ya no sirve.
       alPoder(null);
-      return true;
+      return outcome === 'accepted';
     });
   });
   ventana.addEventListener('appinstalled', () => alPoder(null));

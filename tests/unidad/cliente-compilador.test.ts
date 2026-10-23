@@ -47,6 +47,18 @@ describe('cliente del compilador', () => {
     expect(creados).toHaveLength(2);
   });
 
+  it('si alguien pide preparar mientras ya se prepara, el avance le llega a él', async () => {
+    const falso = new TrabajadorFalso();
+    const c = cliente(falso);
+    const primero: number[] = [];
+    const segundo: number[] = [];
+    const a = c.preparar(hecho => primero.push(hecho));
+    const b = c.preparar(hecho => segundo.push(hecho));
+    await Promise.all([a, b]);
+    expect(falso.preparaciones).toBe(1);
+    expect(segundo).toEqual([50]);
+  });
+
   it('firmaProyecto no depende del orden de los archivos y cambia con el contenido', () => {
     const a = firmaProyecto({ nombre: 'p', archivos: { 'p.ino': 'a', 'b.h': 'b' } });
     expect(firmaProyecto({ nombre: 'p', archivos: { 'b.h': 'b', 'p.ino': 'a' } })).toBe(a);
