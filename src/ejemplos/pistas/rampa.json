@@ -1,0 +1,251 @@
+{
+  "version": 1,
+  "nombre": "Rampa y baches",
+  "tamanoBaldosa": 300,
+  "columnas": 8,
+  "filas": 6,
+  "ambiente": {
+    "luz": "normal"
+  },
+  "baldosas": [
+    {
+      "c": 0,
+      "r": 0,
+      "rot": 0,
+      "tipo": "partida"
+    },
+    {
+      "c": 1,
+      "r": 0,
+      "rot": 0,
+      "tipo": "recta"
+    },
+    {
+      "c": 2,
+      "r": 0,
+      "rot": 0,
+      "tipo": "rampa",
+      "props": {
+        "angulo": 20
+      }
+    },
+    {
+      "c": 3,
+      "r": 0,
+      "rot": 0,
+      "tipo": "recta",
+      "nivel": 109.19
+    },
+    {
+      "c": 4,
+      "r": 0,
+      "rot": 180,
+      "tipo": "rampa",
+      "props": {
+        "angulo": 20
+      }
+    },
+    {
+      "c": 5,
+      "r": 0,
+      "rot": 0,
+      "tipo": "recta"
+    },
+    {
+      "c": 6,
+      "r": 0,
+      "rot": 0,
+      "tipo": "recta"
+    },
+    {
+      "c": 7,
+      "r": 0,
+      "rot": 0,
+      "tipo": "giroSuave"
+    },
+    {
+      "c": 7,
+      "r": 1,
+      "rot": 90,
+      "tipo": "recta"
+    },
+    {
+      "c": 7,
+      "r": 2,
+      "rot": 90,
+      "tipo": "giroSuave"
+    },
+    {
+      "c": 6,
+      "r": 2,
+      "rot": 180,
+      "tipo": "recta"
+    },
+    {
+      "c": 5,
+      "r": 2,
+      "rot": 180,
+      "tipo": "recta"
+    },
+    {
+      "c": 4,
+      "r": 2,
+      "rot": 180,
+      "tipo": "recta"
+    },
+    {
+      "c": 3,
+      "r": 2,
+      "rot": 180,
+      "tipo": "recta"
+    },
+    {
+      "c": 2,
+      "r": 2,
+      "rot": 270,
+      "tipo": "giroSuave"
+    },
+    {
+      "c": 2,
+      "r": 3,
+      "rot": 90,
+      "tipo": "recta"
+    },
+    {
+      "c": 2,
+      "r": 4,
+      "rot": 90,
+      "tipo": "giroSuave"
+    },
+    {
+      "c": 1,
+      "r": 4,
+      "rot": 180,
+      "tipo": "recta"
+    },
+    {
+      "c": 0,
+      "r": 4,
+      "rot": 180,
+      "tipo": "meta"
+    }
+  ],
+  "objetos": [
+    {
+      "tipo": "hito",
+      "x": 450,
+      "y": 150,
+      "rot": 0,
+      "props": {
+        "numero": 1,
+        "yaw": 0
+      }
+    },
+    {
+      "tipo": "hito",
+      "x": 1050,
+      "y": 150,
+      "rot": 0,
+      "props": {
+        "numero": 2,
+        "yaw": 0
+      }
+    },
+    {
+      "tipo": "hito",
+      "x": 1650,
+      "y": 150,
+      "rot": 0,
+      "props": {
+        "numero": 3,
+        "yaw": 0
+      }
+    },
+    {
+      "tipo": "hito",
+      "x": 2250,
+      "y": 450,
+      "rot": 0,
+      "props": {
+        "numero": 4,
+        "yaw": 90
+      }
+    },
+    {
+      "tipo": "hito",
+      "x": 1950,
+      "y": 750,
+      "rot": 0,
+      "props": {
+        "numero": 5,
+        "yaw": 180
+      }
+    },
+    {
+      "tipo": "hito",
+      "x": 1350,
+      "y": 750,
+      "rot": 0,
+      "props": {
+        "numero": 6,
+        "yaw": 180
+      }
+    },
+    {
+      "tipo": "hito",
+      "x": 750,
+      "y": 1050,
+      "rot": 0,
+      "props": {
+        "numero": 7,
+        "yaw": 90
+      }
+    },
+    {
+      "tipo": "hito",
+      "x": 450,
+      "y": 1350,
+      "rot": 0,
+      "props": {
+        "numero": 8,
+        "yaw": 180
+      }
+    },
+    {
+      "tipo": "bache",
+      "x": 1950,
+      "y": 150,
+      "rot": 90,
+      "props": {
+        "largo": 250,
+        "radio": 6
+      }
+    },
+    {
+      "tipo": "bache",
+      "x": 750,
+      "y": 1000,
+      "rot": 45,
+      "props": {
+        "largo": 200,
+        "radio": 6
+      }
+    },
+    {
+      "tipo": "obstaculo",
+      "x": 1650,
+      "y": 750,
+      "rot": 0,
+      "props": {
+        "ancho": 100,
+        "largo": 100,
+        "alto": 100
+      }
+    }
+  ],
+  "inicio": {
+    "x": 150,
+    "y": 150,
+    "yaw": 0
+  }
+}

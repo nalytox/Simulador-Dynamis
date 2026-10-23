@@ -30,7 +30,7 @@ test('Ajustar parámetros muestra los valores marcados del ejemplo', async ({ pa
   const giroscopio = ventana(page).locator('.pid', { has: page.getByRole('heading', { name: 'Giroscopio' }) });
   await expect(giroscopio).toContainText('Todavía no está en tu código. Marca sus variables así:');
   await expect(giroscopio.locator('pre')).toHaveText('float kp = 1.0;  // @ajustar giroscopio');
-  await expect(page.locator('#aj-pista')).toHaveText('Práctica');
+  await expect(page.locator('#aj-pista')).toHaveText('Práctica FIRVI');
   await expect(page.locator('#aj-chip')).toHaveText('Sin empezar');
   await expect(page.locator('#aj-pruebas')).toHaveValue('200');
 });
