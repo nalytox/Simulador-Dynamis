@@ -29,9 +29,8 @@ test('con 10 pruebas, el gráfico y el mejor resultado se llenan', async ({ page
   await expect(page.locator('#aj-ver')).toBeEnabled();
   await expect(page.locator('#aj-usar')).toBeEnabled();
   expect(await vivos(page)).toBe(0);
-  // El tooltip muestra la prueba bajo el puntero.
-  const punto = page.locator('#aj-grafico .g-punto').first();
-  await punto.hover();
+  // El tooltip muestra la prueba bajo el puntero (la prueba 1 siempre es récord: su círculo amarillo la tapa).
+  await page.locator('#aj-grafico .g-punto').first().hover({ force: true });
   await expect(page.locator('#aj-tip')).toContainText('Prueba 1 · recompensa');
 });
 
