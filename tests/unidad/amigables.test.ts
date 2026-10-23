@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { existsSync } from 'node:fs';
 import { traducirDiagnostico, primerError, LIBRERIAS_DISPONIBLES } from '../../src/compilador/amigables';
 import type { Diagnostico } from '../../src/compilador/diagnosticos';
 
@@ -42,5 +43,10 @@ describe('errores amigables', () => {
     const ds = [diag('unused variable', { severidad: 'advertencia' }), diag("redefinition of 'x'", { linea: 7 })];
     expect(primerError(ds, RUTAS)?.linea).toBe(7);
     expect(primerError([ds[0]], RUTAS)).toBeNull();
+  });
+
+  it('las librerías disponibles son las del núcleo simulado', () => {
+    expect(LIBRERIAS_DISPONIBLES).toEqual(['Wire.h', 'QTRSensors.h', 'Adafruit_VL53L0X.h', 'MPU6050_light.h', 'Adafruit_TCS34725.h']);
+    for (const l of LIBRERIAS_DISPONIBLES) expect(existsSync(`src/nucleo/include/${l}`), l).toBe(true);
   });
 });

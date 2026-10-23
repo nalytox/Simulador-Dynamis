@@ -1,16 +1,16 @@
-// Subir la rampa: el acelerómetro del MPU6050 mide hacia dónde tira la gravedad. Cuando el robot
-// se inclina, una parte de la gravedad aparece en el eje x, y con eso se calcula la inclinación.
+// Subir la rampa: el MPU6050 mide hacia dónde tira la gravedad y qué tan rápido gira el robot, y la
+// librería MPU6050_light junta las dos cosas para calcular la inclinación.
 // Al subir, el robot acelera para que no le falte fuerza; al bajar, frena un poco.
 // Si el sensor de distancia ve algo muy cerca (el obstáculo), se detiene.
 #include <Wire.h>
 #include <QTRSensors.h>
-#include <Adafruit_MPU6050.h>
-#include <VL53L0X.h>
+#include <MPU6050_light.h>
+#include <Adafruit_VL53L0X.h>
 #include "pines.h"
 
 QTRSensors qtr;
-Adafruit_MPU6050 mpu;
-VL53L0X distancia;
+MPU6050 mpu(Wire);
+Adafruit_VL53L0X distancia;
 uint16_t valores[8];
 
 const int VELOCIDAD = 90;            // velocidad en lo plano, de 0 a 255
@@ -21,7 +21,6 @@ const float INCLINACION_RAMPA = 8;   // desde cuántos grados se considera rampa
 const int DISTANCIA_MINIMA = 80;     // mm: si hay algo más cerca, se detiene
 
 unsigned long ultimoMensaje = 0;
-unsigned long ultimaMedida = 0;
 unsigned long inicioRecorrido = 0;
 
 // Mueve los motores: valores de -255 (atrás) a 255 (adelante).
@@ -41,11 +40,11 @@ void girarCalibrando(int sentido, unsigned long ms) {
   while (millis() - inicio < ms) qtr.calibrate();
 }
 
-// La inclinación en grados: positiva con la nariz hacia arriba.
+// La inclinación en grados: positiva con la nariz hacia arriba. En el Dynamis el eje x del MPU6050
+// apunta hacia adelante, y con la nariz hacia arriba getAngleY() es negativo: por eso el signo menos.
 float inclinacion() {
-  sensors_event_t a, g, temp;
-  mpu.getEvent(&a, &g, &temp);
-  return atan2(a.acceleration.x, a.acceleration.z) * 180 / PI;
+  mpu.update();  // lee el sensor: hay que llamarlo seguido
+  return -mpu.getAngleY();
 }
 
 // La meta tiene una barra atravesada: casi todos los sensores ven negro a la vez.
@@ -67,16 +66,15 @@ void setup() {
   qtr.setTypeAnalog();
   qtr.setSensorPins(PINES_QTR, 8);
   Wire.begin();
-  if (!mpu.begin()) {
+  if (mpu.begin() != 0) {  // 0 quiere decir que el sensor respondió
     Serial.println("No encuentro el MPU6050. Revisa los cables SDA y SCL.");
     while (true) delay(1000);
   }
-  distancia.setTimeout(500);
-  if (!distancia.init()) {
+  if (!distancia.begin()) {
     Serial.println("No encuentro el VL53L0X. Revisa los cables SDA y SCL.");
     while (true) delay(1000);
   }
-  distancia.startContinuous(20);  // una medida cada 20 ms
+  distancia.startRangeContinuous(40);  // una medida nueva cada 40 ms (cada medida tarda 33 ms)
 
   Serial.println("Calibrando...");
   girarCalibrando(1, 150);
@@ -96,13 +94,11 @@ void loop() {
     while (true) delay(1000);
   }
 
-  if (millis() - ultimaMedida >= 25) {
-    ultimaMedida = millis();
-    if (distancia.readRangeContinuousMillimeters() < DISTANCIA_MINIMA) {
-      motores(0, 0);
-      Serial.println("Hay algo adelante: me detengo. (Para rodearlo, mira el ejemplo «Esquivar el obstáculo».)");
-      while (true) delay(1000);
-    }
+  // Sin esperar al sensor: solo cuando terminó una medida nueva (si no ve nada, entrega 65535).
+  if (distancia.isRangeComplete() && distancia.readRangeResult() < DISTANCIA_MINIMA) {
+    motores(0, 0);
+    Serial.println("Hay algo adelante: me detengo. (Para rodearlo, mira el ejemplo «Esquivar el obstáculo».)");
+    while (true) delay(1000);
   }
 
   float grados = inclinacion();

@@ -11,7 +11,7 @@ export interface MensajeAmigable {
   tecnico: string;
 }
 
-export const LIBRERIAS_DISPONIBLES = ['Wire.h', 'QTRSensors.h', 'VL53L0X.h', 'Adafruit_MPU6050.h', 'MPU6050.h', 'Adafruit_TCS34725.h'];
+export const LIBRERIAS_DISPONIBLES = ['Wire.h', 'QTRSensors.h', 'Adafruit_VL53L0X.h', 'MPU6050_light.h', 'Adafruit_TCS34725.h'];
 
 const PUNTO_Y_COMA = 'Falta un punto y coma `;` al final. En C++ cada instrucción termina con `;`.';
 const LLAVES = 'Las llaves `{ }` no están parejas.';

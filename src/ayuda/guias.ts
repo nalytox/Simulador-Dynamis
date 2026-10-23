@@ -1,6 +1,6 @@
 /** Las guías de cada sensor de la Ayuda (spec §12): qué hace, cómo se usa y un programa completo que compila. */
 export interface GuiaSensor {
-  id: 'qtr' | 'vl53l0x' | 'tcs34725' | 'mpu6050' | 'mpu6050-i2cdevlib' | 'motores';
+  id: 'qtr' | 'vl53l0x' | 'tcs34725' | 'mpu6050' | 'motores';
   titulo: string;
   libreria: string;
   explicacion: string[];
@@ -43,31 +43,31 @@ void loop() {
   {
     id: 'vl53l0x',
     titulo: 'Sensor de distancia VL53L0X',
-    libreria: 'VL53L0X (Pololu)',
+    libreria: 'Adafruit_VL53L0X',
     explicacion: [
       'Mide la distancia hasta lo que tiene adelante con un rayo láser infrarrojo, en milímetros (hasta unos 2 m).',
-      'En modo continuo entrega una medida nueva cada pocos milisegundos. Si no ve nada, entrega 8190 o más.',
+      'Cada medida tarda unos 33 ms. Si RangeStatus es 4, no vio nada: está fuera de alcance.',
+      'Para no detener el programa mientras mide, usa startRangeContinuous() y, cuando isRangeComplete() diga que hay una medida nueva, léela con readRangeResult().',
     ],
     programa: `#include <Wire.h>
-#include <VL53L0X.h>
+#include <Adafruit_VL53L0X.h>
 
-VL53L0X distancia;
+Adafruit_VL53L0X distancia;
 
 void setup() {
   Serial.begin(115200);
   Wire.begin();
-  distancia.setTimeout(500);
-  if (!distancia.init()) {
+  if (!distancia.begin()) {
     Serial.println("No encuentro el VL53L0X. Revisa los cables SDA y SCL.");
     while (true) delay(1000);
   }
-  distancia.startContinuous();
 }
 
 void loop() {
-  int mm = distancia.readRangeContinuousMillimeters();
-  if (distancia.timeoutOccurred()) Serial.println("El sensor se demoró demasiado.");
-  else Serial.printf("Distancia: %d mm\\n", mm);
+  VL53L0X_RangingMeasurementData_t medida;
+  distancia.rangingTest(&medida, false);  // una medida: tarda unos 33 ms
+  if (medida.RangeStatus != 4) Serial.printf("Distancia: %u mm\\n", medida.RangeMilliMeter);
+  else Serial.println("No veo nada: está fuera de alcance.");
   delay(100);
 }
 `,
@@ -106,62 +106,35 @@ void loop() {
   {
     id: 'mpu6050',
     titulo: 'Giroscopio y acelerómetro MPU6050',
-    libreria: 'Adafruit_MPU6050',
+    libreria: 'MPU6050_light',
     explicacion: [
-      'El acelerómetro mide hacia dónde tira la gravedad (en m/s²): sirve para saber si el robot sube o baja una rampa.',
-      'El giroscopio mide qué tan rápido gira el robot (en rad/s): sumándolo en el tiempo se sabe cuánto giró.',
-    ],
-    programa: `#include <Adafruit_MPU6050.h>
-
-Adafruit_MPU6050 mpu;
-
-void setup() {
-  Serial.begin(115200);
-  if (!mpu.begin()) {
-    Serial.println("No encuentro el MPU6050. Revisa los cables SDA y SCL.");
-    while (true) delay(1000);
-  }
-  mpu.setAccelerometerRange(MPU6050_RANGE_2_G);
-  mpu.setGyroRange(MPU6050_RANGE_250_DEG);
-}
-
-void loop() {
-  sensors_event_t a, g, temp;
-  mpu.getEvent(&a, &g, &temp);
-  float inclinacion = atan2(a.acceleration.x, a.acceleration.z) * 180 / PI;
-  Serial.printf("Inclinación %.1f° · giro %.2f rad/s\\n", inclinacion, g.gyro.z);
-  delay(200);
-}
-`,
-  },
-  {
-    id: 'mpu6050-i2cdevlib',
-    titulo: 'MPU6050 con i2cdevlib',
-    libreria: 'MPU6050 (i2cdevlib / Electronic Cats)',
-    explicacion: [
-      'Otra librería para el mismo sensor: entrega números enteros sin convertir a unidades.',
-      'Con los rangos por defecto, 16384 en el acelerómetro es 1 g, y 131 en el giroscopio es 1 °/s.',
+      'El acelerómetro mide hacia dónde tira la gravedad y el giroscopio, qué tan rápido gira el robot (en °/s). La librería junta las dos cosas y entrega ángulos en grados.',
+      'getAngleZ() dice cuánto ha girado el robot (crece al girar a la izquierda) y getAngleY(), su inclinación (en el Dynamis es negativa con la nariz hacia arriba).',
+      'Llama a calcOffsets() con el robot quieto antes de empezar, y a update() muy seguido: así suma bien el giro.',
     ],
     programa: `#include <Wire.h>
-#include <MPU6050.h>
+#include <MPU6050_light.h>
 
-MPU6050 mpu;
+MPU6050 mpu(Wire);
+unsigned long ultimoMensaje = 0;
 
 void setup() {
   Serial.begin(115200);
   Wire.begin();
-  mpu.initialize();
-  if (!mpu.testConnection()) {
+  if (mpu.begin() != 0) {  // 0 quiere decir que el sensor respondió
     Serial.println("No encuentro el MPU6050. Revisa los cables SDA y SCL.");
     while (true) delay(1000);
   }
+  Serial.println("Midiendo el desvío. No muevas el robot...");
+  mpu.calcOffsets();
 }
 
 void loop() {
-  int16_t ax, ay, az, gx, gy, gz;
-  mpu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
-  Serial.printf("az %d (16384 = 1 g) · gz %d (131 = 1 °/s)\\n", az, gz);
-  delay(200);
+  mpu.update();  // lee el sensor y suma lo que giró
+  if (millis() - ultimoMensaje >= 200) {
+    ultimoMensaje = millis();
+    Serial.printf("Inclinación %.1f° · giro %.1f° · %.0f °/s\\n", -mpu.getAngleY(), mpu.getAngleZ(), mpu.getGyroZ());
+  }
 }
 `,
   },

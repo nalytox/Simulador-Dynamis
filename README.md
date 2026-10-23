@@ -94,9 +94,8 @@ Son reimplementaciones compatibles con la API pública de cada librería (el det
 
 - Arduino / ESP32 core 3.x: pines, tiempo, `Serial`, `String` y `Wire`;
 - `QTRSensors` de Pololu (v4);
-- `VL53L0X` de Pololu;
-- `Adafruit_MPU6050` (con `Adafruit_Sensor`);
-- `MPU6050` de i2cdevlib (con `I2Cdev.h`);
+- `Adafruit_VL53L0X`;
+- `MPU6050_light` (de rfetick);
 - `Adafruit_TCS34725`.
 
 ## Requisitos

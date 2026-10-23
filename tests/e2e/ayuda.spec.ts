@@ -11,7 +11,7 @@ test('Ayuda muestra la guía de cada sensor y copia el programa', async ({ page,
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.goto('/');
   await abrirAyuda(page);
-  await expect(page.locator('#ay-sensores .ay-guia')).toHaveCount(6);
+  await expect(page.locator('#ay-sensores .ay-guia')).toHaveCount(5);
   await page.locator('#ay-guia-qtr .ay-copiar').click();
   await expect(page.locator('#ay-guia-qtr .ay-copiar')).toHaveText('¡Copiado!');
   expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('#include <QTRSensors.h>');
