@@ -10,8 +10,27 @@ import { huellaRobot } from '../robot/config';
  * @param {import('../mundo/tipos').Mundo} mundo
  */
 export function estadoInicial(pose, robot, mundo) {
-  const { pitch, roll } = mundo.inclinacion(pose.x, pose.y, pose.yaw);
-  return { x: pose.x, y: pose.y, z: mundo.altura(pose.x, pose.y), yaw: pose.yaw, pitch, roll, v: 0, w: 0 };
+  return { x: pose.x, y: pose.y, yaw: pose.yaw, ...apoyo(pose.x, pose.y, pose.yaw, robot, mundo), v: 0, w: 0 };
+}
+
+/**
+ * Altura e inclinación del chasis apoyado en el suelo: se inclina según la altura del suelo bajo su
+ * frente y su cola (pitch) y bajo cada rueda (roll). z es la altura del eje de las ruedas.
+ * Así el robot empieza a subir cuando su frente llega a la rampa, y un bache chico lo inclina poco.
+ */
+function apoyo(x, y, yaw, robot, mundo) {
+  const c = Math.cos(yaw);
+  const s = Math.sin(yaw);
+  const suelo = (adelante, izquierda) => mundo.altura(x + adelante * c - izquierda * s, y + adelante * s + izquierda * c);
+  const frente = robot.chasis.xDelantero;
+  const cola = robot.chasis.xDelantero - robot.chasis.largo;
+  const medio = robot.ruedas.trocha / 2;
+  const hFrente = suelo(frente, 0);
+  const hCola = suelo(cola, 0);
+  const z = hCola + ((hFrente - hCola) * (robot.ruedas.x - cola)) / (frente - cola);
+  const pitch = -Math.atan2(hFrente - hCola, frente - cola);
+  const roll = Math.atan2(suelo(robot.ruedas.x, medio) - suelo(robot.ruedas.x, -medio), 2 * medio);
+  return { z, pitch: pitch === 0 ? 0 : pitch, roll: roll === 0 ? 0 : roll };
 }
 
 /**
@@ -37,6 +56,5 @@ export function pasoDinamica(estado, motores, dt, mundo, robot, azar) {
     x = estado.x;
     y = estado.y;
   }
-  const { pitch, roll } = mundo.inclinacion(x, y, yaw);
-  return { ...estado, x, y, z: mundo.altura(x, y), yaw, pitch, roll, v, w };
+  return { ...estado, x, y, yaw, ...apoyo(x, y, yaw, robot, mundo), v, w };
 }

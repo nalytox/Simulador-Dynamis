@@ -36,6 +36,10 @@ const FICHAS: Ficha[] = [
   { id: 'leer-linea', nombre: 'Leer la línea', descripcion: 'Calibra el sensor de línea y muestra dónde ve la línea.', pista: 'practica' },
   { id: 'seguidor-pid', nombre: 'Seguidor de línea con PID', descripcion: 'Sigue la línea con un control PID: P, I y D.', pista: 'practica' },
   { id: 'leer-giroscopio', nombre: 'Leer el giroscopio', descripcion: 'Gira 90° midiendo el giro con el MPU6050.', pista: 'practica' },
+  { id: 'cruzar-cortes', nombre: 'Cruzar cortes', descripcion: 'Sigue la línea aunque tenga cortes: si la pierde, sigue derecho un poco.', pista: 'cruces' },
+  { id: 'marcas-color', nombre: 'Leer marcas de color en cruces', descripcion: 'Lee las marcas verdes antes de cada cruce y gira hacia donde indican.', pista: 'cruces' },
+  { id: 'subir-rampa', nombre: 'Subir la rampa', descripcion: 'Mide la inclinación con el MPU6050 y acelera para subir la rampa.', pista: 'rampa' },
+  { id: 'esquivar-obstaculo', nombre: 'Esquivar el obstáculo', descripcion: 'Ve el obstáculo con el sensor de distancia y lo rodea sin tocarlo.', pista: 'rampa' },
 ];
 
 const archivos = import.meta.glob('./proyectos/*/*', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;

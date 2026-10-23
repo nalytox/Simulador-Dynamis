@@ -35,7 +35,7 @@ export function pasoDinamica(estado, motores, dt, mundo, robot, azar) → nuevo 
 
 **El placeholder actual:**
 - cinemática diferencial ideal con `vMaxMmS` de `parametros.js`;
-- `z`, `pitch` y `roll` salen del mundo;
+- `z`, `pitch` y `roll` salen de `mundo.altura` bajo el frente y la cola del chasis y bajo cada rueda: el robot empieza a inclinarse cuando su frente llega a una rampa, y un bache de 6 mm lo inclina apenas unos grados;
 - si el robot choca, no avanza.
 
 ## El mundo de la pista
