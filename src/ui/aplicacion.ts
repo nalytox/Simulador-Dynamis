@@ -16,6 +16,7 @@ import { crearVentanaRobot } from './mi-robot';
 import { crearVentanaEjemplos } from './ejemplos';
 import { crearRecorrido } from './recorrido';
 import { crearVentanaAyuda } from './ayuda';
+import { escucharInstalacion } from '../pwa/instalar';
 import { crearVentanaAjuste, type PedidoEntrenamiento, type FinVentana } from './ajustar';
 import { crearAgente } from '../ajuste/agente.js';
 import { calcularRecompensa } from '../ajuste/recompensa.js';
@@ -39,6 +40,12 @@ const SIN_AISLAMIENTO = 'Para usar el simulador, recarga la página o usa Chrome
 const SIN_AUTOGUARDADO = 'No se pudo activar el guardado automático en este navegador: descarga tu proyecto para no perderlo.';
 const CICLO_SIN_FIN = 'Tu programa parece atrapado en un ciclo sin fin. ¿Falta un `delay` o leer un sensor dentro del `while`?';
 const SIN_COMPILADOR = { titulo: 'No pudimos preparar el compilador', mensaje: 'Revisa tu conexión a internet.' };
+const SIN_INTERNET = {
+  titulo: 'Falta internet para la primera vez',
+  mensaje: 'La primera vez el simulador descarga su compilador. Conéctate a internet y presiona Reintentar; después funciona sin conexión.',
+};
+/** Por qué no se pudo preparar el compilador: sin conexión, la primera vez hace falta internet (spec §16). */
+const sinCompilador = () => (navigator.onLine === false ? SIN_INTERNET : SIN_COMPILADOR);
 const SIN_EXPLICACION = { titulo: 'Ups, hay un problema en tu programa', mensaje: 'El compilador no pudo terminar. Mira el mensaje técnico.' };
 /** Eventos del juez que celebran (el resto es un aviso). */
 const LOGROS = new Set(['hito', 'meta']);
@@ -165,6 +172,19 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
     },
   });
   $('btn-ayuda').addEventListener('click', () => ventanaAyuda.abrir());
+  // "Instalar en este computador": al instalar, también se prepara el compilador para que quede
+  // guardado y el simulador funcione sin internet.
+  let instalarApp: (() => Promise<boolean>) | null = null;
+  const instalar = async () => {
+    if (!instalarApp || !(await instalarApp())) return;
+    compilador.preparar(() => {}).then(() => { compiladorListo = true; }, () => {});
+  };
+  escucharInstalacion(raiz.defaultView!, f => {
+    instalarApp = f;
+    $('btn-instalar').hidden = f === null;
+    ventanaAyuda.mostrarInstalar(f ? () => void instalar() : null);
+  });
+  $('btn-instalar').addEventListener('click', () => void instalar());
   const ventanaAjuste = crearVentanaAjuste(raiz, {
     proyecto: () => programa.proyecto(),
     pista: () => pistaEditada,
@@ -280,7 +300,7 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
       await compilador.preparar(() => {});
       compiladorListo = true;
     } catch {
-      return { motivo: 'no-compila', mensaje: `${SIN_COMPILADOR.titulo}. ${SIN_COMPILADOR.mensaje}` };
+      return { motivo: 'no-compila', mensaje: `${sinCompilador().titulo}. ${sinCompilador().mensaje}` };
     }
     const r = await compilador.compilar(programa.proyecto());
     if (!r.ok) return { motivo: 'no-compila', mensaje: 'Tu programa tiene errores: pruébalo con «Probar mi robot» para verlos.' };
@@ -331,7 +351,7 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
         compiladorListo = true;
       } catch {
         if (mio !== intento) return;
-        burbuja.mostrar({ ...SIN_COMPILADOR, boton: { texto: 'Reintentar', alClic: () => void probar(opciones) } });
+        burbuja.mostrar({ ...sinCompilador(), boton: { texto: 'Reintentar', alClic: () => void probar(opciones) } });
         mostrar('error');
         return;
       }

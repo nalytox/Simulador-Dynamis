@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite';
+import { pluginPwa } from './scripts/plugin-pwa.ts';
 
 /** SharedArrayBuffer (pausa y ritmo de la simulación) exige aislamiento de origen cruzado. */
 const AISLAMIENTO = {
@@ -8,6 +9,7 @@ const AISLAMIENTO = {
 
 export default defineConfig({
   base: './',
+  plugins: [pluginPwa()],
   server: { headers: AISLAMIENTO },
   preview: { headers: AISLAMIENTO },
   // @yowasp/clang busca sus .wasm junto a su propio archivo con import.meta.url: no se preempaqueta.

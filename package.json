@@ -13,7 +13,8 @@
     "dev": "npm run nucleo && vite",
     "build": "npm run nucleo && vite build",
     "preview": "vite preview",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "e2e:produccion": "playwright test -c playwright.produccion.config.ts"
   },
   "repository": {
     "type": "git",

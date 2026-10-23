@@ -1,0 +1,16 @@
+{
+  "name": "Simulador Dynamis",
+  "short_name": "Dynamis",
+  "description": "Programa el robot de Dynamis y pruébalo en la pista de Rescue Line.",
+  "lang": "es-CL",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "theme_color": "#0B0F98",
+  "background_color": "#F4FAFF",
+  "icons": [
+    { "src": "iconos/icono-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "iconos/icono-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "iconos/icono-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
