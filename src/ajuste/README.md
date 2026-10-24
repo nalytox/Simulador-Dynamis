@@ -103,7 +103,7 @@ export function debeTerminar(paso, mundo) → false | string
 |---|---|---|
 | `t` | s | El tiempo virtual. |
 | `estado` | mm y rad | `{ x, y, z, yaw, pitch, roll }` del robot en el mundo (ver `src/modelos/README.md`). |
-| `lecturas` | — | Lo que miden los sensores en ese instante: `{ qtr: number[8] (ADC 0–4095), distanciaMm, color: { r, g, b, c }, mpu: { ax, ay, az, gx, gy, gz, temp } }`. Es lo mismo que muestran las tarjetas de la vista Programar, no lo que leyó el programa. |
+| `lecturas` | — | Lo que miden los sensores en ese instante: `{ qtr: number[8] (ADC 0–4095), distanciaMm, color: { r, g, b, c }, color2: { r, g, b, c } | null, mpu: { ax, ay, az, gx, gy, gz, temp } }` (`color2` es el segundo TCS34725, si el robot lo tiene). Es lo mismo que muestran las tarjetas de la vista Programar, no lo que leyó el programa. |
 | `motores` | — | `{ izq: { duty, modo }, der: { duty, modo } }`, con `duty` de −1 a 1. |
 | `eventos` | — | Lo que pasó desde el paso anterior (abajo). |
 

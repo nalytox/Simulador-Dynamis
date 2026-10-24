@@ -37,8 +37,11 @@ DYN_IMPORTAR("aviso") void dyn_aviso(const char* texto, size_t largo);
 DYN_IMPORTAR("vl53_medir") uint16_t dyn_vl53_medir(void);
 /** ax ay az (m/s²), gx gy gz (rad/s), temp (°C), en el marco del sensor. Cuesta COSTOS_US.lecturaMpu. */
 DYN_IMPORTAR("mpu_leer") void dyn_mpu_leer(float* datos7);
-/** Cuentas crudas r, g, b, c; led: 1 si el LED de la placa está encendido. */
-DYN_IMPORTAR("tcs_leer") void dyn_tcs_leer(uint32_t integracion_us, uint32_t ganancia, int led, uint16_t* rgbc);
+/** I2C directo, para lo que el simulador tiene a nivel de registros: el multiplexor TCA9548A y los
+ * TCS34725. 1 si algún dispositivo respondió (ACK), 0 si no. Cuesta COSTOS_US.i2cByte por byte. */
+DYN_IMPORTAR("i2c_escribir") int dyn_i2c_escribir(uint8_t direccion, const uint8_t* datos, size_t largo);
+/** Lee `largo` bytes por I2C directo: 1 si algún dispositivo respondió, 0 si no. */
+DYN_IMPORTAR("i2c_leer") int dyn_i2c_leer(uint8_t direccion, uint8_t* datos, size_t largo);
 
 static inline void dynAvisar(const char* texto) { dyn_aviso(texto, strlen(texto)); }
 /** Un valor marcado con @ajustar: el preprocesador reemplaza el número por esta llamada, y el

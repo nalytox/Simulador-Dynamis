@@ -1,5 +1,6 @@
 import { colorMuestra, nombreColor, porcentajeMotor, posicionLinea, rumboGrados, textoDistancia, textoInclinacion } from './lecturas';
 import type { LecturasVista } from '../simulacion/simulador';
+import type { LecturaTCS } from '../simulacion/sensores';
 import type { Instantanea } from '../simulacion/ejecucion';
 import type { Motores } from '../simulacion/motores';
 
@@ -41,6 +42,12 @@ export function crearTarjetas(raiz: Document): { mostrar(l: LecturasVista | null
     $(`m-${lado}-n`).textContent = porcentaje === null ? SIN : `${porcentaje}%`;
   };
 
+  const mostrarColor = (id: 'color' | 'color2', c: LecturaTCS, prefijo: string) => {
+    $(`${id}-muestra`).style.background = colorMuestra(c);
+    $(`${id}-nombre`).textContent = `${prefijo}${nombreColor(c)}`;
+    $(`${id}-rgbc`).innerHTML = (['r', 'g', 'b', 'c'] as const).map(k => `<span>${k.toUpperCase()} ${c[k]}</span>`).join('');
+  };
+
   return {
     mostrar(l, e, m) {
       barras.forEach((barra, i) => {
@@ -58,15 +65,18 @@ export function crearTarjetas(raiz: Document): { mostrar(l: LecturasVista | null
         $('tof-val').innerHTML = mm >= 8190 ? textoDistancia(mm) : `${Math.round(mm)} <small>mm</small>`;
         $('tof-bar').style.width = mm >= ALCANCE_MM ? '0%' : `${100 - (mm / ALCANCE_MM) * 100}%`;
         $('tof-sub').textContent = mm < MUY_CERCA_MM ? '¡Hay algo muy cerca!' : 'Alcance hasta 2 m';
-        $('color-muestra').style.background = colorMuestra(l.color);
-        $('color-nombre').textContent = nombreColor(l.color);
-        $('color-rgbc').innerHTML = (['r', 'g', 'b', 'c'] as const).map(k => `<span>${k.toUpperCase()} ${l.color[k]}</span>`).join('');
+        // Con dos TCS34725, cada fila dice de cuál es.
+        const dos = l.color2 !== null;
+        mostrarColor('color', l.color, dos ? '1: ' : '');
+        $('color2').hidden = !dos;
+        if (l.color2) mostrarColor('color2', l.color2, '2: ');
       } else {
         $('tof-val').innerHTML = `${SIN} <small>mm</small>`;
         $('tof-bar').style.width = '0%';
         $('color-muestra').style.background = '#FFFFFF';
         $('color-nombre').textContent = SIN;
         $('color-rgbc').replaceChildren();
+        $('color2').hidden = true;
       }
 
       if (e && l) {

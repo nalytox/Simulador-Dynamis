@@ -4,6 +4,8 @@ export const COSTOS_US = {
   analogRead: 10, analogWrite: 2, ledcWrite: 2, serialAvailable: 1, llamadaLoop: 1, yield: 1,
   /** Una lectura del MPU6050 por I2C (14 bytes a 400 kHz), en cualquier función de lectura. */
   lecturaMpu: 400,
+  /** Un byte por I2C a 400 kHz (8 bits y el ACK), en el I2C directo: la dirección cuenta como un byte. */
+  i2cByte: 22.5,
   /** Un aviso de una librería mal usada: así un ciclo que la llama sin parar no congela el tiempo. */
   aviso: 1,
 } as const;

@@ -87,3 +87,32 @@ it('el QTR necesita exactamente 8 pines, sin huecos', () => {
   expect(normalizarRobot(conHueco).ok).toBe(false);
   expect(conCampo(copia(), 'qtr.pines.9', 3).qtr.pines).toEqual(ROBOT_POR_DEFECTO.qtr.pines);
 });
+
+it('un robot.json sin el segundo TCS34725 ni canales se completa y lo informa', () => {
+  const { tcs34725b, ...sinSegundo } = copia();
+  const datos = { ...sinSegundo, tcs34725: { x: 40, y: -46, z: 5, led: null } };
+  const r = normalizarRobot(JSON.parse(JSON.stringify(datos)));
+  expect(r).toEqual({ ok: true, robot: copia(), avisos: ['Faltaba tcs34725.canal: se usó el valor del profe.', 'Faltaba tcs34725b: se usaron los valores del profe.'] });
+  expect(tcs34725b).toEqual({ instalado: false, x: 40, y: 46, z: 5, led: null, canal: null });
+});
+
+it('canales del multiplexor y el segundo TCS34725: tipos y rangos', () => {
+  const datos = copia() as unknown as Record<string, Record<string, unknown>>;
+  datos.tcs34725.canal = 9;
+  datos.tcs34725b.instalado = 'si';
+  datos.tcs34725b.canal = 1.5;
+  expect(normalizarRobot(datos)).toEqual({ ok: false, errores: [
+    'tcs34725.canal debe ser un canal del multiplexor (0 a 7) o null (sin multiplexor).',
+    'tcs34725b.instalado debe ser true o false.',
+    'tcs34725b.canal debe ser un canal del multiplexor (0 a 7) o null (sin multiplexor).',
+  ] });
+  const r = copia();
+  expect(conCampo(r, 'tcs34725.canal', 9).tcs34725.canal).toBe(7);
+  expect(conCampo(conCampo(r, 'tcs34725.canal', 2), 'tcs34725.canal', null).tcs34725.canal).toBeNull();
+  expect(conCampo(r, 'tcs34725b.instalado', true).tcs34725b.instalado).toBe(true);
+  expect(CAMPOS_ROBOT.filter(c => c.ruta.startsWith('tcs34725')).map(c => [c.ruta, c.tipo])).toEqual([
+    ['tcs34725.x', 'numero'], ['tcs34725.y', 'numero'], ['tcs34725.z', 'numero'],
+    ['tcs34725b.instalado', 'si-no'], ['tcs34725b.x', 'numero'], ['tcs34725b.y', 'numero'], ['tcs34725b.z', 'numero'],
+    ['tcs34725.led', 'pin-opcional'], ['tcs34725.canal', 'canal'], ['tcs34725b.led', 'pin-opcional'], ['tcs34725b.canal', 'canal'],
+  ]);
+});

@@ -8,7 +8,7 @@ export interface GuiaSensor {
   aviso?: string;
 }
 
-const AVISO_I2C = 'El VL53L0X y el TCS34725 usan la misma dirección I2C (0x29). El simulador no lo nota, pero en el robot real hay que cambiar la dirección del VL53L0X con setAddress (apagando el otro con XSHUT) o usar un multiplexor I2C.';
+const AVISO_I2C = 'El VL53L0X y el TCS34725 usan la misma dirección I2C (0x29). El simulador no lo nota, pero en el robot real hay que cambiar la dirección del VL53L0X con setAddress (apagando el otro con XSHUT) o poner el TCS34725 detrás de un multiplexor TCA9548A (en «Mi robot», ponle su canal).';
 
 export const GUIAS: GuiaSensor[] = [
   {
@@ -80,6 +80,7 @@ void loop() {
     explicacion: [
       'Mide cuánta luz roja (R), verde (G) y azul (B) refleja el suelo, y la luz total (C).',
       'Con más tiempo de integración y más ganancia, las lecturas son más grandes. Compara R, G y B para saber el color: si G es el mayor, es verde.',
+      'Con dos TCS34725 (uno a cada lado de la línea), los dos usan la dirección 0x29: van detrás de un multiplexor TCA9548A (0x70). Antes de leer uno, abre su canal: Wire.beginTransmission(0x70); Wire.write(1 << canal); Wire.endTransmission();',
     ],
     programa: `#include <Wire.h>
 #include <Adafruit_TCS34725.h>

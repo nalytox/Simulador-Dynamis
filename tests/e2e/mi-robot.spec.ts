@@ -138,3 +138,20 @@ test('editar la pista con una rampa y probar', async ({ page }) => {
   await expect(page.locator('#chip-tiempo')).toHaveText(/t = ([3-9]|\d\d),/, { timeout: 30_000 });
   await expect(page.locator('#burbuja')).toBeHidden();
 });
+
+test('con el segundo TCS34725 en canales del multiplexor, la tarjeta de color muestra los dos', async ({ page }) => {
+  await abrirMiRobot(page);
+  await campo(page, 'tcs34725b.instalado').check();
+  await expect(page.locator('#robot-avisos')).toContainText('Los dos TCS34725 usan la dirección 0x29: ponlos en canales distintos del multiplexor.');
+  await cambiar(page, 'tcs34725.canal', '0');
+  await cambiar(page, 'tcs34725b.canal', '1');
+  await expect(page.locator('#robot-avisos')).not.toContainText('0x29');
+  await expect(campo(page, 'tcs34725.canal')).toHaveValue('0');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#color2')).toBeHidden();
+  await page.locator('#btn-probar').click();
+  await corriendo(page);
+  await expect(page.locator('#color2')).toBeVisible();
+  await expect(page.locator('#color-nombre')).toHaveText(/^1: /);
+  await expect(page.locator('#color2-nombre')).toHaveText(/^2: /);
+});

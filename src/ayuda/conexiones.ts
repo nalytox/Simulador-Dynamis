@@ -21,10 +21,21 @@ export function conexionesDe(r: ConfigRobot): GrupoConexiones[] {
       ...r.qtr.pines.map((p, i) => ({ que: `S${i + 1}${i === 0 ? ' (izquierda)' : i === ultimo ? ' (derecha)' : ''}`, pin: pin(p) })),
       { que: 'Emisores', pin: pin(r.qtr.emisor, 'siempre encendidos') },
     ] },
-    { grupo: 'Bus I2C', filas: [
-      { que: 'SDA', pin: String(SDA) }, { que: 'SCL', pin: String(SCL) },
-      { que: 'VL53L0X', pin: '0x29' }, { que: 'TCS34725', pin: '0x29 ⚠' }, { que: 'MPU6050', pin: '0x68' },
-      { que: 'LED del TCS34725', pin: pin(r.tcs34725.led, 'encendido, salvo con setInterrupt(true)') },
-    ] },
+    { grupo: 'Bus I2C', filas: busI2C(r) },
+  ];
+}
+
+// Un TCS34725 directo en el bus choca con el VL53L0X (los dos usan 0x29): por eso el ⚠.
+function busI2C(r: ConfigRobot): { que: string; pin: string }[] {
+  const colores = [r.tcs34725, ...(r.tcs34725b.instalado ? [r.tcs34725b] : [])];
+  const nombre = (i: number) => (colores.length > 1 ? `TCS34725 (color ${i + 1})` : 'TCS34725');
+  const hayMux = colores.some(c => c.canal !== null);
+  return [
+    { que: 'SDA', pin: String(SDA) }, { que: 'SCL', pin: String(SCL) },
+    { que: 'VL53L0X', pin: '0x29' },
+    ...(hayMux ? [{ que: 'Multiplexor TCA9548A', pin: '0x70' }] : []),
+    ...colores.map((c, i) => ({ que: nombre(i), pin: c.canal === null ? '0x29 ⚠' : `0x29, canal ${c.canal} del multiplexor` })),
+    { que: 'MPU6050', pin: '0x68' },
+    ...colores.map((c, i) => ({ que: `LED del ${nombre(i)}`, pin: pin(c.led, 'encendido, salvo con setInterrupt(true)') })),
   ];
 }

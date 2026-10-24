@@ -5,7 +5,7 @@ import { pistaDe } from '../ayuda/pistas';
 const CON_OBSTACULO = pistaDe({ columnas: 4, filas: 1, baldosas: [0, 1, 2, 3].map(c => ({ c, r: 0, tipo: 'recta' })),
   objetos: [{ tipo: 'obstaculo', x: 600, y: 150, rot: 0 }] });
 const INICIO = '#include <Wire.h>\n#include <Adafruit_VL53L0X.h>\nAdafruit_VL53L0X lox = Adafruit_VL53L0X();\nVL53L0X_RangingMeasurementData_t m;\n';
-const BUS_DIRECTO = 'El simulador no tiene un bus I2C directo: usa las librerías de los sensores en vez de Wire.beginTransmission o Wire.requestFrom.';
+const BUS_DIRECTO = 'Nadie respondió en 0x68: por I2C directo el simulador solo tiene el multiplexor TCA9548A y los TCS34725. Para los demás sensores usa sus librerías.';
 const lineas = (...l: (string | number)[]) => [...l, ''].join('\r\n');
 
 describe('VL53L0X (Adafruit_VL53L0X) y Wire', { timeout: 120_000 }, () => {
@@ -70,7 +70,7 @@ describe('VL53L0X (Adafruit_VL53L0X) y Wire', { timeout: 120_000 }, () => {
     const { texto, sim } = await correrSketch(`${INICIO}Adafruit_VL53L0X otro;\nvoid setup() { Serial.begin(115200);
       Serial.println(otro.readRange()); Serial.println(otro.rangingTest(&m)); Serial.println(m.RangeStatus); Serial.println(otro.startRangeContinuous());
       lox.begin(); Serial.println(lox.isRangeComplete()); Serial.println(lox.waitRangeComplete());
-      Wire.beginTransmission(0x29); Serial.println(Wire.endTransmission()); Serial.println(Wire.requestFrom(0x29, 2)); }\nvoid loop() {}`,
+      Wire.beginTransmission(0x68); Serial.println(Wire.endTransmission()); Serial.println(Wire.requestFrom(0x68, 2)); }\nvoid loop() {}`,
       { duracionUs: 300_000 });
     expect(texto).toBe(lineas(65535, -20, 4, 0, 0, 0, 2, 0));
     expect(sim.avisos).toEqual(expect.arrayContaining(['Llama a begin() del VL53L0X antes de leerlo.',

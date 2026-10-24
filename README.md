@@ -97,11 +97,12 @@ int velocidad = 100;     // @ajustar siguelineas 50..200
 Son reimplementaciones compatibles con la API pública de cada librería (el detalle está en la
 [spec, §7](docs/superpowers/specs/2026-10-17-simulador-dynamis-design.md#7-núcleo-simulado-api-soportada-en-la-v1)):
 
-- Arduino / ESP32 core 3.x: pines, tiempo, `Serial`, `String` y `Wire`;
+- Arduino / ESP32 core 3.x: pines, tiempo, `Serial`, `String`, `Wire` y `Wire1`;
 - `QTRSensors` de Pololu (v4);
 - `Adafruit_VL53L0X`;
 - `MPU6050_light` (de rfetick);
-- `Adafruit_TCS34725`.
+- `Adafruit_TCS34725`, con uno o dos sensores, también detrás de un multiplexor TCA9548A (se
+  configura en "Mi robot" y se usa por I2C directo, como en el robot real).
 
 ## Requisitos
 

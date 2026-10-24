@@ -74,6 +74,9 @@ static inline void analogWriteFrequency(uint8_t pin, uint32_t freq) { (void)pin;
 static inline bool ledcAttach(uint8_t pin, uint32_t freq, uint8_t bits) { return dyn_ledc_attach(pin, freq, bits); }
 static inline bool ledcWrite(uint8_t pin, uint32_t duty) { return dyn_ledc_write(pin, duty); }
 static inline bool ledcDetach(uint8_t pin) { return dyn_ledc_detach(pin); }
+// Bluetooth (esp32-hal-bt.h): el simulador no tiene radio, así que siempre está apagada.
+static inline bool btStarted(void) { return false; }
+static inline bool btStop(void) { return true; }
 
 #ifdef __cplusplus
 }
