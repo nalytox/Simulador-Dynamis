@@ -1,4 +1,4 @@
-import type { ConfigRobot } from '../robot/config';
+import type { ConfigRobot, SensorColor } from '../robot/config';
 import type { Mundo, Punto3 } from '../mundo/tipos';
 import type { Luz } from '../pista/tipos';
 import type { Azar } from './azar';
@@ -68,7 +68,8 @@ export function poseVL53(estado: EstadoRobot, robot: ConfigRobot): PoseSensor {
   return { ...puntoEnMundo(estado, { x, y, z }), yaw: estado.yaw + yaw * GRADOS, pitch: estado.pitch + pitch * GRADOS };
 }
 
-export function puntoTCS(estado: EstadoRobot, robot: ConfigRobot): Punto3 {
-  const { x, y, z } = robot.tcs34725;
+/** Dónde está un TCS34725 en el mundo (por defecto, el primero del robot). */
+export function puntoTCS(estado: EstadoRobot, robot: ConfigRobot, sensor: SensorColor = robot.tcs34725): Punto3 {
+  const { x, y, z } = sensor;
   return puntoEnMundo(estado, { x, y, z });
 }

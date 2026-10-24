@@ -159,10 +159,10 @@ export function leerTCS34725({ t, estado, sensor, tiempoIntegracionMs, ganancia,
 
 | Parámetro | Unidad | Qué es |
 |---|---|---|
-| `sensor` | mm | `{ x, y, z }`: la posición del sensor en el mundo. |
+| `sensor` | mm | `{ x, y, z }`: la posición en el mundo del sensor que se lee (con dos TCS34725, el del canal abierto del multiplexor). |
 | `tiempoIntegracionMs` | ms | De 2,4 a 614,4: `(256 − ATIME) · 2,4`. |
 | `ganancia` | — | El factor del amplificador: 1, 4, 16 o 60. |
-| `ledEncendido` | — | Si `robot.tcs34725.led` tiene un pin, el LED sigue a ese pin. Si no, está encendido salvo después de `setInterrupt(true)`, como en la placa típica. |
+| `ledEncendido` | — | Si el sensor tiene `led` con un pin, el LED sigue a ese pin. Si no, está encendido salvo con la interrupción activada (`setInterrupt(true)`), como en la placa típica. |
 | `ambiente` | — | `{ luz: 'normal' \| 'fuerte' \| 'tenue' }`. |
 | **devuelve** | cuentas | Las cuentas crudas de los canales rojo, verde, azul y claro. |
 
@@ -173,6 +173,8 @@ export function leerTCS34725({ t, estado, sensor, tiempoIntegracionMs, ganancia,
   - no usa el LED, la luz ambiente, la altura ni el ruido.
 - **Qué hace el núcleo:**
   - acota cada canal a 0–65535 y al máximo del chip, `min(65535, 1024 · (256 − ATIME))`;
+  - los registros guardan la medida durante un ciclo de integración: leer los 4 canales dentro del
+    mismo ciclo llama a tu modelo una sola vez;
   - `getRawData` espera el tiempo de integración, como la librería real.
 
 ### Para el estudiante: el QTR con `analogRead`

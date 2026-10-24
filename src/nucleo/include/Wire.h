@@ -1,5 +1,7 @@
-// Wire.h — bus I2C del ESP32. Los sensores se simulan a nivel de librería: begin y setClock no
-// hacen nada, y el acceso directo al bus avisa y responde como un bus sin dispositivos.
+// Wire.h — buses I2C del ESP32 (Wire y Wire1). begin y setClock no hacen nada: el simulador no
+// distingue los buses. Por I2C directo responden el multiplexor TCA9548A y los TCS34725, que el
+// simulador tiene a nivel de registros; los demás sensores se simulan en sus librerías y aquí no
+// responden (el simulador avisa).
 #pragma once
 
 #include <stddef.h>
@@ -21,6 +23,17 @@ public:
   int available();
   int read();
   int peek();
+
+private:
+  // Como I2C_BUFFER_LENGTH del ESP32.
+  static const size_t BUFER = 128;
+  uint8_t direccion = 0;
+  uint8_t salida[BUFER];
+  size_t enSalida = 0;
+  uint8_t entrada[BUFER];
+  size_t enEntrada = 0;
+  size_t leidos = 0;
 };
 
 extern TwoWire Wire;
+extern TwoWire Wire1;

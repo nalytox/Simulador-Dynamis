@@ -213,11 +213,12 @@ Errores durante la ejecución:
 | `Adafruit_VL53L0X::rangingTest`, `readRange` | presupuesto de medición (33 ms por defecto); en modo continuo, espera hasta la siguiente medición del período |
 | `Adafruit_VL53L0X::waitRangeComplete` | espera hasta que termina la medida en curso (`isRangeComplete` y `readRangeResult` no esperan) |
 | `Adafruit_VL53L0X::setAddress` (también dentro de `begin`) | 10 ms, como la librería |
-| `Adafruit_TCS34725::getRawData` | espera el tiempo de integración (como la librería real) |
+| `Adafruit_TCS34725::getRawData` | lee 4 registros por I2C y espera el tiempo de integración (como la librería real) |
+| I2C directo (`Wire.endTransmission`, `Wire.requestFrom`) y cada registro que leen o escriben las librerías por I2C | 22,5 µs por byte, contando la dirección (`COSTOS_US.i2cByte`, 400 kHz); si nadie responde, solo la dirección |
 | `Serial.print*` | 10 bits por carácter a la velocidad configurada, solo si se llena el búfer de 128 bytes |
 | `Serial.available()`, `read()`, `peek()` | 1 µs (esperar datos no congela el tiempo) |
 | `delay(ms)` / `delayMicroseconds(us)` | exactamente lo pedido, con un mínimo de 1 µs (`delay(0)` también cede) |
-| Aviso de una librería mal usada (VL53L0X o MPU6050 sin `begin`, QTR sin configurar, `Wire` directo…) | 1 µs (un ciclo que la llama sin parar no congela el tiempo) |
+| Aviso de una librería mal usada (VL53L0X o MPU6050 sin `begin`, QTR sin configurar, I2C directo sin respuesta…) | 1 µs (un ciclo que la llama sin parar no congela el tiempo) |
 
 - **Memoria:** el programa tiene un tope de 512 KB, como la SRAM del ESP32. Si se acaba, `malloc` falla como en el robot (por ejemplo, un `String` que crece sin fin deja de crecer) en vez de comerse la memoria del computador.
 - **Determinismo:** cada ejecución tiene una **semilla**. Los modelos reciben un generador aleatorio con esa semilla (`ctx.azar()`), así una prueba se puede repetir exactamente (por ejemplo, "Ver esta prueba en la pista").
@@ -232,11 +233,16 @@ Son reimplementaciones **compatibles con la API pública** de cada librería, es
 **Arduino / ESP32 core 3.x**
 - **Pines:** `pinMode`, `digitalWrite`, `digitalRead`, `analogRead` (12 bits, `analogReadResolution`), `analogWrite` (8 bits por defecto, `analogWriteResolution`), `ledcAttach(pin, freq, res)`, `ledcWrite(pin, duty)`, `ledcDetach`.
 - **Tiempo:** `millis`, `micros`, `delay`, `delayMicroseconds`, `yield`.
+- **Radio:** `btStop()` (devuelve `true`) y `btStarted()` (devuelve `false`), para los programas que apagan el Bluetooth como piden las bases. El simulador no tiene radio.
 - **Utilidades:** `random`, `randomSeed`, `map`, `constrain`, `min`, `max`, `abs`, `sq`, constantes `HIGH/LOW/INPUT/OUTPUT/INPUT_PULLUP`, nombres de pines de la placa (`A0`…`A19`, `SDA`, `SCL`, `T0`…), `F()`/`PROGMEM`/`pgm_read_*`, `itoa`/`ltoa`/`utoa`/`ultoa`/`dtostrf` y `<inttypes.h>` (`PRIu32`…), `analogWriteFrequency` (se acepta y no cambia la simulación).
 - **Buses de un pin:** como en el core 3.x, un pin está en GPIO (`pinMode`) o en PWM (`analogWrite`, `ledcAttach`); `digitalWrite` sobre un pin en PWM no tiene efecto y produce un aviso.
 - **`Serial`:** `begin`, `print`, `println`, `printf`, `write`, `flush`. `available()` y `read()` devuelven 0 y -1 (no hay entrada desde la UI en la v1) y avisan que nadie escribe por el Serial.
 - **`String`** (subconjunto de `WString`): construcción desde números, concatenación, `length`, `toInt`, `toFloat`, `indexOf`, `substring`, `c_str`.
-- **`Wire`:** `begin([sda, scl])` y `setClock` no hacen nada. Los dispositivos se simulan a nivel de librería. El acceso directo a registros (`beginTransmission`, `write`, `endTransmission`, `requestFrom`, `available`, `read`, `peek`) no está soportado en la v1: compila, avisa una vez y responde como un bus sin dispositivos (`endTransmission` da 2, `requestFrom` y `available` dan 0, y `read` da −1).
+- **`Wire` y `Wire1`:** `begin([sda, scl, frecuencia])` y `setClock` no hacen nada, y el simulador no distingue los dos buses: llegan al mismo bus simulado.
+  - **I2C directo** (`beginTransmission`, `write`, `endTransmission`, `requestFrom`, `available`, `read` y `peek`, con búferes de 128 bytes como el ESP32): responden el multiplexor **TCA9548A** en `0x70` (si algún TCS34725 tiene canal) y los **TCS34725** en `0x29`, a nivel de registros.
+  - **TCA9548A:** el byte que se le escribe abre los canales (un bit por canal) y al leerlo devuelve los canales abiertos. Un TCS34725 con canal responde solo si su canal está abierto; uno sin canal está directo en el bus. Si hay dos TCS34725 a la vez en `0x29`, los dos escuchan, se lee el primero y se avisa.
+  - **TCS34725:** el primer byte es el comando (bit 7) con el registro; los siguientes se escriben desde ahí, avanzando de a uno, y las lecturas también avanzan (así funcionan el autoincremento `0x20` y los `read16` de Adafruit). ID `0x44`; `ENABLE` con PON y AEN integra; los datos valen 0 hasta que termina la primera integración (`STATUS.AVALID`) y guardan la medida de un ciclo de integración (leer los 4 canales dentro del mismo ciclo da una sola medida, con la pose del momento en que se lee); `ATIME` y `CONTROL` eligen la integración y la ganancia; la función especial `0xE6` borra la interrupción.
+  - **Los demás sensores** (VL53L0X, MPU6050) se simulan a nivel de librería y por I2C directo no responden: `endTransmission` da 2, `requestFrom` da 0 y `read` da −1, y el simulador avisa qué falta según la dirección. Sin datos, `available`, `read` y `peek` gastan 1 µs, para que esperar en un ciclo no congele el tiempo.
 
 **Adafruit `Adafruit_VL53L0X`**
 - **Medir:** `begin(dirección, debug, &Wire, configuración)`, `rangingTest(&medida, debug)` y `getSingleRangingMeasurement`, `readRange`, `readRangeStatus`, `printRangeStatus`, `startRange`, `isRangeComplete`, `waitRangeComplete`, `readRangeResult`, `startRangeContinuous(período)`, `stopRangeContinuous`, `timeoutOccurred` (siempre `false`, como la librería) y el miembro `Status`.
@@ -259,11 +265,11 @@ Son reimplementaciones **compatibles con la API pública** de cada librería, es
 - **El chip simulado tiene registros:** `writeData` y `readData` los escriben y leen (`WHO_AM_I` es 0x68 y los registros de datos 0x3B…0x48 se leen al momento). La cuantización usa el rango que dicen los registros, así que cambiar el rango con `writeData` en vez de `setGyroConfig` da lecturas mal escaladas, como en el robot.
 - **Mal usada:** leer sin `begin()`, o con el chip dormido, avisa y entrega ceros (en el robot, la librería divide por un valor sin inicializar).
 
-**Adafruit `Adafruit_TCS34725`:** constructor `(tiempoIntegración, ganancia)`, `begin`, `setIntegrationTime`, `setGain`, `getRawData`, `getRawDataOneShot`, `getRGB`, `calculateColorTemperature_dn40`, `calculateLux`, `setInterrupt`. LED: si `robot.tcs34725.led` tiene un pin, el LED sigue a ese pin; si no, está encendido salvo después de `setInterrupt(true)`, como en la placa típica (el LED está conectado al pin INT).
+**Adafruit `Adafruit_TCS34725`:** constructor `(tiempoIntegración, ganancia)`, `begin(dirección, &Wire)`, `init`, `setIntegrationTime`, `setGain`, `getRawData`, `getRawDataOneShot`, `getRGB`, `calculateColorTemperature_dn40`, `calculateLux`, `setInterrupt`, `clearInterrupt`, `setIntLimits`, `enable`, `disable`, `write8`, `read8`, `read16` y las constantes de los registros (`TCS34725_COMMAND_BIT`, `TCS34725_CDATAL`…). Como la librería, trabaja por I2C con los registros del chip: `begin` busca el ID en la dirección (detrás del canal abierto del multiplexor, si hay uno) y da `false` si nadie responde; `setIntegrationTime`, `setGain` y `getRawData` llaman a `begin` si hace falta. Con dos TCS34725, cada objeto lee el chip del canal abierto en ese momento. LED: si el sensor tiene `led` con un pin, el LED sigue a ese pin; si no, está encendido salvo con la interrupción activada (`setInterrupt(true)`), como en la placa típica (el LED está conectado al pin INT).
 
 **Conversión de unidades (la hace el núcleo, no los modelos):** los modelos entregan magnitudes físicas (§9) y el núcleo las convierte a lo que devuelve cada librería según su configuración (rango, ganancia, resolución).
 
-**Nota de hardware real:** el VL53L0X y el TCS34725 usan la misma dirección I2C por defecto (`0x29`). El simulador no emula ese choque, pero la ayuda advierte que en el robot real hay que cambiar la dirección del VL53L0X (`setAddress` con XSHUT) o usar un multiplexor.
+**Nota de hardware real:** el VL53L0X y el TCS34725 usan la misma dirección I2C por defecto (`0x29`). El simulador no emula el choque de un TCS34725 directo en el bus con el VL53L0X (que se simula a nivel de librería), pero la ayuda advierte que en el robot real hay que cambiar la dirección del VL53L0X (`setAddress` con XSHUT) o poner los TCS34725 detrás del multiplexor.
 
 ---
 
@@ -293,10 +299,13 @@ La configuración del robot describe el **robot físico de Dynamis**. Es la "ver
   qtr:      { pines: [36, 39, 34, 35, 32, 33, 25, 26], emisor: null,
               x: 92, separacion: 9.525, altura: 3 },
   vl53l0x:  { x: 92, y: 0, z: 35, yaw: 0, pitch: 0 },
-  tcs34725: { x: 40, y: -46, z: 5, led: null },
+  tcs34725: { x: 40, y: -46, z: 5, led: null, canal: null },
+  tcs34725b: { instalado: false, x: 40, y: 46, z: 5, led: null, canal: null },
   mpu6050:  { x: 0, y: 0, z: 40, orientacion: 'z-arriba-x-adelante' },
 }
 ```
+
+- **Sensores de color:** `tcs34725b` es un segundo TCS34725 opcional (por ejemplo, uno a cada lado de la línea). `canal` es el canal (0 a 7) del multiplexor TCA9548A donde está conectado cada uno, o `null` si va directo en el bus; con algún canal, el robot tiene el multiplexor en `0x70`. Si los dos están en el mismo canal (o los dos sin canal), "Mi robot" avisa que chocan en `0x29`. La tarjeta de color muestra los dos y el lienzo dibuja los dos. Un `robot.json` anterior, sin `canal` ni `tcs34725b`, se completa con estos valores y se avisa.
 
 - **Pines → motores (driver TB6612):**
   - IN1/IN2 dan el sentido: `10` avanza, `01` retrocede, `11` freno, `00` libre.
@@ -751,9 +760,9 @@ Referencia visual: la maqueta en `docs/maqueta/`. Todo en **español (Chile)**, 
 
 ## 17. Fuera de alcance en la v1
 
-- Acceso I2C a nivel de registros (`Wire.beginTransmission`/`requestFrom` directo) y emulación del choque de direcciones `0x29`.
+- Acceso I2C a nivel de registros para el VL53L0X y el MPU6050 (sí están el multiplexor TCA9548A y los TCS34725), y emulación del choque de direcciones `0x29` entre un TCS34725 y el VL53L0X.
 - DMP del MPU6050 (MotionApps).
-- WiFi, Bluetooth, tareas de FreeRTOS (`xTaskCreate`), interrupciones (`attachInterrupt`), EEPROM/Preferences y entrada por `Serial` desde la UI.
+- WiFi, Bluetooth (más allá de `btStop`), tareas de FreeRTOS (`xTaskCreate`), interrupciones (`attachInterrupt`), EEPROM/Preferences y entrada por `Serial` desde la UI.
 - Puentes y túneles en la pista; vista 3D; varios robots a la vez.
 
 ---

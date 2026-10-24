@@ -109,10 +109,11 @@ export function crearVentanaRobot(raiz: Document, eventos: { robot(): ConfigRobo
       Object.assign(input, { type: 'number', step: campo.tipo === 'numero' ? 'any' : '1' });
       if (campo.min !== undefined) input.min = String(campo.min);
       if (campo.max !== undefined) input.max = String(campo.max);
-      if (campo.tipo === 'pin-opcional') input.placeholder = 'sin conectar';
+      const opcional = campo.tipo === 'pin-opcional' || campo.tipo === 'canal';
+      if (opcional) input.placeholder = campo.tipo === 'canal' ? 'sin multiplexor' : 'sin conectar';
       input.addEventListener('change', () => {
         const r = eventos.robot();
-        if (campo.tipo === 'pin-opcional' && input.value.trim() === '') {
+        if (opcional && input.value.trim() === '') {
           aplicar(conCampo(r, campo.ruta, null));
           return;
         }

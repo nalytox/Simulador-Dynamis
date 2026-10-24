@@ -3,6 +3,7 @@ import { correrSketch } from '../ayuda/correr-sketch';
 import { ROBOT_POR_DEFECTO } from '../../src/robot/config';
 
 const INICIO = '#include <QTRSensors.h>\nQTRSensors qtr;\nconst uint8_t PINES[8] = {36, 39, 34, 35, 32, 33, 25, 26};\nuint16_t v[8];\n';
+const SIN_CALIBRAR = 'El QTR no está calibrado: readCalibrated y readLine no leen los sensores y usan lo que ya tiene el arreglo. Calibra con calibrate().';
 const imprimir = 'for (int i = 0; i < 8; i++) { Serial.print(v[i]); Serial.print(i < 7 ? " " : "\\n"); }';
 
 describe('QTRSensors', { timeout: 120_000 }, () => {
@@ -21,6 +22,15 @@ describe('QTRSensors', { timeout: 120_000 }, () => {
     expect((await sketch(260)).texto).toBe('0\r\n');
   });
 
+  it('sin calibrar, readLineBlack no lee el QTR: calcula con lo que ya tiene el arreglo, como Pololu', async () => {
+    const { texto, sim } = await correrSketch(`${INICIO}void setup() { Serial.begin(115200); qtr.setTypeAnalog(); qtr.setSensorPins(PINES, 8);
+      for (int i = 0; i < 8; i++) v[i] = 0; v[3] = v[4] = 971; Serial.println(qtr.readLineBlack(v));
+      v[3] = v[4] = 0; v[7] = 900; Serial.println(qtr.readLineBlack(v));
+      v[7] = 0; Serial.println(qtr.readLineBlack(v)); }\nvoid loop() {}`);
+    expect(texto).toBe('3500\r\n7000\r\n7000\r\n');
+    expect(sim.avisos).toEqual([SIN_CALIBRAR]);
+  });
+
   it('emisores: on y off esperan 300 y 1200 µs; usar la librería sin configurarla avisa', async () => {
     const robot = { ...ROBOT_POR_DEFECTO, qtr: { ...ROBOT_POR_DEFECTO.qtr, emisor: 27 } };
     const { texto } = await correrSketch(`${INICIO}void setup() { Serial.begin(115200); qtr.setTypeAnalog(); qtr.setSensorPins(PINES, 8); qtr.setEmitterPin(27);
@@ -28,7 +38,7 @@ describe('QTRSensors', { timeout: 120_000 }, () => {
     expect(texto).toBe('1\r\n');
     const { sim } = await correrSketch(`${INICIO}QTRSensors otro;\nvoid setup() { otro.read(v); qtr.setTypeAnalog(); qtr.read(v); qtr.setSensorPins(PINES, 8); qtr.readLineBlack(v); }\nvoid loop() {}`);
     expect(sim.avisos).toEqual(expect.arrayContaining(['Llama a setTypeAnalog() del QTR antes de leerlo.', 'Llama a setSensorPins() del QTR antes de leerlo.',
-      'Calibra el QTR con calibrate() antes de usar readCalibrated o readLine.']));
+      SIN_CALIBRAR]));
   });
 
   it('readCalibrated usa los tipos de Pololu: rango uint16 y valor int16', async () => {

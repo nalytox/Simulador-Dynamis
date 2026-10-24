@@ -15,6 +15,17 @@ describe('configuración del robot', () => {
     const r = structuredClone(ROBOT_POR_DEFECTO); r.tcs34725.x = 200;
     expect(validarRobot(r)).toEqual([{ campo: 'tcs34725', mensaje: 'El TCS34725 queda fuera del chasis.' }]);
   });
+  it('el segundo TCS34725: misma dirección sin multiplexor, LED repetido y fuera del chasis', () => {
+    const r = structuredClone(ROBOT_POR_DEFECTO);
+    r.tcs34725b.instalado = true;
+    expect(validarRobot(r)).toEqual([{ campo: 'tcs34725b.canal', mensaje: 'Los dos TCS34725 usan la dirección 0x29: ponlos en canales distintos del multiplexor.' }]);
+    r.tcs34725.canal = 0; r.tcs34725b.canal = 1;
+    expect(validarRobot(r)).toEqual([]);
+    r.tcs34725b.x = 200; r.tcs34725b.led = 4;
+    expect(validarRobot(r).map(a => a.mensaje)).toEqual(['El pin 4 está usado dos veces.', 'El segundo TCS34725 queda fuera del chasis.']);
+    r.tcs34725b.instalado = false;
+    expect(validarRobot(r)).toEqual([]);
+  });
   it('huellaRobot rota el chasis', () => {
     const h = huellaRobot(100, 0, Math.PI / 2, ROBOT_POR_DEFECTO);
     expect(h[0].x).toBeCloseTo(34); expect(h[0].y).toBeCloseTo(96); // (96, 66) rotado 90° + (100, 0)

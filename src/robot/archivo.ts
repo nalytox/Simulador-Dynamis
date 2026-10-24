@@ -11,7 +11,8 @@ export interface CampoRobot {
   grupo: 'Medidas' | 'Sensores' | 'Pines';
   etiqueta: string;
   unidad: 'mm' | '°' | 'pin' | null;
-  tipo: 'numero' | 'pin' | 'pin-opcional' | 'si-no';
+  /** canal: un canal del multiplexor TCA9548A (0 a 7) o null (sin multiplexor). */
+  tipo: 'numero' | 'pin' | 'pin-opcional' | 'si-no' | 'canal';
   min?: number;
   max?: number;
 }
@@ -25,7 +26,10 @@ const SENSORES_QTR = 8;
 const POSITIVAS = new Set(['chasis.largo', 'chasis.ancho', 'chasis.alto', 'ruedas.diametro', 'ruedas.trocha', 'qtr.separacion', 'qtr.altura']);
 const PINES = new Set(['motores.izq.pwm', 'motores.izq.in1', 'motores.izq.in2', 'motores.der.pwm', 'motores.der.in1', 'motores.der.in2']);
 /** Pines que pueden quedar sin conectar (null). */
-const PINES_OPCIONALES = new Set(['motores.stby', 'qtr.emisor', 'tcs34725.led']);
+const PINES_OPCIONALES = new Set(['motores.stby', 'qtr.emisor', 'tcs34725.led', 'tcs34725b.led']);
+/** Canales del multiplexor (null: el sensor va directo en el bus). */
+const CANALES = new Set(['tcs34725.canal', 'tcs34725b.canal']);
+const CANAL_MAXIMO = 7;
 /** Valores opcionales que no están en ROBOT_POR_DEFECTO. */
 const OPCIONALES: Record<string, string[]> = { 'motores.izq': ['invertir'], 'motores.der': ['invertir'] };
 
@@ -57,11 +61,19 @@ function normalizarValor(plantilla: unknown, dato: unknown, ruta: string, avisos
     else if (dato.length !== SENSORES_QTR) errores.push(`${ruta} debe tener ${SENSORES_QTR} pines, uno por sensor.`);
     return dato;
   }
+  if (typeof plantilla === 'boolean') {
+    if (typeof dato !== 'boolean') errores.push(`${ruta} debe ser true o false.`);
+    return dato;
+  }
   if (typeof plantilla === 'string') {
     if (dato !== plantilla) errores.push(`${ruta} debe ser "${plantilla}".`);
     return dato;
   }
-  if (PINES_OPCIONALES.has(ruta)) {
+  if (CANALES.has(ruta)) {
+    if (dato !== null && !(Number.isInteger(dato) && (dato as number) >= 0 && (dato as number) <= CANAL_MAXIMO)) {
+      errores.push(`${ruta} debe ser un canal del multiplexor (0 a ${CANAL_MAXIMO}) o null (sin multiplexor).`);
+    }
+  } else if (PINES_OPCIONALES.has(ruta)) {
     if (dato !== null && !Number.isInteger(dato)) errores.push(`${ruta} debe ser un pin o null (sin conectar).`);
   } else if (PINES.has(ruta)) {
     if (!Number.isInteger(dato)) errores.push(`${ruta} debe ser un pin (un número entero).`);
@@ -107,6 +119,8 @@ const posicion = (sensor: string, nombre: string, ejes: ('x' | 'y' | 'z')[]): Ca
   `${sensor}.${eje}`, `${nombre}: ${{ x: 'hacia adelante', y: 'hacia la izquierda', z: 'altura' }[eje]}`, eje === 'z' ? 0 : -300, 300, 'Sensores'));
 const pin = (ruta: string, etiqueta: string, opcional = false): CampoRobot =>
   ({ ruta, grupo: 'Pines', etiqueta, unidad: 'pin', tipo: opcional ? 'pin-opcional' : 'pin', min: 0, max: PIN_MAXIMO });
+const canal = (ruta: string, etiqueta: string): CampoRobot =>
+  ({ ruta, grupo: 'Pines', etiqueta, unidad: null, tipo: 'canal', min: 0, max: CANAL_MAXIMO });
 const motor = (lado: 'izq' | 'der', nombre: string): CampoRobot[] => [
   pin(`motores.${lado}.pwm`, `${nombre}: PWM`),
   pin(`motores.${lado}.in1`, `${nombre}: IN1`),
@@ -129,14 +143,19 @@ export const CAMPOS_ROBOT: CampoRobot[] = [
   ...posicion('vl53l0x', 'Distancia (VL53L0X)', ['x', 'y', 'z']),
   angulo('vl53l0x.yaw', 'Distancia (VL53L0X): giro hacia la izquierda', 180),
   angulo('vl53l0x.pitch', 'Distancia (VL53L0X): inclinación hacia abajo', 90),
-  ...posicion('tcs34725', 'Color (TCS34725)', ['x', 'y', 'z']),
+  ...posicion('tcs34725', 'Color 1 (TCS34725)', ['x', 'y', 'z']),
+  { ruta: 'tcs34725b.instalado', grupo: 'Sensores', etiqueta: 'Color 2 (TCS34725): instalado', unidad: null, tipo: 'si-no' },
+  ...posicion('tcs34725b', 'Color 2 (TCS34725)', ['x', 'y', 'z']),
   ...posicion('mpu6050', 'Giro (MPU6050)', ['x', 'y', 'z']),
   ...motor('izq', 'Motor izquierdo'),
   ...motor('der', 'Motor derecho'),
   pin('motores.stby', 'Driver: STBY', true),
   ...Array.from({ length: 8 }, (_, i) => pin(`qtr.pines.${i}`, `Sensor de línea: sensor ${i + 1}`)),
   pin('qtr.emisor', 'Sensor de línea: LEDs (emisor)', true),
-  pin('tcs34725.led', 'Color: LED', true),
+  pin('tcs34725.led', 'Color 1: LED', true),
+  canal('tcs34725.canal', 'Color 1: canal del multiplexor'),
+  pin('tcs34725b.led', 'Color 2: LED', true),
+  canal('tcs34725b.canal', 'Color 2: canal del multiplexor'),
 ];
 
 const partes = (ruta: string) => ruta.split('.');

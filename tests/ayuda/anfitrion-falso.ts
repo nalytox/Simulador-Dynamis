@@ -24,7 +24,8 @@ export function crearAnfitrionFalso(): { anfitrion: Anfitrion; llamadas: unknown
     serialBegin: registrar('serialBegin'), serialWrite: escribir('serialWrite'), serialAvailable: registrar('serialAvailable', 0),
     aviso: (texto: string) => { llamadas.push(['aviso', texto]); }, vl53Medir: registrar('vl53Medir', 0),
     mpuLeer: () => { llamadas.push(['mpuLeer']); return [0, 0, 0, 0, 0, 0, 0]; },
-    tcsLeer: (...args: unknown[]) => { llamadas.push(['tcsLeer', ...args]); return [0, 0, 0, 0]; },
+    i2cEscribir: (direccion: number, bytes: Uint8Array) => { llamadas.push(['i2cEscribir', direccion, [...bytes]]); return false; },
+    i2cLeer: (direccion: number, largo: number) => { llamadas.push(['i2cLeer', direccion, largo]); return null; },
     azarU32: registrar('azarU32', 12345), salidaEstandar: escribir('salidaEstandar'), tiempoNs: () => 0n,
     ajustable: (grupo: string, nombre: string, valor: number) => { llamadas.push(['ajustable', grupo, nombre, valor]); return valor; },
   };

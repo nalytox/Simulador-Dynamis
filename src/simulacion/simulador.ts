@@ -4,7 +4,8 @@ import { Pines } from './pines';
 import { pinesAMotores, type Motores } from './motores';
 import { COSTOS_US, BUFER_SERIAL_BYTES, usPorCaracter } from './costos';
 import { crearAzar, type Azar } from './azar';
-import { ROBOT_POR_DEFECTO, type ConfigRobot } from '../robot/config';
+import { ROBOT_POR_DEFECTO, type ConfigRobot, type SensorColor } from '../robot/config';
+import { BusI2C } from './i2c';
 import { mundoPlano } from '../mundo/plano';
 import type { Mundo } from '../mundo/tipos';
 import { MODELOS_POR_DEFECTO, poseVL53, puntosQTR, puntoTCS, type Ambiente, type LecturaMPU, type LecturaTCS, type ModelosSensores } from './sensores';
@@ -44,8 +45,11 @@ export interface OpcionesSimulador {
 
 export interface ResultadoEjecucion { motivo: 'tiempo' | 'error' | 'detenido'; tiempoUs: number; error?: ErrorEjecucion }
 
-/** Lo que miden los sensores en un instante, para las tarjetas de la UI (no lo que leyó el programa). */
-export interface LecturasVista { qtr: number[]; distanciaMm: number; color: LecturaTCS; mpu: LecturaMPU }
+/**
+ * Lo que miden los sensores en un instante, para las tarjetas de la UI (no lo que leyó el programa).
+ * color2: el segundo TCS34725, si el robot lo tiene.
+ */
+export interface LecturasVista { qtr: number[]; distanciaMm: number; color: LecturaTCS; color2: LecturaTCS | null; mpu: LecturaMPU }
 
 interface ExportsPrograma {
   memory: WebAssembly.Memory;
@@ -106,6 +110,7 @@ export class Simulador {
   private readonly modelos: ModelosSensores;
   private readonly ambiente: Ambiente;
   private readonly ajustes: Record<string, number>;
+  private readonly busI2C: BusI2C;
 
   private bitsAdc = BITS_ADC_POR_DEFECTO;
   private serialActivo = false;
@@ -133,6 +138,12 @@ export class Simulador {
     this.ajustes = o.ajustes ?? {};
     this.estadoActual = this.dinamica.estadoInicial(o.poseInicial ?? { x: 0, y: 0, yaw: 0 }, this.robot, this.mundo);
     this.estadoAnterior = this.estadoActual;
+    this.busI2C = new BusI2C(this.robot, {
+      leerColor: (sensor, integracionMs, ganancia, ledEncendido) => this.leerTCS(sensor, integracionMs, ganancia, ledEncendido, this.azarModelos),
+      nivelPin: pin => this.pinesSim.nivel(pin),
+      ahoraUs: () => this.t,
+      avisar: texto => this.avisar(texto),
+    });
   }
 
   /** Instancia el programa y ejecuta sus constructores globales (_initialize). */
@@ -178,12 +189,17 @@ export class Simulador {
    * no cambia lo que lee el programa y la prueba sigue siendo reproducible.
    */
   medirParaVista(azar: Azar): LecturasVista {
-    const pinLed = this.robot.tcs34725.led;
-    const color = this.leerTCS(VISTA_TCS.integracionMs, VISTA_TCS.ganancia, pinLed === null || this.pinesSim.nivel(pinLed) > 0.5, azar);
+    const color = (sensor: SensorColor): LecturaTCS => {
+      const ledEncendido = sensor.led === null || this.pinesSim.nivel(sensor.led) > 0.5;
+      const l = this.leerTCS(sensor, VISTA_TCS.integracionMs, VISTA_TCS.ganancia, ledEncendido, azar);
+      return { r: acotar(l.r, MAXIMO_CUENTAS_TCS), g: acotar(l.g, MAXIMO_CUENTAS_TCS), b: acotar(l.b, MAXIMO_CUENTAS_TCS), c: acotar(l.c, MAXIMO_CUENTAS_TCS) };
+    };
+    const segundo = this.robot.tcs34725b;
     return {
       qtr: this.leerQTR(azar).map(v => acotar(v, MAXIMO_ADC_CRUDO)),
       distanciaMm: acotar(this.leerVL53(azar), SIN_OBJETIVO_VL53_MM),
-      color: { r: acotar(color.r, MAXIMO_CUENTAS_TCS), g: acotar(color.g, MAXIMO_CUENTAS_TCS), b: acotar(color.b, MAXIMO_CUENTAS_TCS), c: acotar(color.c, MAXIMO_CUENTAS_TCS) },
+      color: color(this.robot.tcs34725),
+      color2: segundo?.instalado ? color(segundo) : null,
       mpu: this.leerMPU(azar),
     };
   }
@@ -253,9 +269,9 @@ export class Simulador {
       montaje: this.robot.mpu6050, mundo: this.mundo, azar }));
   }
 
-  private leerTCS(integracionMs: number, ganancia: number, ledEncendido: boolean, azar: Azar): LecturaTCS {
+  private leerTCS(sensor: SensorColor, integracionMs: number, ganancia: number, ledEncendido: boolean, azar: Azar): LecturaTCS {
     return protegido('el modelo del TCS34725', () => this.modelos.leerTCS34725({
-      t: this.t / 1e6, estado: this.estadoActual, sensor: puntoTCS(this.estadoActual, this.robot),
+      t: this.t / 1e6, estado: this.estadoActual, sensor: puntoTCS(this.estadoActual, this.robot, sensor),
       tiempoIntegracionMs: integracionMs, ganancia, ledEncendido, mundo: this.mundo, ambiente: this.ambiente, azar }));
   }
 
@@ -322,10 +338,16 @@ export class Simulador {
         const l = this.leerMPU(this.azarModelos);
         return [l.ax, l.ay, l.az, l.gx, l.gy, l.gz, l.temp];
       },
-      tcsLeer: (integracionUs, ganancia, led) => {
-        const pinLed = this.robot.tcs34725.led;
-        const l = this.leerTCS(integracionUs / 1000, ganancia, pinLed === null ? led : p.nivel(pinLed) > 0.5, this.azarModelos);
-        return [l.r, l.g, l.b, l.c];
+      i2cEscribir: (direccion, bytes) => {
+        const respondio = this.busI2C.escribir(direccion, bytes);
+        // Si nadie responde, la transmisión se corta después de la dirección.
+        this.avanzar((respondio ? bytes.length + 1 : 1) * COSTOS_US.i2cByte);
+        return respondio;
+      },
+      i2cLeer: (direccion, largo) => {
+        const bytes = this.busI2C.leer(direccion, largo);
+        this.avanzar((bytes ? largo + 1 : 1) * COSTOS_US.i2cByte);
+        return bytes;
       },
       serialAvailable: () => {
         this.avisar(AVISO_SERIAL_SIN_ENTRADA);

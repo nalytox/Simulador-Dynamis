@@ -5,10 +5,11 @@ import { pistaDe } from '../ayuda/pistas';
 const INICIO = '#include <Wire.h>\n#include <Adafruit_TCS34725.h>\n';
 
 describe('Adafruit_TCS34725', { timeout: 120_000 }, () => {
-  it('por defecto: 2,4 ms y 1x sobre blanco; getRawData espera la integración', async () => {
+  it('por defecto: 2,4 ms y 1x sobre blanco; getRawData lee 4 registros por I2C y espera la integración', async () => {
     const { texto } = await correrSketch(`${INICIO}Adafruit_TCS34725 tcs;\nuint16_t r, g, b, c;\nvoid setup() { Serial.begin(115200); Serial.println(tcs.begin());
-      unsigned long t0 = millis(); tcs.getRawData(&r, &g, &b, &c); Serial.printf("%u %u %u %u %lu\\n", r, g, b, c, millis() - t0); }\nvoid loop() {}`);
-    expect(texto).toBe('1\r\n24 24 24 72 3\n');
+      unsigned long t0 = micros(); tcs.getRawData(&r, &g, &b, &c); Serial.printf("%u %u %u %u %lu\\n", r, g, b, c, micros() - t0); }\nvoid loop() {}`);
+    // 4 lecturas de 16 bits (112,5 µs cada una a 400 kHz) más los 3 ms de la integración.
+    expect(texto).toBe('1\r\n24 24 24 72 3451\n');
   });
 
   it('50 ms y 4x: getRGB, temperatura de color y lux', async () => {
@@ -35,8 +36,10 @@ describe('Adafruit_TCS34725', { timeout: 120_000 }, () => {
 
   it('los tiempos de integración de 600 y 614 ms son los de Adafruit', async () => {
     const { texto } = await correrSketch(`${INICIO}Adafruit_TCS34725 tcs(TCS34725_INTEGRATIONTIME_600MS);\nuint16_t r, g, b, c;\nvoid setup() { Serial.begin(115200); tcs.begin();
-      tcs.getRawData(&r, &g, &b, &c); Serial.println(r); tcs.setIntegrationTime(TCS34725_INTEGRATIONTIME_614MS); tcs.getRawData(&r, &g, &b, &c); Serial.println(r); }\nvoid loop() {}`,
-      { duracionUs: 2_000_000 });
-    expect(texto).toBe('6000\r\n6144\r\n');
+      tcs.getRawData(&r, &g, &b, &c); Serial.println(r); tcs.setIntegrationTime(TCS34725_INTEGRATIONTIME_614MS);
+      tcs.getRawData(&r, &g, &b, &c); Serial.println(r); tcs.getRawData(&r, &g, &b, &c); Serial.println(r); }\nvoid loop() {}`,
+      { duracionUs: 3_000_000 });
+    // Los registros guardan el ciclo anterior hasta que termina uno con el tiempo nuevo.
+    expect(texto).toBe('6000\r\n6000\r\n6144\r\n');
   });
 });

@@ -29,8 +29,10 @@ export interface Anfitrion {
   vl53Medir(): number;
   /** ax, ay, az (m/s²), gx, gy, gz (rad/s) y temp (°C) del MPU6050. */
   mpuLeer(): number[];
-  /** Cuentas crudas r, g, b, c del TCS34725. */
-  tcsLeer(integracionUs: number, ganancia: number, led: boolean): number[];
+  /** I2C directo (multiplexor y TCS34725): true si algún dispositivo respondió. */
+  i2cEscribir(direccion: number, bytes: Uint8Array): boolean;
+  /** Lee `largo` bytes por I2C directo, o null si nadie respondió. */
+  i2cLeer(direccion: number, largo: number): Uint8Array | null;
   azarU32(): number;
   /** El valor de un parámetro @ajustar en esta prueba; `valor` es el del código. */
   ajustable(grupo: string, nombre: string, valor: number): number;
@@ -88,9 +90,13 @@ const DYNAMIS: Record<string, FabricaImport> = {
   mpu_leer: (a, memoria) => (ptr: number) => {
     new Float32Array(memoria().buffer, u32(ptr), 7).set(a.mpuLeer());
   },
-  tcs_leer: (a, memoria) => (integracionUs: number, ganancia: number, led: number, ptr: number) => {
-    const cuentas = a.tcsLeer(u32(integracionUs), u32(ganancia), led !== 0).map(c => Math.min(65535, Math.max(0, Math.round(c))));
-    new Uint16Array(memoria().buffer, u32(ptr), 4).set(cuentas);
+  i2c_escribir: (a, memoria) => (direccion: number, ptr: number, largo: number) =>
+    (a.i2cEscribir(direccion & 0x7f, new Uint8Array(memoria().buffer, u32(ptr), u32(largo)).slice()) ? 1 : 0),
+  i2c_leer: (a, memoria) => (direccion: number, ptr: number, largo: number) => {
+    const bytes = a.i2cLeer(direccion & 0x7f, u32(largo));
+    if (!bytes) return 0;
+    new Uint8Array(memoria().buffer, u32(ptr), u32(largo)).set(bytes);
+    return 1;
   },
   azar_u32: a => () => a.azarU32(),
   ajustable: (a, memoria) => (grupo: number, nombre: number, valor: number) =>

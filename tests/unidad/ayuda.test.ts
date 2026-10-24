@@ -22,6 +22,18 @@ it('conexionesDe con el robot por defecto', () => {
   ]);
 });
 
+it('con dos TCS34725 detrás del multiplexor, el bus I2C muestra el TCA9548A y el canal de cada uno', () => {
+  const robot = { ...ROBOT_POR_DEFECTO, tcs34725: { ...ROBOT_POR_DEFECTO.tcs34725, canal: 0 },
+    tcs34725b: { ...ROBOT_POR_DEFECTO.tcs34725b, instalado: true, canal: 1, led: 14 } };
+  expect(conexionesDe(robot).find(g => g.grupo === 'Bus I2C')!.filas).toEqual([
+    { que: 'SDA', pin: '21' }, { que: 'SCL', pin: '22' },
+    { que: 'VL53L0X', pin: '0x29' }, { que: 'Multiplexor TCA9548A', pin: '0x70' },
+    { que: 'TCS34725 (color 1)', pin: '0x29, canal 0 del multiplexor' }, { que: 'TCS34725 (color 2)', pin: '0x29, canal 1 del multiplexor' },
+    { que: 'MPU6050', pin: '0x68' },
+    { que: 'LED del TCS34725 (color 1)', pin: 'encendido, salvo con setInterrupt(true)' }, { que: 'LED del TCS34725 (color 2)', pin: '14' },
+  ]);
+});
+
 it('un pin opcional conectado muestra su número', () => {
   const robot = { ...ROBOT_POR_DEFECTO, motores: { ...ROBOT_POR_DEFECTO.motores, stby: 23 }, qtr: { ...ROBOT_POR_DEFECTO.qtr, emisor: 27 }, tcs34725: { ...ROBOT_POR_DEFECTO.tcs34725, led: 14 } };
   const filas = conexionesDe(robot).flatMap(g => g.filas);
@@ -52,6 +64,6 @@ it('las guías cubren los sensores de la spec', () => {
 });
 
 it('el aviso I2C está en el VL53L0X y el TCS34725', () => {
-  const AVISO = 'El VL53L0X y el TCS34725 usan la misma dirección I2C (0x29). El simulador no lo nota, pero en el robot real hay que cambiar la dirección del VL53L0X con setAddress (apagando el otro con XSHUT) o usar un multiplexor I2C.';
+  const AVISO = 'El VL53L0X y el TCS34725 usan la misma dirección I2C (0x29). El simulador no lo nota, pero en el robot real hay que cambiar la dirección del VL53L0X con setAddress (apagando el otro con XSHUT) o poner el TCS34725 detrás de un multiplexor TCA9548A (en «Mi robot», ponle su canal).';
   expect(GUIAS.filter(g => g.aviso).map(g => [g.id, g.aviso])).toEqual([['vl53l0x', AVISO], ['tcs34725', AVISO]]);
 });

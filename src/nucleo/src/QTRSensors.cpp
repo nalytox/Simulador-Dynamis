@@ -166,7 +166,7 @@ void QTRSensors::readCalibrated(uint16_t* sensorValues, QTRReadMode mode) {
     : mode == QTRReadMode::OnAndOff ? calibrationOn.initialized && calibrationOff.initialized
     : calibrationOn.initialized;
   if (!listo || mode == QTRReadMode::Manual) {
-    dynAvisar("Calibra el QTR con calibrate() antes de usar readCalibrated o readLine.");
+    dynAvisar("El QTR no está calibrado: readCalibrated y readLine no leen los sensores y usan lo que ya tiene el arreglo. Calibra con calibrate().");
     return;
   }
   read(sensorValues, mode);
@@ -193,9 +193,9 @@ void QTRSensors::readCalibrated(uint16_t* sensorValues, QTRReadMode mode) {
 
 uint16_t QTRSensors::leerLinea(uint16_t* valores, QTRReadMode modo, bool lineaBlanca) {
   modo = conUnSoloPin(modo);
-  bool listo = modo == QTRReadMode::Off ? calibrationOff.initialized : calibrationOn.initialized;
+  // Como Pololu: sin calibrar, readCalibrated no lee y la posición sale de lo que ya tiene el arreglo.
   readCalibrated(valores, modo);
-  if (!listo || cantidad == 0) return ultimaPosicion;
+  if (cantidad == 0) return ultimaPosicion;
   bool sobreLinea = false;
   uint32_t ponderado = 0;
   uint32_t suma = 0;

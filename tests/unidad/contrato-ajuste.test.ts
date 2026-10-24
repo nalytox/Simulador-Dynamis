@@ -11,7 +11,7 @@ const PARAMETROS: ParametroAgente[] = [
 ];
 const PASO: PasoRegistro = {
   t: 0.01, estado: { x: 150, y: 150, z: 0, yaw: 0, pitch: 0, roll: 0 },
-  lecturas: { qtr: [0, 0, 0, 0, 0, 0, 0, 0], distanciaMm: 8190, color: { r: 0, g: 0, b: 0, c: 0 }, mpu: { ax: 0, ay: 0, az: 9.81, gx: 0, gy: 0, gz: 0, temp: 25 } },
+  lecturas: { qtr: [0, 0, 0, 0, 0, 0, 0, 0], distanciaMm: 8190, color: { r: 0, g: 0, b: 0, c: 0 }, color2: null, mpu: { ax: 0, ay: 0, az: 9.81, gx: 0, gy: 0, gz: 0, temp: 25 } },
   motores: { izq: { duty: 0, modo: 'libre' }, der: { duty: 0, modo: 'libre' } }, eventos: [],
 };
 const REGISTRO: RegistroPrueba = {

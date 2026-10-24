@@ -8,7 +8,7 @@ import { agregarObjeto, colocarBaldosa } from '../pista/edicion';
 import type { Pieza } from './paleta';
 import type { Ubicacion } from '../pista/baldosas';
 import { TAMANO_BALDOSA as T, type Baldosa, type ObjetoDePista, type Pista } from '../pista/tipos';
-import { poseVL53 } from '../simulacion/sensores';
+import { poseVL53, type LecturaTCS } from '../simulacion/sensores';
 import type { EstadoRobot, Pose } from '../simulacion/simulador';
 import type { Instantanea } from '../simulacion/ejecucion';
 import type { ConfigRobot } from '../robot/config';
@@ -284,7 +284,7 @@ export function dibujarRobot(ctx: CanvasRenderingContext2D, v: Vista, i: Instant
   const estado: EstadoRobot = i ? { ...i.estado } : { x: pose.x, y: pose.y, z: 0, yaw: pose.yaw, pitch: 0, roll: 0 };
   if (i) rayoVL53(ctx, estado, robot, i.sensores.distanciaMm);
 
-  const { chasis, ruedas, qtr, tcs34725, vl53l0x } = robot;
+  const { chasis, ruedas, qtr, tcs34725, tcs34725b, vl53l0x } = robot;
   ctx.save();
   ctx.translate(estado.x, estado.y);
   ctx.rotate(estado.yaw);
@@ -316,7 +316,7 @@ export function dibujarRobot(ctx: CanvasRenderingContext2D, v: Vista, i: Instant
   ctx.arc(chasis.xDelantero - 66, 34, 6, 0, 2 * Math.PI);
   ctx.arc(chasis.xDelantero - 66, -34, 6, 0, 2 * Math.PI);
   ctx.fill();
-  // Sensores: la barra del QTR (el sensor 0 es el de la izquierda, +y), el TCS y el VL53L0X.
+  // Sensores: la barra del QTR (el sensor 0 es el de la izquierda, +y), los TCS y el VL53L0X.
   const medio = (qtr.pines.length - 1) / 2;
   ctx.fillStyle = '#060962';
   ctx.beginPath();
@@ -328,13 +328,17 @@ export function dibujarRobot(ctx: CanvasRenderingContext2D, v: Vista, i: Instant
     ctx.arc(qtr.x, (medio - k) * qtr.separacion, 3.8, 0, 2 * Math.PI);
     ctx.fill();
   });
-  ctx.fillStyle = i ? colorMuestra(i.sensores.color) : '#FFFFFF';
-  ctx.strokeStyle = '#FFFFFF';
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.roundRect(tcs34725.x - 9, tcs34725.y - 9, 18, 18, 5);
-  ctx.fill();
-  ctx.stroke();
+  const sensorColor = (s: { x: number; y: number }, c: LecturaTCS | null | undefined) => {
+    ctx.fillStyle = c ? colorMuestra(c) : '#FFFFFF';
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.roundRect(s.x - 9, s.y - 9, 18, 18, 5);
+    ctx.fill();
+    ctx.stroke();
+  };
+  sensorColor(tcs34725, i?.sensores.color);
+  if (tcs34725b?.instalado) sensorColor(tcs34725b, i?.sensores.color2);
   ctx.fillStyle = C.celeste;
   ctx.beginPath();
   ctx.roundRect(vl53l0x.x - 4, vl53l0x.y - 7, 8, 14, 3);
