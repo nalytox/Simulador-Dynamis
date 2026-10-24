@@ -1,7 +1,7 @@
 // MODELO DEL SENSOR DE DISTANCIA VL53L0X — lo implementa el profesor.
 // Contrato y unidades: ver src/modelos/README.md.
 
-/** Sin objetivo dentro del alcance, la librería de Pololu entrega 8190 o más. */
+/** Sin objetivo dentro del alcance, el sensor entrega 8190 (y Adafruit_VL53L0X, RangeStatus 4). */
 const SIN_OBJETIVO = 8190;
 const ALCANCE_MM = 2000;
 

@@ -1,5 +1,6 @@
 # Publica el simulador en GitHub Pages cada vez que hay un push a main (spec §16).
-# La primera vez hay que activar Pages en Settings → Pages → Source: "GitHub Actions".
+# La primera vez hay que activar Pages en Settings → Pages → Source: "GitHub Actions"; si no, el paso
+# `publicar` falla con "HttpError: Not Found" ("Ensure GitHub Pages has been enabled").
 name: Publicar en GitHub Pages
 
 on:

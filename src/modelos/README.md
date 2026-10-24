@@ -119,8 +119,9 @@ export function leerVL53L0X({ t, estado, sensor, mundo, azar }) → number
   el cono de 25°, sin ruido y sin la reflectividad del objeto.
 - **Qué hace el núcleo:**
   - redondea y acota el resultado a 0–8190;
-  - `readRangeSingleMillimeters` espera el presupuesto de medición (33 ms por defecto) y después
-    llama a tu modelo;
+  - con 8190 la medida de `Adafruit_VL53L0X` queda con `RangeStatus` 4 (sin objetivo);
+  - `rangingTest` y `readRange` esperan el presupuesto de medición (33 ms por defecto) y después
+    llaman a tu modelo;
   - en modo continuo la medida se calcula con la pose del momento de la lectura.
 
 ### `mpu6050.js`
@@ -145,9 +146,9 @@ El acelerómetro mide la fuerza específica: en reposo sobre el piso da `az = +9
   - **Cuantiza a `int16` como el chip, según el rango elegido.** Acelerómetro: 16384, 8192, 4096 o
     2048 LSB/g. Giroscopio: 131, 65,5, 32,8 o 16,4 LSB/(°/s). Satura en ±32767.
   - **Temperatura:** `crudo = (T − 36,53) · 340`.
-  - **Adafruit_MPU6050** convierte lo cuantizado de vuelta a m/s² y rad/s.
-  - **i2cdevlib** entrega los valores crudos, con los offsets sumados.
-  - **Tiempo:** cada lectura (`getEvent`, `getMotion6`, `getRotationZ`…) cuesta 0,4 ms.
+  - **MPU6050_light** convierte lo cuantizado a g y °/s con sus propias cuentas (resta sus offsets y
+    calcula los ángulos con su filtro complementario).
+  - **Tiempo:** cada lectura (`update`, `fetchData`…) cuesta 0,4 ms.
 
 ### `tcs34725.js`
 

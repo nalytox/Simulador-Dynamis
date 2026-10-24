@@ -57,7 +57,12 @@ subirlo al robot físico.
 4. **Probar los cambios:** `npm test` (unidad e integración), `npm run e2e` (la app en Chromium) y
    `npm run e2e:produccion` (la versión publicada, sin internet incluido).
 5. **Publicar en GitHub Pages:**
-   - la primera vez, en GitHub: **Settings → Pages → Source: "GitHub Actions"**;
+   - la primera vez, en GitHub: **Settings → Pages → Build and deployment → Source: "GitHub
+     Actions"** (solo puede hacerlo quien administra el repositorio; el workflow no puede activarlo
+     solo);
+   - si el paso `publicar` falla con `HttpError: Not Found` y «Ensure GitHub Pages has been
+     enabled», falta ese paso (o Source quedó en "Deploy from a branch"): actívalo y, en la
+     pestaña **Actions**, abre la ejecución fallida y usa **Re-run failed jobs**;
    - después, cada *push* a la rama `main` corre las pruebas, construye la app y la publica sola
      (workflow `.github/workflows/publicar.yml`). También se puede correr a mano desde la pestaña
      **Actions**;
@@ -94,9 +99,8 @@ Son reimplementaciones compatibles con la API pública de cada librería (el det
 
 - Arduino / ESP32 core 3.x: pines, tiempo, `Serial`, `String` y `Wire`;
 - `QTRSensors` de Pololu (v4);
-- `VL53L0X` de Pololu;
-- `Adafruit_MPU6050` (con `Adafruit_Sensor`);
-- `MPU6050` de i2cdevlib (con `I2Cdev.h`);
+- `Adafruit_VL53L0X`;
+- `MPU6050_light` (de rfetick);
 - `Adafruit_TCS34725`.
 
 ## Requisitos

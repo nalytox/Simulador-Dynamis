@@ -117,8 +117,8 @@ src/
                                # ventana de ajuste, avisos, tema.css
   proyecto/                    # modelo de proyecto multiarchivo, importar/exportar, autoguardado
   compilador/                  # worker, preprocesador Arduino, prototipos, @ajustar, errores amigables
-  nucleo/                      # C++ del núcleo simulado: Arduino.h, Wire.h, VL53L0X.h, QTRSensors.h,
-                               # Adafruit_MPU6050.h, Adafruit_Sensor.h, MPU6050.h, Adafruit_TCS34725.h, WString…
+  nucleo/                      # C++ del núcleo simulado: Arduino.h, Wire.h, QTRSensors.h, Adafruit_VL53L0X.h,
+                               # MPU6050_light.h, Adafruit_TCS34725.h, WString…
   simulacion/                  # worker, reloj virtual, puente (imports del wasm), pines → motores,
                                # bucle de física, instantáneas
   mundo/                       # muestrear, altura, inclinacion, raycast 3D, colisiones
@@ -209,14 +209,15 @@ Errores durante la ejecución:
 | `digitalWrite`, `digitalRead`, `pinMode` | 1 µs |
 | `analogRead` | 10 µs |
 | `analogWrite`, `ledcWrite` | 2 µs |
-| Lectura del MPU6050 (14 bytes por I2C a 400 kHz) | 0,4 ms (`COSTOS_US.lecturaMpu`), en cualquier función de lectura (`getEvent`, `getMotion6`, `getAcceleration`, `getRotationZ`…) |
-| `VL53L0X::readRangeSingleMillimeters` | presupuesto de medición (33 ms por defecto) |
-| `VL53L0X::readRangeContinuousMillimeters` | espera hasta la siguiente medición del período configurado |
+| Lectura del MPU6050 (14 bytes por I2C a 400 kHz) | 0,4 ms (`COSTOS_US.lecturaMpu`), en cada lectura del chip (`update`, `fetchData`, `readData` de un registro de datos); `calcOffsets` hace 500 lecturas con `delay(1)` (unos 0,7 s) |
+| `Adafruit_VL53L0X::rangingTest`, `readRange` | presupuesto de medición (33 ms por defecto); en modo continuo, espera hasta la siguiente medición del período |
+| `Adafruit_VL53L0X::waitRangeComplete` | espera hasta que termina la medida en curso (`isRangeComplete` y `readRangeResult` no esperan) |
+| `Adafruit_VL53L0X::setAddress` (también dentro de `begin`) | 10 ms, como la librería |
 | `Adafruit_TCS34725::getRawData` | espera el tiempo de integración (como la librería real) |
 | `Serial.print*` | 10 bits por carácter a la velocidad configurada, solo si se llena el búfer de 128 bytes |
 | `Serial.available()`, `read()`, `peek()` | 1 µs (esperar datos no congela el tiempo) |
 | `delay(ms)` / `delayMicroseconds(us)` | exactamente lo pedido, con un mínimo de 1 µs (`delay(0)` también cede) |
-| Aviso de una librería mal usada (VL53L0X sin `init`, QTR sin configurar, `Wire` directo…) | 1 µs (un ciclo que la llama sin parar no congela el tiempo) |
+| Aviso de una librería mal usada (VL53L0X o MPU6050 sin `begin`, QTR sin configurar, `Wire` directo…) | 1 µs (un ciclo que la llama sin parar no congela el tiempo) |
 
 - **Memoria:** el programa tiene un tope de 512 KB, como la SRAM del ESP32. Si se acaba, `malloc` falla como en el robot (por ejemplo, un `String` que crece sin fin deja de crecer) en vez de comerse la memoria del computador.
 - **Determinismo:** cada ejecución tiene una **semilla**. Los modelos reciben un generador aleatorio con esa semilla (`ctx.azar()`), así una prueba se puede repetir exactamente (por ejemplo, "Ver esta prueba en la pista").
@@ -237,7 +238,13 @@ Son reimplementaciones **compatibles con la API pública** de cada librería, es
 - **`String`** (subconjunto de `WString`): construcción desde números, concatenación, `length`, `toInt`, `toFloat`, `indexOf`, `substring`, `c_str`.
 - **`Wire`:** `begin([sda, scl])` y `setClock` no hacen nada. Los dispositivos se simulan a nivel de librería. El acceso directo a registros (`beginTransmission`, `write`, `endTransmission`, `requestFrom`, `available`, `read`, `peek`) no está soportado en la v1: compila, avisa una vez y responde como un bus sin dispositivos (`endTransmission` da 2, `requestFrom` y `available` dan 0, y `read` da −1).
 
-**Pololu `VL53L0X`:** `init`, `setTimeout`, `getTimeout`, `timeoutOccurred`, `setAddress`, `getAddress`, `startContinuous(period)`, `stopContinuous`, `readRangeContinuousMillimeters`, `readRangeSingleMillimeters`, `setMeasurementTimingBudget`, `getMeasurementTimingBudget`, `setSignalRateLimit` y `setVcselPulsePeriod` (estas dos se aceptan y no tienen efecto en la v1). En modo continuo, la medida que se entrega se calcula con la pose del momento de la lectura, no con la del instante en que el chip la terminó: si la lectura llega tarde, el robot pudo haberse movido un poco.
+**Adafruit `Adafruit_VL53L0X`**
+- **Medir:** `begin(dirección, debug, &Wire, configuración)`, `rangingTest(&medida, debug)` y `getSingleRangingMeasurement`, `readRange`, `readRangeStatus`, `printRangeStatus`, `startRange`, `isRangeComplete`, `waitRangeComplete`, `readRangeResult`, `startRangeContinuous(período)`, `stopRangeContinuous`, `timeoutOccurred` (siempre `false`, como la librería) y el miembro `Status`.
+- **Configurar:** `setAddress`, `configSensor` (`VL53L0X_SENSE_DEFAULT`, `_LONG_RANGE`, `_HIGH_SPEED` y `_HIGH_ACCURACY`, con los presupuestos de la librería: el de fábrica de 33 ms, 33, 30 y 200 ms), `set/getMeasurementTimingBudgetMicroSeconds` (mínimo 20 000 µs), `set/getVcselPulsePeriod`, `set/getLimitCheckEnable` y `set/getLimitCheckValue`. Los períodos VCSEL y los límites se validan, se guardan y se pueden leer, pero no cambian las medidas en la v1.
+- **La medida:** `VL53L0X_RangingMeasurementData_t` con `RangeMilliMeter` y `RangeStatus`: 0 si es válida y 4 («Phase Fail») si no hay objetivo, con 8190 mm. Las tasas de señal y de luz ambiente quedan en 0. Como en la librería, con estado 4 `readRange` entrega igual los mm (8190) y `readRangeResult` entrega 65535.
+- **Modo continuo:** la primera medida termina un presupuesto después de empezar y las siguientes llegan una por período (seguidas, si el período es menor que el presupuesto). `readRangeResult` no espera: sin medida nueva, entrega la anterior. `readRange` en modo continuo espera y entrega la medida siguiente; en el chip real la API de ST lo pasa a modo único, pero aquí sigue en continuo para que el ejemplo de Adafruit (`isRangeComplete` y después `readRange`) funcione igual que en el robot. La medida se calcula con la pose del momento en que se lee, no con la del instante en que el chip la terminó: si la lectura llega tarde, el robot pudo haberse movido un poco.
+- **Mal usada:** sin `begin()` avisa, `readRange` y `readRangeResult` dan 65535 y la medida queda sin objetivo (estado 4); `isRangeComplete` y `waitRangeComplete` sin una medida en curso avisan.
+- **No están en la v1:** las funciones de interrupciones y GPIO (`setGpioConfig`, `getGpioConfig`, `setInterruptThresholds`, `getInterruptThresholds`, `clearInterruptMask`, `setDeviceMode`, `getDeviceMode`, `startMeasurement`, `stopMeasurement`, `getRangingMeasurement` y `getLimitCheckCurrent`). Con `debug = true`, las medidas imprimen lo mismo que la librería, pero `begin` no imprime nada.
 
 **Pololu `QTRSensors` (v4)**
 - `setTypeAnalog`, `setSensorPins`, `setEmitterPin`, `setSamplesPerSensor`, `emittersOn/Off`, `read`, `calibrate`, `resetCalibration`, `readCalibrated`, `readLineBlack`, `readLineWhite`, y los miembros `calibrationOn.minimum/maximum`.
@@ -246,9 +253,11 @@ Son reimplementaciones **compatibles con la API pública** de cada librería, es
 - Modos de lectura (`QTRReadMode`, los mismos nombres de Pololu): `Off`, `On`, `OnAndOff` y `Manual`. `OddEven` y `OddEvenAndOff` se tratan como `On` y `OnAndOff`, porque el QTR-MX-8A tiene un solo pin de emisores.
 - Usa los mismos tipos enteros que la librería: las muestras se suman en 16 bits y `readCalibrated` calcula el rango en `uint16` y el valor en `int16`, así que una calibración mala (mínimo sobre el máximo o un rango muy angosto) da las mismas lecturas raras que en el robot.
 
-**Adafruit `Adafruit_MPU6050`** (+ `Adafruit_Sensor`): `begin`, `setAccelerometerRange`, `getAccelerometerRange`, `setGyroRange`, `getGyroRange`, `setFilterBandwidth`, `getEvent(&a, &g, &temp)` con `sensors_event_t`. Unidades: m/s² y rad/s. Leer sin `begin()` avisa y entrega ceros, porque el chip sigue dormido (en el robot, la librería se cuelga).
-
-**i2cdevlib / Electronic Cats `MPU6050`:** `initialize`, `testConnection`, `getMotion6`, `getAcceleration`, `getRotation`, `getRotationX/Y/Z`, `setFullScaleAccelRange`, `setFullScaleGyroRange` y `set{X,Y,Z}{Accel,Gyro}Offset`. Devuelven `int16` escalados según el rango (por ejemplo ±2 g → 16384 LSB/g, ±250 °/s → 131 LSB/(°/s)). Los offsets van en las unidades de los registros del chip: `set*AccelOffset` en las del rango ±16 g (2048 LSB/g) y `set*GyroOffset` en las del rango ±1000 °/s (32,8 LSB/(°/s)). Se suman al valor crudo, escalados al rango actual. Leer sin `initialize()` avisa y entrega ceros, porque el chip sigue dormido.
+**rfetick `MPU6050_light`**
+- **API:** `MPU6050 mpu(Wire)`, `begin(gyro, acc)` (devuelve 0; rangos 0…3: ±250, ±500, ±1000 y ±2000 °/s, y ±2, ±4, ±8 y ±16 g; por defecto ±500 °/s y ±2 g), `calcOffsets`, `calcGyroOffsets`, `calcAccOffsets`, `update`, `fetchData`, `getAccX/Y/Z` (g), `getGyroX/Y/Z` (°/s), `getTemp`, `getAccAngleX/Y`, `getAngleX/Y/Z` (grados), `setGyroConfig`, `setAccConfig`, `setGyroOffsets`, `setAccOffsets`, `get{Gyro,Acc}{X,Y,Z}offset`, `setFilterGyroCoef`, `setFilterAccCoef`, `getFilterGyroCoef`, `getFilterAccCoef`, `setAddress`, `getAddress`, `writeData`, `readData` y el miembro `upsideDownMounting`.
+- **Las cuentas son las de la librería:** el filtro complementario (coeficiente 0,98) para `getAngleX/Y`, `getAngleZ` sumando el giroscopio con `dt` en milisegundos, y `calcOffsets` con 500 lecturas y `delay(1)` entre ellas.
+- **El chip simulado tiene registros:** `writeData` y `readData` los escriben y leen (`WHO_AM_I` es 0x68 y los registros de datos 0x3B…0x48 se leen al momento). La cuantización usa el rango que dicen los registros, así que cambiar el rango con `writeData` en vez de `setGyroConfig` da lecturas mal escaladas, como en el robot.
+- **Mal usada:** leer sin `begin()`, o con el chip dormido, avisa y entrega ceros (en el robot, la librería divide por un valor sin inicializar).
 
 **Adafruit `Adafruit_TCS34725`:** constructor `(tiempoIntegración, ganancia)`, `begin`, `setIntegrationTime`, `setGain`, `getRawData`, `getRawDataOneShot`, `getRGB`, `calculateColorTemperature_dn40`, `calculateLux`, `setInterrupt`. LED: si `robot.tcs34725.led` tiene un pin, el LED sigue a ese pin; si no, está encendido salvo después de `setInterrupt(true)`, como en la placa típica (el LED está conectado al pin INT).
 
@@ -633,7 +642,7 @@ Referencia visual: la maqueta en `docs/maqueta/`. Todo en **español (Chile)**, 
   - Pistas (8 × 6): Práctica FIRVI (la del comienzo); Cruces con marcas (cruces sin marcas, con marca a la izquierda y a la derecha, y una línea con cortes); y Rampa y baches (rampa de subida y bajada, baches y el obstáculo F4). Las dos últimas tienen 8 hitos y pasan la revisión de las bases.
   - La ventana muestra cada proyecto con su pista ("Se prueba en la pista «X»", con un botón para abrirla) y cada pista con su miniatura. Abrir pide confirmar si el trabajo actual cambió; un ejemplo intacto se reemplaza sin preguntar.
 - **Ayuda:** cuatro pestañas.
-  - **Sensores:** una guía por sensor (QTR, VL53L0X, TCS34725, MPU6050 con Adafruit y con i2cdevlib, motores TB6612), con un programa completo que compila y un botón "Copiar". Las del VL53L0X y el TCS34725 traen el aviso de la dirección I2C repetida.
+  - **Sensores:** una guía por sensor (QTR, VL53L0X, TCS34725, MPU6050 y motores TB6612), con un programa completo que compila y un botón "Copiar". Las del VL53L0X y el TCS34725 traen el aviso de la dirección I2C repetida.
   - **Conexiones de mi robot:** generada desde "Mi robot" cada vez que se abre, con el botón "Cambiar en Mi robot".
   - **Las bases:** qué hace cada pieza y cómo se puntúa (con las mismas constantes del juez).
   - **Primeros pasos:** "Ver el recorrido de nuevo", el uso sin internet e "Instalar en este computador".
@@ -774,7 +783,7 @@ El alcance es grande. Se sugiere implementarlo en fases que dejen algo usable al
    
    Prueba: un sketch que avanza mueve al robot, en Node.
 2. **Pista, mundo y juez:** modelo de pista, catálogo FIRVI, mapa de superficie, `altura`/`inclinacion`/`raycast`/`colisiona`, rampas, baches y juez virtual.
-3. **Librerías de sensores:** QTRSensors, VL53L0X, MPU6050 (Adafruit e i2cdevlib) y TCS34725, con sus placeholders de modelo.
+3. **Librerías de sensores:** QTRSensors, VL53L0X (Adafruit_VL53L0X), MPU6050 (MPU6050_light) y TCS34725, con sus placeholders de modelo.
 4. **UI Programar:**
    - editor con pestañas;
    - abrir carpeta, `.zip` y autoguardado;

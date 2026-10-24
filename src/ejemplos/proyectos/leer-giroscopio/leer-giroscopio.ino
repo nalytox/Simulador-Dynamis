@@ -1,13 +1,12 @@
-// Leer el giroscopio: el MPU6050 mide qué tan rápido gira el robot (en radianes por segundo).
-// Sumando esa velocidad en el tiempo se sabe cuánto ha girado. Aquí el robot gira 90° a la
-// izquierda y se detiene.
-#include <Adafruit_MPU6050.h>
+// Leer el giroscopio: el MPU6050 mide qué tan rápido gira el robot (en grados por segundo), y la
+// librería MPU6050_light suma esa velocidad en el tiempo para saber cuánto ha girado: getAngleZ().
+// Aquí el robot gira 90° a la izquierda y se detiene.
+#include <Wire.h>
+#include <MPU6050_light.h>
 #include "pines.h"
 
-Adafruit_MPU6050 mpu;
-float desvio = 0;       // lo que el giroscopio mide aunque el robot esté quieto
-float angulo = 0;       // cuánto ha girado, en grados
-unsigned long anterior = 0;
+MPU6050 mpu(Wire);
+float inicio = 0;       // el ángulo al empezar a girar
 unsigned long ultimoMensaje = 0;
 bool termine = false;
 
@@ -28,33 +27,24 @@ void setup() {
   pinMode(PIN_IN1_DER, OUTPUT);
   pinMode(PIN_IN2_DER, OUTPUT);
 
-  if (!mpu.begin()) {
+  Wire.begin();
+  if (mpu.begin() != 0) {  // 0 quiere decir que el sensor respondió
     Serial.println("No encuentro el MPU6050. Revisa los cables SDA y SCL.");
     while (true) delay(1000);
   }
-  mpu.setGyroRange(MPU6050_RANGE_500_DEG);
 
-  // Con el robot quieto, mide el desvío del giroscopio durante medio segundo.
+  // Con el robot quieto, mide lo que el sensor marca aunque no se mueva (tarda menos de un segundo).
   Serial.println("Midiendo el desvío del giroscopio. No me muevas...");
-  sensors_event_t a, g, temp;
-  for (int i = 0; i < 100; i++) {
-    mpu.getEvent(&a, &g, &temp);
-    desvio += g.gyro.z;
-    delay(5);
-  }
-  desvio /= 100;
+  mpu.calcOffsets();
 
   Serial.println("Giro a la izquierda hasta llegar a 90°");
-  anterior = micros();
+  mpu.update();
+  inicio = mpu.getAngleZ();
 }
 
 void loop() {
-  sensors_event_t a, g, temp;
-  mpu.getEvent(&a, &g, &temp);
-  unsigned long ahora = micros();
-  float segundos = (ahora - anterior) / 1000000.0;
-  anterior = ahora;
-  angulo += (g.gyro.z - desvio) * segundos * 180 / PI;  // de rad/s a grados
+  mpu.update();  // lee el sensor y suma lo que giró: hay que llamarlo seguido
+  float angulo = mpu.getAngleZ() - inicio;  // en grados; crece al girar a la izquierda
 
   if (!termine) {
     if (angulo >= 90) {

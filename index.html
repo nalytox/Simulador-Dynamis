@@ -175,7 +175,7 @@ int pos = qtr.readLineBlack(valores);  // 0 a 7000</pre>
             <div class="medidor"><b id="tof-bar" style="width:0%"></b></div>
             <div class="sub" id="tof-sub">Alcance hasta 1200 mm</div>
             <button class="como" data-snip="s-tof">¿Cómo lo uso?</button>
-            <pre id="s-tof" hidden>int mm = distancia.readRangeContinuousMillimeters();</pre>
+            <pre id="s-tof" hidden>int mm = distancia.readRange();  // en milímetros</pre>
           </section>
 
           <section class="sensor">
@@ -201,8 +201,8 @@ tcs.getRawData(&amp;r, &amp;g, &amp;b, &amp;c);</pre>
                 <div class="sub" id="mpu-sub">gz 0 °/s · inclinación 0°</div></div>
             </div>
             <button class="como" data-snip="s-mpu">¿Cómo lo uso?</button>
-            <pre id="s-mpu" hidden>sensors_event_t a, g, temp;
-mpu.getEvent(&amp;a, &amp;g, &amp;temp);</pre>
+            <pre id="s-mpu" hidden>mpu.update();  // llámalo seguido
+float giro = mpu.getAngleZ();  // en grados</pre>
           </section>
 
           <section class="sensor">

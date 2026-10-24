@@ -41,7 +41,9 @@ it('puntaje sale de las constantes del juez', () => {
 });
 
 it('las guías cubren los sensores de la spec', () => {
-  expect(GUIAS.map(g => g.id)).toEqual(['qtr', 'vl53l0x', 'tcs34725', 'mpu6050', 'mpu6050-i2cdevlib', 'motores']);
+  expect(GUIAS.map(g => g.id)).toEqual(['qtr', 'vl53l0x', 'tcs34725', 'mpu6050', 'motores']);
+  expect(GUIAS.map(g => g.libreria)).toEqual(['QTRSensors (Pololu)', 'Adafruit_VL53L0X', 'Adafruit_TCS34725', 'MPU6050_light',
+    'Sin librería: pinMode, digitalWrite y analogWrite']);
   for (const g of GUIAS) {
     expect(g.titulo, g.id).not.toBe('');
     expect(g.explicacion.length, g.id).toBeGreaterThan(0);

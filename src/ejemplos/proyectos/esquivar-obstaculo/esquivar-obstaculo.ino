@@ -3,11 +3,11 @@
 // Los tiempos de los giros dependen del robot: si tu robot gira más rápido o más lento, ajústalos.
 #include <Wire.h>
 #include <QTRSensors.h>
-#include <VL53L0X.h>
+#include <Adafruit_VL53L0X.h>
 #include "pines.h"
 
 QTRSensors qtr;
-VL53L0X distancia;
+Adafruit_VL53L0X distancia;
 uint16_t valores[8];
 
 const int VELOCIDAD = 100;              // velocidad hacia adelante, de 0 a 255
@@ -21,7 +21,6 @@ const unsigned long ARCO_MINIMO = 900;    // ms de arco antes de buscar la líne
 const unsigned long AL_CENTRO = 390;      // ms para llevar las ruedas sobre la línea
 
 unsigned long inicioRecorrido = 0;
-unsigned long ultimaMedida = 0;
 
 // Mueve los motores: valores de -255 (atrás) a 255 (adelante).
 void motores(int izq, int der) {
@@ -89,12 +88,11 @@ void setup() {
   qtr.setTypeAnalog();
   qtr.setSensorPins(PINES_QTR, 8);
 
-  distancia.setTimeout(500);
-  if (!distancia.init()) {
+  if (!distancia.begin()) {
     Serial.println("No encuentro el VL53L0X. Revisa los cables SDA y SCL.");
     while (true) delay(1000);
   }
-  distancia.startContinuous(20);  // una medida cada 20 ms
+  distancia.startRangeContinuous(40);  // una medida nueva cada 40 ms (cada medida tarda 33 ms)
 
   Serial.println("Calibrando...");
   girarCalibrando(1, 150);
@@ -114,10 +112,9 @@ void loop() {
     while (true) delay(1000);
   }
 
-  // El sensor entrega una medida cada 20 ms: no vale la pena preguntarle más seguido.
-  if (millis() - ultimaMedida >= 25) {
-    ultimaMedida = millis();
-    int mm = distancia.readRangeContinuousMillimeters();
+  // Sin esperar al sensor: solo cuando terminó una medida nueva.
+  if (distancia.isRangeComplete()) {
+    int mm = distancia.readRangeResult();  // 65535 si no ve nada
     if (mm < DISTANCIA_PARA_ESQUIVAR) {
       esquivar();
       return;
