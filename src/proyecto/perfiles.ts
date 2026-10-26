@@ -5,8 +5,11 @@
  */
 export interface Perfil { id: string; nombre: string }
 
-export const PERFILES: readonly Perfil[] = ['Marco', 'Maite', 'Juan', 'Antonio', 'Agustin', 'Javier', 'Emilia']
-  .map(nombre => ({ id: nombre.toLowerCase(), nombre }));
+export const PERFILES: readonly Perfil[] = [
+  ...['Marco', 'Maite', 'Juan', 'Antonio', 'Agustin', 'Javier', 'Emilia'].map(nombre => ({ id: nombre.toLowerCase(), nombre })),
+  // Para quien no está en la lista: un perfil compartido.
+  { id: 'otro', nombre: 'Otro/a' },
+];
 
 export const CLAVE_PERFIL = 'dynamis.perfil';
 

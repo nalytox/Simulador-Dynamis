@@ -1,9 +1,9 @@
 import { test, expect, type Page } from '@playwright/test';
 
 // Sin perfil elegido de antemano (las demás pruebas parten como Marco, ver fixtures.ts).
-const NOMBRES = ['Marco', 'Maite', 'Juan', 'Antonio', 'Agustin', 'Javier', 'Emilia'];
+const NOMBRES = ['Marco', 'Maite', 'Juan', 'Antonio', 'Agustin', 'Javier', 'Emilia', 'Otro/a'];
 const ORIGEN = 'http://localhost:5179';
-const RECORRIDO_VISTO = NOMBRES.map(n => ({ name: `dynamis.recorrido.${n.toLowerCase()}`, value: 'visto' }));
+const RECORRIDO_VISTO = ['marco', 'maite', 'juan', 'antonio', 'agustin', 'javier', 'emilia', 'otro'].map(id => ({ name: `dynamis.recorrido.${id}`, value: 'visto' }));
 test.use({ storageState: { cookies: [], origins: [{ origin: ORIGEN, localStorage: RECORRIDO_VISTO }] } });
 
 const ventana = (page: Page) => page.locator('#ventana-perfil');
@@ -17,7 +17,7 @@ async function elegir(page: Page, nombre: string) {
   await expect(codigo(page)).toBeVisible();
 }
 
-test('al abrir pide elegir quién va a programar, solo con los siete nombres', async ({ page }) => {
+test('al abrir pide elegir quién va a programar, solo con los siete nombres y Otro/a', async ({ page }) => {
   await page.goto('/');
   await expect(ventana(page)).toBeVisible();
   await expect(ventana(page).getByRole('button')).toHaveText(NOMBRES);
