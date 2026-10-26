@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './fixtures';
 
 const agregar = async (page: Page, desde: number, hasta: number) => {
   // La consola está debajo del editor: se trae a la vista para mirar qué líneas se ven.

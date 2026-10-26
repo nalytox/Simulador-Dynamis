@@ -6,7 +6,6 @@ export const PASOS_RECORRIDO: { selector: string; texto: string }[] = [
   { selector: '#tab-pista', texto: 'Aquí construyes la pista' },
 ];
 
-const CLAVE = 'dynamis.recorrido';
 const VISTO = 'visto';
 const MARGEN = 12;
 
@@ -14,10 +13,10 @@ type Almacen = Pick<Storage, 'getItem' | 'setItem'>;
 
 /**
  * El recorrido de la primera visita: un bocadillo con la mascota junto a cada parte de la pantalla.
- * Se recuerda en el navegador (una comodidad, no un dato del trabajo); si no se puede guardar, igual
- * funciona y simplemente se muestra otra vez en la próxima visita.
+ * Que ya se vio se recuerda en el navegador con `clave` (una por perfil); es una comodidad, no un dato
+ * del trabajo: si no se puede guardar, igual funciona y simplemente se muestra otra vez.
  */
-export function crearRecorrido(raiz: Document, almacen?: Almacen): { mostrar(): void; mostrarSiEsPrimeraVez(): void } {
+export function crearRecorrido(raiz: Document, clave: string, almacen?: Almacen): { mostrar(): void; mostrarSiEsPrimeraVez(): void } {
   const $ = (id: string) => raiz.getElementById(id)!;
   const caja = $('recorrido');
   const botonSiguiente = $('rec-siguiente') as HTMLButtonElement;
@@ -59,7 +58,7 @@ export function crearRecorrido(raiz: Document, almacen?: Almacen): { mostrar(): 
     resaltado?.classList.remove('recorrido-foco');
     resaltado = null;
     try {
-      almacen?.setItem(CLAVE, VISTO);
+      almacen?.setItem(clave, VISTO);
     } catch {
       // Sin almacenamiento, el recorrido vuelve a aparecer la próxima vez: no es grave.
     }
@@ -89,7 +88,7 @@ export function crearRecorrido(raiz: Document, almacen?: Almacen): { mostrar(): 
     mostrarSiEsPrimeraVez() {
       let visto = false;
       try {
-        visto = almacen?.getItem(CLAVE) === VISTO;
+        visto = almacen?.getItem(clave) === VISTO;
       } catch {
         visto = false;
       }

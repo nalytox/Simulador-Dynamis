@@ -7,6 +7,8 @@ subirlo al robot físico.
 
 ## Qué incluye
 
+- **Perfiles:** al abrir, cada estudiante elige su nombre (sin contraseña) y su trabajo se guarda
+  aparte del de los demás.
 - **Programar:** editor con pestañas; abrir una carpeta o un `.zip`, descargar el proyecto y
   autoguardado. **"Probar mi robot"** compila en el navegador y muestra al robot en la pista, con
   pausa, velocidad y "Volver al inicio". Muestra los mensajes del `Serial`, lo que miden los
@@ -29,11 +31,15 @@ subirlo al robot físico.
 
 1. Abre la dirección publicada (`https://<usuario>.github.io/Simulador-Dynamis/`) en Chrome o Edge
    (también en Chromebooks). No hay que instalar nada ni crear una cuenta.
-2. La app abre con un seguidor de línea y la pista de práctica: presiona **"Probar mi robot"**. La
+2. Elige tu nombre. Cada perfil guarda su propio programa, pista, robot y preferencias en este
+   navegador, así que otro estudiante que use el mismo computador no cambia tu trabajo. El botón con
+   tu nombre, en la banda de arriba, sirve para cambiar de perfil. La lista de nombres está en
+   `src/proyecto/perfiles.ts`.
+3. La app abre con un seguidor de línea y la pista de práctica: presiona **"Probar mi robot"**. La
    primera vez descarga el compilador; después queda guardado.
-3. **Todo se guarda solo** en el navegador. "Descargar mi proyecto" entrega un `.zip` que se abre
+4. **Todo se guarda solo** en el navegador. "Descargar mi proyecto" entrega un `.zip` que se abre
    en el Arduino IDE para subirlo al robot.
-4. **"Instalar en este computador"** deja un ícono en el escritorio, si el navegador lo permite.
+5. **"Instalar en este computador"** deja un ícono en el escritorio, si el navegador lo permite.
 
 ## Librerías soportadas
 

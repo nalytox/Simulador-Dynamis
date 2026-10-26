@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import { abrirEditor, baldosa, clicCelda, elegirPieza, pistaEditor, seleccion } from './ayuda/editor';
 
 test('la pestaña Construir pista muestra la paleta y la pista; volver a Programar muestra los mensajes al final', async ({ page }) => {

@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './fixtures';
 import { abrirEditor, baldosa, clicCelda, clicEn, elegirPieza, enPantalla, pistaEditor, seleccion } from './ayuda/editor';
 
 const panel = (page: Page) => page.locator('#panel-pista');

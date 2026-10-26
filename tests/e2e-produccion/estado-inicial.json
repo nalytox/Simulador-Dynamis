@@ -1,6 +1,6 @@
 {
   "cookies": [],
   "origins": [
-    { "origin": "http://localhost:5180", "localStorage": [{ "name": "dynamis.recorrido", "value": "visto" }] }
+    { "origin": "http://localhost:5180", "localStorage": [{ "name": "dynamis.recorrido.marco", "value": "visto" }] }
   ]
 }

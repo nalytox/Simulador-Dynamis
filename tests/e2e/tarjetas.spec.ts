@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test('antes de probar, las tarjetas muestran — y el juez muestra 2 hitos, la meta, "Quedan 5:00" y "0 de 3"', async ({ page }) => {
   await page.goto('/');

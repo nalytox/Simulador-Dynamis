@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import { abrirEditor, arrastrar, clicCelda, clicEn, elegirPieza, escribir, pistaEditor, seleccion } from './ayuda/editor';
 
 test('poner dos hitos los numera solos y vuelve a Elegir', async ({ page }) => {
