@@ -426,6 +426,8 @@ button:disabled { opacity: .55; cursor: not-allowed; }
 .rec-pie { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .rec-paso { font-size: 14px; opacity: .75; margin-right: auto; }
 .rec-pie button { min-height: 40px; }
+.rec-siguiente { border: 0; background: var(--azul); color: var(--blanco); font-weight: 600; padding: 8px 18px; border-radius: 999px; }
+.rec-siguiente:hover { background: var(--azul-2); }
 .recorrido-foco { outline: 4px solid var(--sol); outline-offset: 4px; border-radius: 12px; }
 @media (prefers-reduced-motion: no-preference) { .recorrido { transition: top .2s ease, left .2s ease; } }
 
