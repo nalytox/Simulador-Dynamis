@@ -5,7 +5,7 @@ import { accionEsperada, bocasDe } from './catalogo';
 import { gradosARadianes } from './serializacion';
 import { TAMANO_BALDOSA, type Baldosa, type Lado, type Pista } from './tipos';
 
-/** Aviso sobre una pista que no cumple las bases (spec §10.4). Avisa, no bloquea. */
+/** Aviso sobre una pista que no cumple las bases. Avisa, no bloquea. */
 export interface AvisoPista {
   mensaje: string;
   baldosas?: { c: number; r: number }[];

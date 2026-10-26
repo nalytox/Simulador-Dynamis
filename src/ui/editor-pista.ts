@@ -83,7 +83,7 @@ function anilloDe(p: Pista, sel: Seleccion | null): MarcasEditor['anillo'] {
 }
 
 /**
- * La vista Construir pista (spec §10.5): la paleta, la grilla, el nombre y el tamaño de la pista.
+ * La vista Construir pista: la paleta, la grilla, el nombre y el tamaño de la pista.
  * Con Elegir, un clic elige una baldosa, un objeto o el inicio, y arrastrar mueve el objeto o el
  * inicio. Con una baldosa, cada clic la coloca y la elige; con un objeto o el inicio, el clic lo
  * pone y vuelve a Elegir. Con el teclado: flechas, Enter, R (Mayús+R al revés), Supr y Esc.

@@ -41,7 +41,7 @@ const ESPERA_POR_DEFECTO_MS = 2000;
 /** Lo más que puede tardar un worker en cargar y tomar su prueba, incluso en un Chromebook lento. */
 const ESPERA_CARGA_MS = 20_000;
 
-/** El detalle técnico de un worker que no cargó: el error, el archivo y la línea (spec §14). */
+/** El detalle técnico de un worker que no cargó: el error, el archivo y la línea. */
 function detalleDeCarga(e: unknown): string {
   const { message, filename, lineno } = (e ?? {}) as Partial<ErrorEvent>;
   const donde = filename ? ` (${filename}${lineno ? `:${lineno}` : ''})` : '';
@@ -53,7 +53,7 @@ function errorCon(nombre: string, mensaje: string, tecnico?: string): Error {
 }
 
 /**
- * Pool de workers (spec §11.2): cada uno recibe el módulo una vez y después pruebas, de a una. Un worker
+ * Pool de workers: cada uno recibe el módulo una vez y después pruebas, de a una. Un worker
  * cuyo programa deja de avanzar (sin latidos) se termina y se reemplaza; esa prueba vale como
  * 'ciclo-sin-fin' y su recompensa se calcula aquí.
  */

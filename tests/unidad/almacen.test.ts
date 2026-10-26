@@ -5,21 +5,21 @@ import { pistaDe } from '../ayuda/pistas';
 
 describe('almacén del navegador', () => {
   it('guarda y lee el proyecto, la pista y las preferencias', async () => {
-    const almacen = await abrirAlmacen();
+    const almacen = await abrirAlmacen('prueba');
     expect(almacen).not.toBeNull();
     const proyecto = { nombre: 'p', archivos: { 'p.ino': 'void setup() {}' } };
     const pista = pistaDe({ columnas: 1, filas: 1, baldosas: [{ c: 0, r: 0, tipo: 'partida' }] });
     await almacen!.guardar('proyecto', proyecto);
     await almacen!.guardar('pista', pista);
     await almacen!.guardar('preferencias', { velocidad: 200, archivoAbierto: 'p.ino' });
-    const otraVez = await abrirAlmacen();
+    const otraVez = await abrirAlmacen('prueba');
     expect(await otraVez!.leer('proyecto')).toEqual(proyecto);
     expect(await otraVez!.leer('pista')).toEqual(pista);
     expect(await otraVez!.leer('preferencias')).toEqual({ velocidad: 200, archivoAbierto: 'p.ino' });
   });
 
   it('sin IndexedDB, abrirAlmacen da null', async () => {
-    expect(await abrirAlmacen({ open() { throw new Error('bloqueado'); } } as unknown as IDBFactory)).toBeNull();
+    expect(await abrirAlmacen('prueba', { open() { throw new Error('bloqueado'); } } as unknown as IDBFactory)).toBeNull();
     const conError = {
       open() {
         const pedido = { onerror: null as null | (() => void), error: new Error('cuota') };
@@ -27,7 +27,15 @@ describe('almacén del navegador', () => {
         return pedido;
       },
     } as unknown as IDBFactory;
-    expect(await abrirAlmacen(conError)).toBeNull();
+    expect(await abrirAlmacen('prueba', conError)).toBeNull();
+  });
+
+  it('dos bases (dos perfiles) no ven lo que guarda la otra', async () => {
+    const marco = await abrirAlmacen('perfil-marco');
+    const maite = await abrirAlmacen('perfil-maite');
+    await marco!.guardar('proyecto', { nombre: 'p', archivos: { 'p.ino': '// de Marco' } });
+    expect(await maite!.leer('proyecto')).toBeUndefined();
+    expect((await (await abrirAlmacen('perfil-marco'))!.leer('proyecto'))?.archivos['p.ino']).toBe('// de Marco');
   });
 
   it('conRetardo junta varias llamadas en una', () => {

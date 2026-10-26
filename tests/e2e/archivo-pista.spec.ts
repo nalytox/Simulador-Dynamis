@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './fixtures';
 import { abrirEditor, baldosa, clicCelda, clicEn, elegirPieza, pistaEditor } from './ayuda/editor';
 import { escribirPista, leerPista, pistaVacia } from '../../src/pista/serializacion';
 
@@ -73,7 +73,7 @@ test('la pista se autoguarda', async ({ page }) => {
   await elegirPieza(page, 'Giro en L');
   await clicCelda(page, 6, 0);
   await expect.poll(() => page.evaluate(() => new Promise<boolean>(resolver => {
-    const pedido = indexedDB.open('simulador-dynamis', 1);
+    const pedido = indexedDB.open('simulador-dynamis-marco', 1);
     pedido.onsuccess = () => {
       const leer = pedido.result.transaction('datos').objectStore('datos').get('pista');
       leer.onsuccess = () => resolver((leer.result?.baldosas ?? []).some((b: { c: number; r: number }) => b.c === 6 && b.r === 0));

@@ -39,7 +39,7 @@ const campoAjustadas = StateField.define<DecorationSet>({
   provide: f => EditorView.decorations.from(f),
 });
 
-/** Las marcas `@ajustar grupo [min..max]` se destacan (spec §12), como en la maqueta. */
+/** Las marcas `@ajustar grupo [min..max]` se destacan. */
 const marcasAjustar = new MatchDecorator({
   regexp: /@ajustar\b(?:[ \t]+[\p{L}_][\p{L}\p{N}_]*(?:[ \t]+[-+\d.,eE]+[ \t]*\.\.[ \t]*[-+\d.,eE]+)?)?/gu,
   decoration: Decoration.mark({ class: 'marca-ajustar' }),
@@ -66,7 +66,7 @@ const campoError = StateField.define<DecorationSet>({
   provide: f => EditorView.decorations.from(f),
 });
 
-/** Tema con la paleta de Dynamis (spec §12). */
+/** Tema con la paleta de Dynamis. */
 const tema = EditorView.theme({
   '&': { height: '470px', fontSize: '14px', backgroundColor: '#FFFFFF', color: '#12164A' },
   // Sin ligaduras: ">=" se ve como dos caracteres, igual que como se escribe.

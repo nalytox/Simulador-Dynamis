@@ -1,6 +1,6 @@
 import { DESCUENTO_POR_CM, DESCUENTO_REINICIO, MAXIMO_REINICIOS, PUNTOS_HITO, PUNTOS_META, TIEMPO_LIMITE_S } from '../juez/juez';
 
-/** Cómo se puntúa (spec §10.6), con los mismos números que usa el juez virtual. */
+/** Cómo se puntúa, con los mismos números que usa el juez virtual. */
 export function puntaje(): { regla: string; puntos: string }[] {
   const hitos = PUNTOS_HITO.map(String);
   return [

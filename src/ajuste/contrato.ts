@@ -5,7 +5,7 @@ import type { Mundo } from '../mundo/tipos';
 
 /**
  * Contrato entre el motor de pruebas (lo implementa este proyecto) y el agente y la recompensa del
- * profesor (src/ajuste/agente.js y src/ajuste/recompensa.js). Ver src/ajuste/README.md y spec §11.3.
+ * profesor (src/ajuste/agente.js y src/ajuste/recompensa.js). Ver src/ajuste/README.md.
  */
 
 /** Un valor marcado con @ajustar que el estudiante eligió ajustar, con su rango de búsqueda. */

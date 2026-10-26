@@ -11,7 +11,7 @@ const MUY_CERCA_MM = 150;
 const SIN = '—';
 const GRADOS = 180 / Math.PI;
 
-/** "Lo que siente el robot" (spec §12): QTR, distancia, color, giro e inclinación y motores. */
+/** "Lo que siente el robot": QTR, distancia, color, giro e inclinación y motores. */
 export function crearTarjetas(raiz: Document): { mostrar(l: LecturasVista | null, e: Instantanea['estado'] | null, m: Motores | null): void } {
   const $ = (id: string) => raiz.getElementById(id)!;
   const barras = Array.from({ length: 8 }, () => {

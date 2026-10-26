@@ -1,5 +1,5 @@
 /**
- * Bloque de control compartido entre la UI y el worker de simulación (spec §3). El worker no
+ * Bloque de control compartido entre la UI y el worker de simulación. El worker no
  * atiende mensajes mientras corre el programa, así que la pausa, la velocidad y los pedidos del
  * juez se leen de aquí en cada punto de sincronización, y el worker deja un latido para el vigilante.
  */

@@ -23,6 +23,10 @@ describe('errores amigables', () => {
     ["no viable conversion from 'String' to 'int'", 'Estás guardando un dato de un tipo en una variable de otro tipo.'],
     ["assigning to 'int *' from incompatible type 'int'", 'Estás guardando un dato de un tipo en una variable de otro tipo.'],
     ['undefined symbol: loop', 'Falta la función `loop`. ¿Está bien escrito su nombre?'],
+    // Lo que queda al borrar la única instrucción de un if, else, for o while sin llaves.
+    ['expected statement', 'Un `if`, `for` o `while` quedó sin la instrucción que va después (¿borraste esa línea?). Ponle una instrucción, o unas llaves `{ }` vacías.'],
+    ['expected expression', 'Aquí falta un valor o una instrucción. Si borraste una línea, revisa que cada `else` tenga su `if` y que ningún `if` haya quedado sin su instrucción.'],
+    ["extraneous ')' before ';'", 'Sobra un paréntesis `)`. Revisa que cada `(` tenga su `)`: ¿quedó el final de una instrucción que borraste?'],
     ["unknown type name 'foo'", 'El compilador encontró un problema que no sé explicar. Mira el mensaje técnico.'],
   ])('%s', (mensaje, esperado) => {
     expect(mensajeDe(mensaje)).toBe(esperado);

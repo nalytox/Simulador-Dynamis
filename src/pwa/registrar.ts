@@ -25,7 +25,7 @@ function activado(registro: ServiceWorkerRegistration | undefined, ready: Promis
 }
 
 /**
- * Antes de arrancar la app (spec §16): en la versión publicada registra el service worker. Si la
+ * Antes de arrancar la app: en la versión publicada registra el service worker. Si la
  * página todavía no está aislada (GitHub Pages no manda COOP/COEP), recarga una vez para que el
  * service worker agregue esas cabeceras; si ni así, la app explica que hay que usar otro navegador.
  */

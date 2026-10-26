@@ -2,7 +2,7 @@ import type { Proyecto } from './proyecto';
 import type { Pista } from '../pista/tipos';
 import type { ConfigRobot } from '../robot/config';
 
-/** Autoguardado en IndexedDB (spec §13): el proyecto, la pista, el robot y las preferencias. */
+/** Autoguardado en IndexedDB: el proyecto, la pista, el robot y las preferencias. */
 export interface Preferencias { velocidad: number; archivoAbierto?: string }
 export interface DatosGuardados { proyecto: Proyecto; pista: Pista; robot: ConfigRobot; preferencias: Preferencias }
 
@@ -11,7 +11,6 @@ export interface Almacen {
   guardar<K extends keyof DatosGuardados>(clave: K, valor: DatosGuardados[K]): Promise<void>;
 }
 
-const BASE = 'simulador-dynamis';
 const ALMACEN = 'datos';
 
 function esperar<T>(pedido: IDBRequest<T>): Promise<T> {
@@ -21,12 +20,15 @@ function esperar<T>(pedido: IDBRequest<T>): Promise<T> {
   });
 }
 
-/** null si el navegador no deja usar IndexedDB (ventana privada, cuota llena…): la app sigue sin autoguardado. */
-export async function abrirAlmacen(fabrica: IDBFactory | undefined = globalThis.indexedDB): Promise<Almacen | null> {
+/**
+ * El autoguardado guardado en la base `base` (una por perfil). null si el navegador no deja usar
+ * IndexedDB (ventana privada, cuota llena…): la app sigue sin autoguardado.
+ */
+export async function abrirAlmacen(base: string, fabrica: IDBFactory | undefined = globalThis.indexedDB): Promise<Almacen | null> {
   if (!fabrica) return null;
   try {
     const db = await new Promise<IDBDatabase>((resolver, rechazar) => {
-      const pedido = fabrica.open(BASE, 1);
+      const pedido = fabrica.open(base, 1);
       pedido.onupgradeneeded = () => pedido.result.createObjectStore(ALMACEN);
       pedido.onsuccess = () => resolver(pedido.result);
       pedido.onerror = () => rechazar(pedido.error);

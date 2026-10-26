@@ -1,6 +1,6 @@
 import type { Mundo } from './tipos';
 
-/** Mundo vacío: suelo blanco y plano, sin objetos. Lo reemplaza la pista en la fase 2. */
+/** Mundo vacío: suelo blanco y plano, sin objetos. */
 export function mundoPlano(): Mundo {
   return {
     muestrear: () => ({ r: 255, g: 255, b: 255 }),

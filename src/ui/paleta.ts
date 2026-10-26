@@ -18,7 +18,7 @@ const baldosa = (tipo: TipoBaldosa, nombre = NOMBRE_TIPO[tipo], props?: Record<s
 const cruce = (nombre: string, marcas: Record<string, boolean>) => baldosa('cruce', nombre, { marcas });
 const objeto = (tipo: TipoObjetoNuevo, nombre: string): Pieza => ({ clase: 'objeto', nombre, tipo });
 
-/** La paleta del editor, agrupada como en la spec (§10.5). */
+/** La paleta del editor, agrupada por tipo de pieza. */
 export const PALETA: { grupo: string; piezas: Pieza[] }[] = [
   { grupo: 'Líneas', piezas: [baldosa('vacia'), baldosa('recta'), baldosa('giroSuave'), baldosa('giroL'), baldosa('cortes'), baldosa('rampa')] },
   {

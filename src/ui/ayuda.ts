@@ -13,7 +13,7 @@ export interface VentanaAyudaEventos {
   verRecorrido(): void;
 }
 
-/** La ventana "Ayuda" (spec §12): guías de los sensores, conexiones de mi robot, las bases y primeros pasos. */
+/** La ventana "Ayuda": guías de los sensores, conexiones de mi robot, las bases y primeros pasos. */
 export function crearVentanaAyuda(raiz: Document, eventos: VentanaAyudaEventos): {
   abrir(pestana?: PestanaAyuda): void;
   mostrarInstalar(alInstalar: (() => void) | null): void;

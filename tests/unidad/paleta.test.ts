@@ -31,7 +31,7 @@ it('los atajos de marcas dan la acción esperada', () => {
   expect(colocar(pieza('Unión en T (rama a la izquierda)')).props).toMatchObject({ rama: 'izq' });
 });
 
-it('los grupos y los nombres son los de la spec', () => {
+it('los grupos y los nombres de la paleta', () => {
   expect(PALETA.map(g => [g.grupo, g.piezas.map(p => p.nombre)])).toEqual([
     ['Líneas', ['Vacía', 'Recta', 'Giro suave', 'Giro en L', 'Línea con cortes', 'Rampa']],
     ['Cruces y marcas de color', ['Cruce sin marcas', 'Marca a la izquierda', 'Marca a la derecha', 'Marcas a ambos lados',

@@ -1,4 +1,4 @@
-/** Las guías de cada sensor de la Ayuda (spec §12): qué hace, cómo se usa y un programa completo que compila. */
+/** Las guías de cada sensor de la Ayuda: qué hace, cómo se usa y un programa completo que compila. */
 export interface GuiaSensor {
   id: 'qtr' | 'vl53l0x' | 'tcs34725' | 'mpu6050' | 'motores';
   titulo: string;

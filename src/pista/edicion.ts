@@ -4,7 +4,7 @@ import { gradosARadianes, normalizarPista } from './serializacion';
 import { TAMANO_BALDOSA, type Baldosa, type Lado, type ObjetoDePista, type Pista, type Rotacion, type TipoBaldosa } from './tipos';
 
 /**
- * Edición de la pista para el editor (spec §10.5): funciones puras que devuelven una pista nueva
+ * Edición de la pista para el editor: funciones puras que devuelven una pista nueva
  * sin tocar la original. Los ángulos van en grados, como en el JSON.
  */
 export type TipoObjetoNuevo = 'obstaculo' | 'bache-recto' | 'bache-diagonal' | 'hito' | 'desafio';

@@ -31,7 +31,7 @@ function acotarEntero(v: number, p: ParametroAgente): number {
 }
 
 /**
- * Lo que propone el agente, saneado (decisión 5 de la fase 6): solo los ids de los parámetros elegidos,
+ * Lo que propone el agente, saneado: solo los ids de los parámetros elegidos,
  * acotados a su rango, y los enteros redondeados; un valor que no es un número finito toma el valor del código.
  */
 export function acotarPropuesta(valores: Record<string, number>, parametros: ParametroAgente[]): Record<string, number> {
@@ -42,7 +42,7 @@ export function acotarPropuesta(valores: Record<string, number>, parametros: Par
   }));
 }
 
-/** El error para la ventana: FaltaImplementar se explica tal cual; lo demás es del profe (spec §14). */
+/** El error para la ventana: FaltaImplementar se explica tal cual; lo demás es del profe. */
 export function describirError(e: unknown, origen: string): NonNullable<FinEntrenamiento['error']> {
   const error = e instanceof Error ? e : new Error(String(e));
   if (esFaltaImplementar(e)) return { mensaje: error.message, tecnico: '', faltaImplementar: true };
@@ -52,7 +52,7 @@ export function describirError(e: unknown, origen: string): NonNullable<FinEntre
 }
 
 /**
- * El bucle del entrenamiento (spec §11.2), en el hilo principal: le pide valores al agente del profe,
+ * El bucle del entrenamiento, en el hilo principal: le pide valores al agente del profe,
  * mantiene tantas pruebas en curso como workers tiene el pool y le devuelve cada resultado.
  */
 export function entrenar(o: OpcionesEntrenamiento): Promise<FinEntrenamiento> {

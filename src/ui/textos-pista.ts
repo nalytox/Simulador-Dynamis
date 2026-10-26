@@ -1,6 +1,6 @@
 import type { Accion, Baldosa } from '../pista/tipos';
 
-/** Textos del editor de pista (spec §10.3 y §10.5), sin DOM. */
+/** Textos del editor de pista, sin DOM. */
 const ACCIONES: Record<Accion, string> = {
   izq: 'Girar a la izquierda', der: 'Girar a la derecha', vuelta: 'Dar la vuelta (180°)', recto: 'Seguir derecho',
 };

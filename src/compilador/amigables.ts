@@ -1,6 +1,6 @@
 import type { Diagnostico } from './diagnosticos';
 
-/** Un error de compilación explicado para estudiantes de 14 a 16 años (spec §5). */
+/** Un error de compilación explicado para estudiantes de 14 a 16 años. */
 export interface MensajeAmigable {
   titulo: string;
   mensaje: string;
@@ -27,6 +27,10 @@ const PATRONES: [RegExp, (m: RegExpMatchArray) => string][] = [
   [/redefinition of '([^']+)'/, m => `\`${m[1]}\` está definido dos veces.`],
   [/cannot initialize|no viable conversion|incompatible type/, () => TIPOS],
   [/undefined symbol: (\S+)/, m => `Falta la función \`${m[1]}\`. ¿Está bien escrito su nombre?`],
+  // Lo que suele quedar al borrar la única instrucción de un if, else, for o while sin llaves.
+  [/expected statement/, () => 'Un `if`, `for` o `while` quedó sin la instrucción que va después (¿borraste esa línea?). Ponle una instrucción, o unas llaves `{ }` vacías.'],
+  [/expected expression/, () => 'Aquí falta un valor o una instrucción. Si borraste una línea, revisa que cada `else` tenga su `if` y que ningún `if` haya quedado sin su instrucción.'],
+  [/extraneous '\)'/, () => 'Sobra un paréntesis `)`. Revisa que cada `(` tenga su `)`: ¿quedó el final de una instrucción que borraste?'],
 ];
 
 export function traducirDiagnostico(d: Diagnostico, rutasProyecto: string[]): MensajeAmigable {

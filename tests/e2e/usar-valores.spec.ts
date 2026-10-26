@@ -1,9 +1,9 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './fixtures';
 import { entrenar, usarAjusteDePrueba } from './ayuda/ajuste';
 
 /** Lo que quedó autoguardado en IndexedDB para un archivo del proyecto. */
 const guardado = (page: Page, ruta: string) => page.evaluate(r => new Promise<string | undefined>(resolver => {
-  const pedido = indexedDB.open('simulador-dynamis', 1);
+  const pedido = indexedDB.open('simulador-dynamis-marco', 1);
   pedido.onsuccess = () => {
     const leer = pedido.result.transaction('datos').objectStore('datos').get('proyecto');
     leer.onsuccess = () => resolver(leer.result?.archivos?.[r]);

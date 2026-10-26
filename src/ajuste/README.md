@@ -1,7 +1,7 @@
 # Ajustar parámetros: el agente y la recompensa (los implementa el profesor)
 
 "Ajustar parámetros" prueba muchas veces el programa del estudiante en la pista, cada vez con otros
-valores de los números que marcó con `@ajustar`, y busca los que funcionan mejor (spec §11).
+valores de los números que marcó con `@ajustar`, y busca los que funcionan mejor.
 
 Este proyecto implementa todo lo demás:
 - las marcas `@ajustar`;
@@ -84,7 +84,7 @@ export function debeTerminar(paso, mundo) → false | string
 | `semilla` | La semilla de la prueba. Con la misma semilla y los mismos valores, la prueba se repite exactamente. |
 | `duracionS` | La duración máxima elegida, en segundos. |
 | `pasos` | Un `paso` cada 10 ms de tiempo virtual (abajo). Vacío si la prueba no corrió. |
-| `juez` | El juez virtual al final de la prueba: `{ hitos, meta, tiempo, reinicios, eventos, puntaje, terminado }` (ver spec §10.6). `null` si no corrió. |
+| `juez` | El juez virtual al final de la prueba: `{ hitos, meta, tiempo, reinicios, eventos, puntaje, terminado }`. `null` si no corrió. |
 | `fin` | `{ motivo, detalle }`. Ver la tabla de abajo. |
 
 **Valores de `fin.motivo`:**

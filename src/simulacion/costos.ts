@@ -1,4 +1,4 @@
-/** Tiempo virtual (µs) que consume cada llamada del programa (spec §6). */
+/** Tiempo virtual (µs) que consume cada llamada del programa. */
 export const COSTOS_US = {
   millis: 1, micros: 1, pinMode: 1, digitalWrite: 1, digitalRead: 1,
   analogRead: 10, analogWrite: 2, ledcWrite: 2, serialAvailable: 1, llamadaLoop: 1, yield: 1,

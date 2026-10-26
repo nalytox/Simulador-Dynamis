@@ -21,7 +21,7 @@ function camposDelAviso(a: AvisoRobot, r: ConfigRobot): string[] {
 }
 
 /**
- * La ventana "Mi robot" (spec §8): medidas, sensores y pines del robot, su dibujo desde arriba y
+ * La ventana "Mi robot": medidas, sensores y pines del robot, su dibujo desde arriba y
  * los avisos de validarRobot junto a cada campo. Cada cambio se aplica al tiro (el robot nuevo se
  * usa en la próxima prueba). Exporta e importa robot.json y vuelve a los valores del profe.
  */

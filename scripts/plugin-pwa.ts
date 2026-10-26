@@ -15,7 +15,7 @@ function archivosDe(carpeta: string, raiz = carpeta): string[] {
 }
 
 /**
- * Construye el service worker (spec §16) como `sw.js` en la raíz de dist/, y le escribe la lista de
+ * Construye el service worker como `sw.js` en la raíz de dist/, y le escribe la lista de
  * archivos de esta versión y una versión que cambia cuando cambia esa lista.
  */
 export function pluginPwa(): Plugin {

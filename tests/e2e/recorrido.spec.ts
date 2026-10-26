@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './fixtures';
 
 // Una visita nueva: sin la marca de "recorrido visto" que traen las demás pruebas.
 test.use({ storageState: { cookies: [], origins: [] } });
@@ -57,4 +57,28 @@ test('el foco entra al bocadillo', async ({ page }) => {
   await page.goto('/');
   await expect(texto(page)).toHaveText('Este es tu código');
   await expect(siguiente(page)).toBeFocused();
+});
+
+/** Contraste WCAG entre el texto de un elemento y su fondo real (el primero no transparente hacia arriba). */
+const contraste = (page: Page, selector: string) => page.locator(selector).evaluate(el => {
+  const rgba = (c: string) => (c.match(/[\d.]+/g) ?? []).map(Number);
+  const luz = ([r, g, b]: number[]) => {
+    const canal = (v: number) => { const s = v / 255; return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4; };
+    return 0.2126 * canal(r) + 0.7152 * canal(g) + 0.0722 * canal(b);
+  };
+  let fondo: number[] = [255, 255, 255];
+  for (let e: Element | null = el; e; e = e.parentElement) {
+    const c = rgba(getComputedStyle(e).backgroundColor);
+    if (c.length === 3 || (c.length === 4 && c[3] > 0.5)) { fondo = c; break; }
+  }
+  const [a, b] = [luz(rgba(getComputedStyle(el).color)), luz(fondo)].sort((x, y) => y - x);
+  return (a + 0.05) / (b + 0.05);
+});
+
+test('el botón Siguiente se distingue del bocadillo, también con el mouse encima', async ({ page }) => {
+  await page.goto('/');
+  await expect(siguiente(page)).toBeVisible();
+  expect(await contraste(page, '#rec-siguiente')).toBeGreaterThanOrEqual(4.5);
+  await siguiente(page).hover();
+  expect(await contraste(page, '#rec-siguiente')).toBeGreaterThanOrEqual(4.5);
 });

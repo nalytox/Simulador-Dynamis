@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './fixtures';
 import { abrirEditor, clicCelda, elegirPieza } from './ayuda/editor';
 import { leerRobot } from '../../src/robot/archivo';
 import { ROBOT_POR_DEFECTO } from '../../src/robot/config';
@@ -64,7 +64,7 @@ test('los cambios se guardan y se usan en la prueba', async ({ page }) => {
   await expect(ventana(page)).toBeHidden();
   // Se autoguarda (medio segundo después del último cambio): al recargar sigue igual.
   await expect.poll(() => page.evaluate(() => new Promise<number | null>(resolver => {
-    const pedido = indexedDB.open('simulador-dynamis', 1);
+    const pedido = indexedDB.open('simulador-dynamis-marco', 1);
     pedido.onsuccess = () => {
       const leer = pedido.result.transaction('datos').objectStore('datos').get('robot');
       leer.onsuccess = () => resolver(leer.result?.ruedas.trocha ?? null);

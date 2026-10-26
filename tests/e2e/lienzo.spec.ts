@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './fixtures';
 
 interface GanchoLienzo { aPantalla(x: number, y: number): { px: number; py: number }; vista(): { escala: number } }
 

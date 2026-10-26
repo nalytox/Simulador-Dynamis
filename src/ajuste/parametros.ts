@@ -1,7 +1,7 @@
 import type { Ajustable } from '../compilador/ajustables';
 import type { ParametroAgente } from './contrato';
 
-/** Grupos de @ajustar con nombre y sensor amigables (spec §11.1); cualquier otro es un "grupo propio". */
+/** Grupos de @ajustar con nombre y sensor amigables; cualquier otro es un "grupo propio". */
 export const GRUPOS: { id: string; nombre: string; sensor: string }[] = [
   { id: 'siguelineas', nombre: 'Siguelíneas', sensor: 'QTR-MX-8A' },
   { id: 'giroscopio', nombre: 'Giroscopio', sensor: 'MPU6050' },
@@ -17,7 +17,7 @@ const AYUDAS: Record<string, string> = {
 
 export const ayudaDe = (nombre: string): string => AYUDAS[nombre.toLowerCase()] ?? 'Valor ajustable';
 
-/** El rango de la marca; si no tiene, de 0 a 4 veces el valor (decisión 4 de la fase 6). */
+/** El rango de la marca; si no tiene, de 0 a 4 veces el valor. */
 export function rangoPorDefecto(a: Ajustable): [number, number] {
   if (a.min !== null && a.max !== null) return [a.min, a.max];
   if (a.valor === 0) return [0, 1];

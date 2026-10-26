@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test('compila en el navegador: un sketch válido da un módulo y uno con error da el diagnóstico', async ({ page }) => {
   await page.goto('/');

@@ -65,9 +65,6 @@ svg.ico.relleno { fill: currentColor; stroke: none; }
 }
 .btn-banda:hover { background: rgba(255,255,255,.12); }
 .btn-banda:focus-visible { outline-color: var(--sol); }
-.aviso-maqueta { background: var(--hielo); color: var(--tinta-suave); font-size: 13px; }
-.aviso-maqueta .gutter { padding-block: 6px; display: flex; gap: 8px; align-items: center; }
-.aviso-maqueta i { width: 10px; height: 10px; border-radius: 50%; background: var(--rosa); display: inline-block; flex: none; }
 
 main.gutter { padding-block: 18px 28px; }
 .vista { display: flex; flex-direction: column; gap: 16px; }
@@ -336,7 +333,7 @@ canvas.mini { width: 100%; aspect-ratio: 4 / 3; display: block; border-radius: 1
   .btn-probar { transition: none; }
 }
 
-/* ===== Agregados de la app (fase 4) ===== */
+/* ===== Editor, consola y avisos de la app ===== */
 .aviso-global { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: rgba(18, 22, 74, .55); padding: 16px; }
 .aviso-global[hidden] { display: none; }
 .aviso-global > div { max-width: 520px; background: var(--blanco); color: var(--tinta); border-radius: 20px; padding: 24px; font-size: 18px; box-shadow: 0 12px 40px rgba(0,0,0,.25); }
@@ -426,10 +423,18 @@ button:disabled { opacity: .55; cursor: not-allowed; }
 .rec-pie { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .rec-paso { font-size: 14px; opacity: .75; margin-right: auto; }
 .rec-pie button { min-height: 40px; }
+.rec-siguiente { border: 0; background: var(--azul); color: var(--blanco); font-weight: 600; padding: 8px 18px; border-radius: 999px; }
+.rec-siguiente:hover { background: var(--azul-2); }
 .recorrido-foco { outline: 4px solid var(--sol); outline-offset: 4px; border-radius: 12px; }
 @media (prefers-reduced-motion: no-preference) { .recorrido { transition: top .2s ease, left .2s ease; } }
 
 /* Ventana Ayuda */
+.ventana-perfil { padding: 0; border: 0; max-width: 760px; width: calc(100% - 32px); max-height: calc(100% - 32px); overflow-y: auto; color: var(--tinta); }
+.ventana-perfil::backdrop { background: rgba(11, 15, 152, .55); }
+.perfiles { list-style: none; margin: 0; padding: 22px; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+.perfil { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 18px 12px; border: 2px solid var(--hielo); border-radius: 20px; background: var(--blanco); color: var(--azul); font-family: var(--f-display); font-weight: 600; font-size: 21px; }
+.perfil::before { content: attr(data-inicial); display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; background: var(--azul); color: var(--blanco); font-size: 26px; }
+.perfil:hover { border-color: var(--celeste); background: var(--hielo); }
 .ventana-ayuda { padding: 0; border: 0; max-width: 1100px; width: calc(100% - 32px); max-height: calc(100% - 32px); overflow-y: auto; color: var(--tinta); }
 .ventana-ayuda::backdrop { background: rgba(11, 15, 152, .3); }
 .ay-pestanas { display: flex; gap: 8px; flex-wrap: wrap; padding: 14px 18px 0; }

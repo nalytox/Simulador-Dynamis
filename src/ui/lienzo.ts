@@ -22,7 +22,7 @@ const PASO_ZOOM = 1.2;
 const PASO_TECLADO_PX = 40;
 const FONDO = '#EAF5FD';
 
-/** La pista y el robot (spec §12): rueda para acercar, arrastrar para mover, doble clic para ver todo. */
+/** La pista y el robot: rueda para acercar, arrastrar para mover, doble clic para ver todo. */
 export function crearLienzo(canvas: HTMLCanvasElement, robot: ConfigRobot): Lienzo {
   const ctx = canvas.getContext('2d')!;
   let pista: Pista | null = null;

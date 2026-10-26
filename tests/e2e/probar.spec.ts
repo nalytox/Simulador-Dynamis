@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './fixtures';
 
 interface Ganchos {
   robot(): { x: number; y: number } | null;
@@ -75,7 +75,7 @@ test('un while(true){} sin delay muestra el aviso de ciclo sin fin y Detener lo 
   await abrir(page, 'void setup() {}\nvoid loop() { while (true) {} }\n');
   await page.locator('#btn-probar').click();
   await corriendo(page);
-  // El texto de la spec, con `delay` y `while` como código.
+  // El texto del aviso, con `delay` y `while` como código.
   await expect(page.locator('#burbuja-mensaje')).toHaveText(
     'Tu programa parece atrapado en un ciclo sin fin. ¿Falta un delay o leer un sensor dentro del while?', { timeout: 6000 });
   await expect(page.locator('#burbuja-mensaje code')).toHaveText(['delay', 'while']);

@@ -44,7 +44,7 @@ export function maximoRobots(nucleos: number | undefined): number {
 }
 
 /**
- * La ventana "Ajustar parámetros" (spec §11.4): qué valores ajustar y en qué rango, la configuración
+ * La ventana "Ajustar parámetros": qué valores ajustar y en qué rango, la configuración
  * del entrenamiento, el progreso con su gráfico y el mejor resultado. Se construye con textContent:
  * los nombres de los valores vienen del código del estudiante.
  */

@@ -1,5 +1,5 @@
 /**
- * Geometría del gráfico de recompensa por prueba (spec §11.4), sin DOM. La recompensa la define el
+ * Geometría del gráfico de recompensa por prueba, sin DOM. La recompensa la define el
  * profe, así que no se supone ninguna escala: puede ser negativa, constante o enorme.
  */
 export interface Escala { desde: number; hasta: number; marcas: number[] }

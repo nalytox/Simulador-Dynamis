@@ -1,4 +1,4 @@
-/** La barra de acciones (spec §12): Probar/Detener, Pausa/Seguir, Volver al inicio, estado y velocidad. */
+/** La barra de acciones: Probar/Detener, Pausa/Seguir, Volver al inicio, estado y velocidad. */
 export type EstadoApp = 'listo' | 'preparando' | 'compilando' | 'corriendo' | 'pausa' | 'terminado' | 'detenido' | 'error';
 
 /** Centésimas de la velocidad real de cada posición del control (decisión 10). */

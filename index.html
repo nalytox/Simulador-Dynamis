@@ -45,6 +45,7 @@
       </button>
     </div>
     <div class="extra">
+      <button class="btn-banda" id="btn-perfil" title="Cambiar de perfil"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span id="perfil-nombre"></span></button>
       <button class="btn-banda" id="btn-mi-robot" aria-haspopup="dialog"><svg class="ico" viewBox="0 0 24 24"><rect x="5" y="8" width="14" height="11" rx="3"/><path d="M12 8V4"/><circle cx="12" cy="3.5" r="1"/><circle cx="9.5" cy="13" r="1"/><circle cx="14.5" cy="13" r="1"/><path d="M3 12v3M21 12v3"/></svg><span>Mi robot</span></button>
       <button class="btn-banda" id="btn-ejemplos" aria-haspopup="dialog"><svg class="ico" viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5"/></svg><span>Ejemplos</span></button>
       <button class="btn-banda" id="btn-instalar" hidden><svg class="ico" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg><span>Instalar en este computador</span></button>
@@ -332,10 +333,21 @@ float giro = mpu.getAngleZ();  // en grados</pre>
     <div class="rec-pie">
       <span class="rec-paso" id="rec-paso"></span>
       <button class="btn-mini" id="rec-saltar">Saltar</button>
-      <button class="btn-banda rec-siguiente" id="rec-siguiente">Siguiente</button>
+      <button class="rec-siguiente" id="rec-siguiente">Siguiente</button>
     </div>
   </div>
 </div>
+
+<dialog class="ventana ventana-perfil" id="ventana-perfil" aria-labelledby="perfil-titulo">
+  <div class="ventana-cab">
+    <svg viewBox="0 0 64 64" aria-hidden="true"><use href="#mascota"/></svg>
+    <div class="ventana-tit">
+      <h2 id="perfil-titulo">¿Quién va a programar?</h2>
+      <p>Elige tu nombre: tu programa, tu pista y tu robot se guardan solo para ti.</p>
+    </div>
+  </div>
+  <ul class="perfiles" id="perfiles"></ul>
+</dialog>
 
 <dialog class="ventana ventana-ayuda" id="ventana-ayuda" aria-labelledby="ay-titulo">
   <div class="ventana-cab">

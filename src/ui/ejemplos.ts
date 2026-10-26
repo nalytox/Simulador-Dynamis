@@ -14,7 +14,7 @@ export interface VentanaEjemplosEventos {
 
 const MINIATURA = { ancho: 160, alto: 120 };
 
-/** La ventana "Ejemplos" (spec §12): proyectos de ejemplo y pistas para probarlos. */
+/** La ventana "Ejemplos": proyectos de ejemplo y pistas para probarlos. */
 export function crearVentanaEjemplos(raiz: Document, eventos: VentanaEjemplosEventos): { abrir(): void } {
   const $ = (id: string) => raiz.getElementById(id)!;
   const ventana = $('ventana-ejemplos') as HTMLDialogElement;

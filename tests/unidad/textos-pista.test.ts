@@ -3,7 +3,7 @@ import { textoAccion, textoAltura, textoPosicion, textoSubida } from '../../src/
 import { pistaVacia } from '../../src/pista/serializacion';
 import { baldosaEn, colocarBaldosa } from '../../src/pista/edicion';
 
-it('textoAccion nombra las 4 acciones como la spec', () => {
+it('textoAccion nombra las 4 acciones', () => {
   expect(textoAccion('izq')).toBe('Girar a la izquierda');
   expect(textoAccion('der')).toBe('Girar a la derecha');
   expect(textoAccion('vuelta')).toBe('Dar la vuelta (180°)');
