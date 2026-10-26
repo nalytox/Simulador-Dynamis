@@ -1,5 +1,5 @@
 /**
- * Las decisiones del service worker (spec §16), sin APIs del navegador para poder probarlas.
+ * Las decisiones del service worker, sin APIs del navegador para poder probarlas.
  * Rutas relativas a la carpeta de la app (por ejemplo, 'assets/index-a.js').
  */
 const DEL_COMPILADOR = /(^|\/)(llvm[^/]*\.wasm|llvm-resources[^/]*\.tar|nucleo[^/]*\.a)$/;

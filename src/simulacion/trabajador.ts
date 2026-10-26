@@ -4,7 +4,7 @@ import type { Pista } from '../pista/tipos';
 import type { ConfigRobot } from '../robot/config';
 import type { AmbitoTrabajador } from '../ui/ambito';
 
-/** Worker de simulación: corre una prueba completa y envía instantáneas (spec §3). */
+/** Worker de simulación: corre una prueba completa y envía instantáneas. */
 export interface MensajeAlSimulador {
   tipo: 'iniciar';
   modulo: WebAssembly.Module;

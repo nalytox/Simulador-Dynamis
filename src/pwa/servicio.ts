@@ -1,4 +1,4 @@
-// El service worker de la app (spec §16), uno solo: agrega COOP/COEP a todas las respuestas
+// El service worker de la app, uno solo: agrega COOP/COEP a todas las respuestas
 // (técnica de coi-serviceworker) y guarda la app para usarla sin internet. Lo arma el plugin de
 // scripts/plugin-pwa.ts como sw.js, con la lista de archivos de esta versión.
 import { estrategia, INICIO, paraPrecachear, sobrantes } from './cache';

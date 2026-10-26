@@ -1,6 +1,6 @@
 import type { Diagnostico } from './diagnosticos';
 
-/** Un error de compilación explicado para estudiantes de 14 a 16 años (spec §5). */
+/** Un error de compilación explicado para estudiantes de 14 a 16 años. */
 export interface MensajeAmigable {
   titulo: string;
   mensaje: string;

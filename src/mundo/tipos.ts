@@ -1,5 +1,5 @@
 /**
- * Contrato del mundo (spec §9): primitivas geométricas que usan los modelos.
+ * Contrato del mundo: primitivas geométricas que usan los modelos.
  * Marco del mundo: x derecha, y arriba, z arriba (mm); yaw antihorario desde +x (rad).
  */
 export interface Punto2 { x: number; y: number }

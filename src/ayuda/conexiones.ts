@@ -9,7 +9,7 @@ const SIN_CONECTAR = 'sin conectar';
 
 const pin = (n: number | null, siNoHay = SIN_CONECTAR) => (n === null ? siNoHay : String(n));
 
-/** "Conexiones de mi robot" (spec §8): los pines de "Mi robot", agrupados como en el robot real. */
+/** "Conexiones de mi robot": los pines de "Mi robot", agrupados como en el robot real. */
 export function conexionesDe(r: ConfigRobot): GrupoConexiones[] {
   const motor = (m: ConfigRobot['motores']['izq']) => [{ que: 'PWM', pin: pin(m.pwm) }, { que: 'IN1', pin: pin(m.in1) }, { que: 'IN2', pin: pin(m.in2) }];
   const ultimo = r.qtr.pines.length - 1;

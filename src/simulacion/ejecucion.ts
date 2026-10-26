@@ -55,7 +55,7 @@ const MEZCLA_VISTA = 0x5bd1e995;
 
 /**
  * Una prueba completa: el programa en la pista con el juez virtual. Un reinicio del juez vuelve a
- * empezar el programa desde setup() en el punto elegido (decisión 3 de la fase 4); el juez sigue.
+ * empezar el programa desde setup() en el punto elegido; el juez sigue.
  * El ritmo, los pedidos y las instantáneas se atienden en cada paso de física, así el robot se ve
  * avanzar y se puede reiniciar también dentro de un delay largo.
  */

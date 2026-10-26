@@ -13,7 +13,7 @@ import type { EstadoRobot, Pose } from '../simulacion/simulador';
 import type { Instantanea } from '../simulacion/ejecucion';
 import type { ConfigRobot } from '../robot/config';
 
-/** Colores de la paleta de Dynamis (spec §12). */
+/** Colores de la paleta de Dynamis. */
 const C = { azul: '#0B0F98', celeste: '#65C7F7', hielo: '#DDF4FF', sol: '#FFD166', rosa: '#FF9FAD', tinta: '#12164A', rejilla: '#CFE7F7' };
 /** Una lectura del QTR sobre esto se considera "ve línea" en el dibujo. */
 const QTR_VE_LINEA = 2000;
@@ -61,7 +61,7 @@ function baldosa(ctx: CanvasRenderingContext2D, b: Baldosa, colorMarcas?: string
     ctx.fillStyle = colorVisible(b, f);
     figura(ctx, f);
   }
-  // Decoraciones del relieve: existen solo en pantalla (spec §9).
+  // Decoraciones del relieve: existen solo en pantalla.
   if (b.tipo === 'rampa') {
     const g = ctx.createLinearGradient(0, 0, T, 0);
     g.addColorStop(0, 'rgba(101,199,247,0.04)');

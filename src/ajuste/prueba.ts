@@ -8,7 +8,7 @@ import { huellaRobot, type ConfigRobot } from '../robot/config';
 import { TAMANO_BALDOSA, type Pista } from '../pista/tipos';
 import { esFaltaImplementar, type ModuloRecompensa, type MotivoFin, type PasoRegistro, type RegistroPrueba, type ResumenPrueba } from './contrato';
 
-/** Lo que vuelve al hilo principal de cada prueba (spec §11.2): sin el registro completo. */
+/** Lo que vuelve al hilo principal de cada prueba: sin el registro completo. */
 export interface ResultadoPrueba {
   valores: Record<string, number>;
   recompensa: number;
@@ -66,7 +66,7 @@ function delProfe<T>(f: () => T): T {
 }
 
 /**
- * Una prueba del entrenamiento (spec §11.2): una instancia nueva del programa con los valores dados,
+ * Una prueba del entrenamiento: una instancia nueva del programa con los valores dados,
  * en la partida, sin ritmo de tiempo real, hasta la duración, hasta que debeTerminar lo pida o hasta
  * que el juez la termine. Registra un paso cada 10 ms y calcula la recompensa del profe.
  */

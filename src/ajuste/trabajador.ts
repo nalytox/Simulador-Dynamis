@@ -6,7 +6,7 @@ import type { Pista } from '../pista/tipos';
 import type { ConfigRobot } from '../robot/config';
 import type { AmbitoTrabajador } from '../ui/ambito';
 
-/** Worker del entrenamiento: recibe el programa una vez y corre pruebas de a una (spec §11.2). */
+/** Worker del entrenamiento: recibe el programa una vez y corre pruebas de a una. */
 export type MensajeAlAjuste =
   | { tipo: 'iniciar'; modulo: WebAssembly.Module; pista: Pista; robot: ConfigRobot; duracionS: number; latidos: SharedArrayBuffer; indice: number }
   | { tipo: 'probar'; id: number; valores: Record<string, number>; semilla: number };

@@ -3,7 +3,7 @@ import { gradosARadianes } from '../pista/serializacion';
 import type { Bache, Baldosa, Pista } from '../pista/tipos';
 
 /**
- * Relieve analítico de la pista (spec §10.4): nivel de cada baldosa, subida de las rampas y
+ * Relieve analítico de la pista: nivel de cada baldosa, subida de las rampas y
  * perfil de medio cilindro de los baches. No usa un raster.
  */
 export interface Relieve {

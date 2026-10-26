@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import { defineConfig } from '@playwright/test';
 
 /**
- * La versión publicada (spec §16): `dist/` servido en /Simulador-Dynamis/ sin las cabeceras COOP/COEP,
+ * La versión publicada: `dist/` servido en /Simulador-Dynamis/ sin las cabeceras COOP/COEP,
  * igual que GitHub Pages. El service worker tiene que aislar la página y guardar la app para usarla sin internet.
  */
 const PUERTO = 5180;

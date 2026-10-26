@@ -5,7 +5,7 @@ interface EventoInstalar extends Event {
 }
 
 /**
- * "Instalar en este computador" (spec §16): avisa con una función cuando el navegador permite
+ * "Instalar en este computador": avisa con una función cuando el navegador permite
  * instalar la app, y con null cuando ya no (se instaló). La función dice si se instaló.
  */
 export function escucharInstalacion(ventana: Window, alPoder: (instalar: (() => Promise<boolean>) | null) => void): void {

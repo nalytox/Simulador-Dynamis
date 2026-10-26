@@ -8,7 +8,7 @@ import { entradasDe, recorridoEsperado } from '../ayuda/recorrido';
 const pista = (id: IdPista): Pista => PISTAS_DE_EJEMPLO.find(p => p.id === id)!.pista;
 const hitos = (p: Pista) => p.objetos.flatMap(o => (o.tipo === 'hito' ? [o.props.numero] : [])).sort((a, b) => a - b);
 
-it('hay tres pistas de ejemplo con los nombres de la spec', () => {
+it('hay tres pistas de ejemplo, con sus nombres', () => {
   expect(PISTAS_DE_EJEMPLO.map(p => [p.id, p.pista.nombre])).toEqual([
     ['practica', 'Práctica FIRVI'], ['cruces', 'Cruces con marcas'], ['rampa', 'Rampa y baches'],
   ]);

@@ -60,7 +60,7 @@ const argumentosDeUnidad = (u: UnidadCompilacion) => [
 
 /**
  * Compila un proyecto Arduino a un módulo WebAssembly enlazado con el núcleo. Los valores marcados con
- * @ajustar pasan por __dyn_ajustable (spec §11.1), sin cambiar los números de línea.
+ * @ajustar pasan por __dyn_ajustable, sin cambiar los números de línea.
  */
 export async function compilar(original: Proyecto, nucleo: ArchivosNucleo): Promise<ResultadoCompilacion> {
   await prepararCompilador();

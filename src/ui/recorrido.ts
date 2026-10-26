@@ -1,4 +1,4 @@
-/** Los pasos del recorrido de la primera visita (spec §12), con el elemento que señala cada uno. */
+/** Los pasos del recorrido de la primera visita, con el elemento que señala cada uno. */
 export const PASOS_RECORRIDO: { selector: string; texto: string }[] = [
   { selector: '#editor', texto: 'Este es tu código' },
   { selector: '#btn-probar', texto: 'Presiona aquí para probar' },

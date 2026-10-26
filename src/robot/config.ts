@@ -1,7 +1,7 @@
 /**
  * Configuración del robot físico de Dynamis: medidas, montaje de sensores y pines.
  * Marco del robot: x adelante, y izquierda, z arriba (mm). Los valores por defecto son
- * provisionales hasta medir el robot real (spec §8).
+ * provisionales hasta medir el robot real.
  */
 export interface PinesMotor { pwm: number; in1: number; in2: number; invertir?: boolean }
 

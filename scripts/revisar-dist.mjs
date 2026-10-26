@@ -1,4 +1,4 @@
-// Revisa dist/ antes de publicarlo en GitHub Pages (spec §16): ningún archivo de 100 MB o más (el
+// Revisa dist/ antes de publicarlo en GitHub Pages: ningún archivo de 100 MB o más (el
 // límite de Pages) y están la página, el service worker y el manifiesto.
 // Uso: node scripts/revisar-dist.mjs dist
 import { existsSync, readdirSync, statSync } from 'node:fs';

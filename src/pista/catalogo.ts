@@ -1,7 +1,7 @@
 import { ANCHO_CINTA, COLOR_MARCA, TAMANO_BALDOSA, type Accion, type Baldosa, type Lado, type Marcas } from './tipos';
 
 /**
- * Catálogo de piezas (spec §10.3) como listas de figuras en el marco local de la baldosa.
+ * Catálogo de piezas como listas de figuras en el marco local de la baldosa.
  * Las mismas figuras dibujan la pista en pantalla y son lo que sienten los sensores.
  */
 export type RolFigura = 'linea' | 'marca';

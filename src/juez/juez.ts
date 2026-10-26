@@ -10,7 +10,7 @@ import { huellaRobot, type ConfigRobot } from '../robot/config';
 import type { Pose } from '../simulacion/simulador';
 
 /**
- * Juez virtual (spec §10.6): puntúa una ejecución como lo dicen las bases FIRVI. Es lógica pura:
+ * Juez virtual: puntúa una ejecución como lo dicen las bases FIRVI. Es lógica pura:
  * recibe la pose del robot en cada paso de física y lleva hitos, meta, tiempo, reinicios y eventos.
  */
 export const PUNTOS_HITO = [5, 10, 20, 20, 10, 15, 15, 20];

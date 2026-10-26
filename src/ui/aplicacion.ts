@@ -44,7 +44,7 @@ const SIN_INTERNET = {
   titulo: 'Falta internet para la primera vez',
   mensaje: 'La primera vez el simulador descarga su compilador. Conéctate a internet y presiona Reintentar; después funciona sin conexión.',
 };
-/** Por qué no se pudo preparar el compilador: sin conexión, la primera vez hace falta internet (spec §16). */
+/** Por qué no se pudo preparar el compilador: sin conexión, la primera vez hace falta internet. */
 const sinCompilador = () => (navigator.onLine === false ? SIN_INTERNET : SIN_COMPILADOR);
 const SIN_EXPLICACION = { titulo: 'Ups, hay un problema en tu programa', mensaje: 'El compilador no pudo terminar. Mira el mensaje técnico.' };
 /** Eventos del juez que celebran (el resto es un aviso). */
@@ -286,7 +286,7 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
   }
 
   /**
-   * "Ajustar parámetros" (spec §11.2): primero el agente del profe (si falta, no se compila nada),
+   * "Ajustar parámetros": primero el agente del profe (si falta, no se compila nada),
    * después se compila una vez y se entrena con la pista y el robot editados.
    */
   async function entrenarDesdeLaVentana(pedido: PedidoEntrenamiento): Promise<FinVentana> {
@@ -327,7 +327,7 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
     $('chip-tiempo').textContent = `t = ${formatoTiempo(0)}`;
   }
 
-  /** Escribe en el código los valores del entrenamiento (spec §11.4) y lo cuenta en los mensajes. */
+  /** Escribe en el código los valores del entrenamiento y lo cuenta en los mensajes. */
   function usarValores(valores: Record<string, number>) {
     vistas.mostrar('programar');
     const r = programa.aplicarAjustes(valores);

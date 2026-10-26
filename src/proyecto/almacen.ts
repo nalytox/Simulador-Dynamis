@@ -2,7 +2,7 @@ import type { Proyecto } from './proyecto';
 import type { Pista } from '../pista/tipos';
 import type { ConfigRobot } from '../robot/config';
 
-/** Autoguardado en IndexedDB (spec §13): el proyecto, la pista, el robot y las preferencias. */
+/** Autoguardado en IndexedDB: el proyecto, la pista, el robot y las preferencias. */
 export interface Preferencias { velocidad: number; archivoAbierto?: string }
 export interface DatosGuardados { proyecto: Proyecto; pista: Pista; robot: ConfigRobot; preferencias: Preferencias }
 

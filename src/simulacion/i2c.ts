@@ -3,7 +3,7 @@ import type { LecturaTCS } from './sensores';
 
 /**
  * El bus I2C a nivel de registros, para lo que se usa por I2C directo: el multiplexor TCA9548A y los
- * TCS34725 detrás de él (spec §7). Los demás sensores se simulan a nivel de librería y aquí no
+ * TCS34725 detrás de él. Los demás sensores se simulan a nivel de librería y aquí no
  * responden. El simulador no distingue Wire de Wire1: los dos llegan a este mismo bus.
  */
 export const DIRECCION_MUX = 0x70;

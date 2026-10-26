@@ -26,7 +26,7 @@ export interface PanelPrograma {
   /** Abre la pestaña y marca la línea con error (null la desmarca). */
   marcarError(archivo: string, linea: number | null): void;
   /**
-   * "Usar estos valores" (decisión 12 de la fase 6): reescribe los números marcados con @ajustar, abre el
+   * "Usar estos valores": reescribe los números marcados con @ajustar, abre el
    * archivo del primer cambio y resalta sus líneas. El cambio en ese archivo se deshace con Ctrl+Z.
    */
   /** Abre un proyecto de ejemplo; si el proyecto actual cambió, pide confirmar. Dice si lo abrió. */

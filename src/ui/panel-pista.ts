@@ -24,7 +24,7 @@ const cm = (mm: number) => (mm / 10).toLocaleString('es-CL', { maximumFractionDi
 const acotar = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n));
 
 /**
- * El panel de la derecha de Construir pista (spec §10.5): lo elegido (baldosa, objeto o inicio)
+ * El panel de la derecha de Construir pista: lo elegido (baldosa, objeto o inicio)
  * con sus propiedades, y debajo de la pista la lista "Revisión de las bases". Cada cambio se avisa
  * con la pista nueva; los números escritos a mano se acotan a su rango.
  */

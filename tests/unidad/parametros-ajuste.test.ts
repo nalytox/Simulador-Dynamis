@@ -6,7 +6,7 @@ const ajustable = (nombre: string, valor: number, min: number | null = null, max
   id: `siguelineas.${nombre}`, grupo: 'siguelineas', nombre, valor, entero: false, min, max, archivo: 'a.ino', linea: 1, forma: 'variable',
 });
 
-it('los grupos con nombre amigable son los de la spec', () => {
+it('los grupos con nombre amigable', () => {
   expect(GRUPOS).toEqual([
     { id: 'siguelineas', nombre: 'Siguelíneas', sensor: 'QTR-MX-8A' },
     { id: 'giroscopio', nombre: 'Giroscopio', sensor: 'MPU6050' },

@@ -17,14 +17,14 @@ function leerPista(datos: unknown): Pista {
   return lectura.pista;
 }
 
-/** Las pistas de la ventana Ejemplos (spec §12), en el orden en que se muestran. */
+/** Las pistas de la ventana Ejemplos, en el orden en que se muestran. */
 export const PISTAS_DE_EJEMPLO: EjemploPista[] = [
   { id: 'practica', descripcion: 'La pista para empezar: rectas, curvas suaves y la meta.', pista: leerPista(practica) },
   { id: 'cruces', descripcion: 'Cruces con marcas de color y una línea cortada.', pista: leerPista(cruces) },
   { id: 'rampa', descripcion: 'Una rampa para subir y bajar, baches y el obstáculo.', pista: leerPista(rampa) },
 ].map(e => ({ ...e, id: e.id as IdPista, nombre: e.pista.nombre }));
 
-/** Con lo que abre la app la primera vez (spec §16): el seguidor de línea y la pista de práctica. */
+/** Con lo que abre la app la primera vez: el seguidor de línea y la pista de práctica. */
 export const PROYECTO_INICIAL: Proyecto = { nombre: 'seguidor', archivos: { 'seguidor.ino': seguidor, 'pines.h': pines } };
 export const PISTA_INICIAL: Pista = PISTAS_DE_EJEMPLO[0].pista;
 
@@ -56,7 +56,7 @@ for (const carpeta of carpetas) {
   if (!FICHAS.some(f => f.id === carpeta)) throw new Error(`Falta la ficha del ejemplo ${carpeta}.`);
 }
 
-/** Los proyectos de la ventana Ejemplos (spec §12): el del comienzo y los de src/ejemplos/proyectos/. */
+/** Los proyectos de la ventana Ejemplos: el del comienzo y los de src/ejemplos/proyectos/. */
 export const PROYECTOS_DE_EJEMPLO: EjemploProyecto[] = [
   { id: 'seguidor', nombre: 'Seguidor de línea', descripcion: 'Calibra el sensor de línea y sigue la línea hasta la meta.', pista: 'practica', proyecto: PROYECTO_INICIAL },
   ...FICHAS.map(f => ({ ...f, proyecto: proyectoDe(f.id) })),

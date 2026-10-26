@@ -1,5 +1,5 @@
 /**
- * Modelo de una pista Rescue Line FIRVI (spec §10.2).
+ * Modelo de una pista Rescue Line FIRVI.
  * Unidades: mm. Los ángulos del JSON (rot, yaw, angulo) van en grados; el simulador usa radianes.
  * La fila r cuenta desde abajo: la baldosa (c, r) ocupa x ∈ [c·300, c·300 + 300), y ∈ [r·300, r·300 + 300).
  */

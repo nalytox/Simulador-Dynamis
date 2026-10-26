@@ -9,7 +9,7 @@ import * as mpu6050 from '../modelos/mpu6050.js';
 import * as tcs34725 from '../modelos/tcs34725.js';
 
 /**
- * Contrato de los modelos de sensores del profesor (spec §9) y posición de cada sensor en el mundo.
+ * Contrato de los modelos de sensores del profesor y posición de cada sensor en el mundo.
  * Los modelos entregan magnitudes físicas; el núcleo las convierte a lo que devuelve cada librería.
  */
 export interface PoseSensor { x: number; y: number; z: number; yaw: number; pitch: number }

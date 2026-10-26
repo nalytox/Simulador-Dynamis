@@ -2,7 +2,7 @@ import { normalizarTexto } from './preprocesador';
 import { ordenarArchivos, tipoDeArchivo, type Proyecto } from '../proyecto/proyecto';
 
 /**
- * Marcas `@ajustar` (spec §11.1): un valor del código marcado en su comentario se puede probar
+ * Marcas `@ajustar`: un valor del código marcado en su comentario se puede probar
  * con otros números sin recompilar. Antes de compilar, el inicializador pasa a
  * `__dyn_ajustable(grupo, nombre, valor)`, que en cada prueba responde el simulador.
  */
@@ -191,7 +191,7 @@ export function formatearValor(v: number, entero: boolean): string {
 }
 
 /**
- * "Usar estos valores" (decisión 12 de la fase 6): busca cada marca por su id en el código actual,
+ * "Usar estos valores": busca cada marca por su id en el código actual,
  * aunque se haya movido de línea, y reescribe solo su número.
  */
 export function reescribirAjustables(p: Proyecto, valores: Record<string, number>): {

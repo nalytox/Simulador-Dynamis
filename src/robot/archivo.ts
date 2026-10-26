@@ -1,7 +1,7 @@
 import { ROBOT_POR_DEFECTO, type ConfigRobot } from './config';
 
 /**
- * El robot como archivo (spec §8): leer y escribir robot.json, y la lista de campos que edita la
+ * El robot como archivo: leer y escribir robot.json, y la lista de campos que edita la
  * ventana "Mi robot". Lo que falta toma el valor del profe (ROBOT_POR_DEFECTO) y se avisa.
  */
 export type ResultadoRobot = { ok: true; robot: ConfigRobot; avisos: string[] } | { ok: false; errores: string[] };
