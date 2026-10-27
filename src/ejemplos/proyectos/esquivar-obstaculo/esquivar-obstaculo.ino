@@ -12,24 +12,35 @@ uint16_t valores[8];
 
 const int VELOCIDAD = 100;              // velocidad hacia adelante, de 0 a 255
 const float KP = 0.03;                  // cuánto corrige por cada unidad de error
-// Más cerca que esto, esquiva. Ojo: el sensor también ve el piso o una rampa a unos 10 cm
-// cuando el robot se inclina, así que el límite tiene que ser menor que eso.
-const int DISTANCIA_PARA_ESQUIVAR = 80;   // mm
-const unsigned long GIRO_90 = 365;        // ms girando sobre su eje para girar unos 90°
+// Más cerca que esto, esquiva. Ojo: el láser va a 2 cm del piso y también ve la subida de una
+// rampa (a unos 4 cm antes de inclinarse) y el piso al terminar de bajarla (a unos 5 cm), así que
+// el límite tiene que ser menor que eso.
+const int DISTANCIA_PARA_ESQUIVAR = 35;   // mm
+const unsigned long RETROCESO = 150;      // ms hacia atrás para que las esquinas no toquen el obstáculo al girar
+const unsigned long GIRO_90 = 420;        // ms girando sobre su eje para girar unos 90°
 const unsigned long APARTARSE = 570;      // ms avanzando para apartarse unos 20 cm
 const unsigned long ARCO_MINIMO = 900;    // ms de arco antes de buscar la línea otra vez
 const unsigned long AL_CENTRO = 390;      // ms para llevar las ruedas sobre la línea
 
 unsigned long inicioRecorrido = 0;
 
-// Mueve los motores: valores de -255 (atrás) a 255 (adelante).
+// Mueve los motores: valores de -255 (atrás) a 255 (adelante). En el ESP32 el PWM se hace con
+// ledcWrite, en los pines que setup() preparó con ledcAttach.
 void motores(int izq, int der) {
   digitalWrite(PIN_IN1_IZQ, izq >= 0);
   digitalWrite(PIN_IN2_IZQ, izq < 0);
   digitalWrite(PIN_IN1_DER, der >= 0);
   digitalWrite(PIN_IN2_DER, der < 0);
-  analogWrite(PIN_PWM_IZQ, constrain(abs(izq), 0, 255));
-  analogWrite(PIN_PWM_DER, constrain(abs(der), 0, 255));
+  ledcWrite(PIN_PWM_IZQ, constrain(abs(izq), 0, 255));
+  ledcWrite(PIN_PWM_DER, constrain(abs(der), 0, 255));
+}
+
+// Abre un canal del multiplexor TCA9548A: desde ahí el bus I2C llega al sensor de ese canal.
+// El VL53L0X y los TCS34725 usan la misma dirección (0x29), por eso cada uno va en su canal.
+void abrirCanal(uint8_t canal) {
+  Wire.beginTransmission(DIRECCION_MUX);
+  Wire.write(1 << canal);
+  Wire.endTransmission();
 }
 
 // Gira sobre su eje mientras el sensor aprende qué es blanco y qué es negro.
@@ -51,10 +62,12 @@ void girarHastaLaLinea(int sentido) {
   while (!veLineaAlCentro()) delay(1);
 }
 
-// Rodea el obstáculo por la derecha: se aparta, hace un arco amplio hacia la izquierda hasta
-// encontrar otra vez la línea, y se pone sobre ella mirando hacia adelante.
+// Rodea el obstáculo por la derecha: retrocede un poco, se aparta, hace un arco amplio hacia la
+// izquierda hasta encontrar otra vez la línea, y se pone sobre ella mirando hacia adelante.
 void esquivar() {
   Serial.println("¡Un obstáculo! Lo rodeo por la derecha.");
+  motores(-128, -128);         // retrocede: al girar sobre su eje, las esquinas del chasis barren un círculo
+  delay(RETROCESO);
   motores(128, -128);          // gira unos 90° a la derecha
   delay(GIRO_90);
   motores(150, 150);           // se aparta del obstáculo
@@ -85,11 +98,15 @@ void setup() {
   pinMode(PIN_IN2_IZQ, OUTPUT);
   pinMode(PIN_IN1_DER, OUTPUT);
   pinMode(PIN_IN2_DER, OUTPUT);
+  ledcAttach(PIN_PWM_IZQ, 5000, 8);  // PWM de 5 kHz y 8 bits: de 0 a 255
+  ledcAttach(PIN_PWM_DER, 5000, 8);
   qtr.setTypeAnalog();
   qtr.setSensorPins(PINES_QTR, 8);
+  qtr.setEmitterPin(PIN_LEDON_QTR);  // la librería enciende los emisores al leer
 
+  abrirCanal(CANAL_LASER);  // el VL53L0X está en el canal 2 del multiplexor
   if (!distancia.begin()) {
-    Serial.println("No encuentro el VL53L0X. Revisa los cables SDA y SCL.");
+    Serial.println("No encuentro el VL53L0X. Revisa los cables SDA y SCL y el canal del multiplexor.");
     while (true) delay(1000);
   }
   distancia.startRangeContinuous(40);  // una medida nueva cada 40 ms (cada medida tarda 33 ms)

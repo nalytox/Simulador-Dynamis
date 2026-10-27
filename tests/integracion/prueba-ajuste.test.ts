@@ -18,8 +18,8 @@ const SEGUIDOR = {
   'seguidor.ino': readFileSync('src/ejemplos/seguidor/seguidor.ino', 'utf8'),
   'pines.h': readFileSync('src/ejemplos/seguidor/pines.h', 'utf8'),
 };
-const AVANZAR = `void setup() { pinMode(16, OUTPUT); pinMode(4, OUTPUT); digitalWrite(16, HIGH); digitalWrite(4, HIGH); }
-void loop() { analogWrite(18, 60); analogWrite(19, 60); delay(10); }`;
+const AVANZAR = `void setup() { pinMode(16, OUTPUT); pinMode(5, OUTPUT); digitalWrite(16, HIGH); digitalWrite(5, HIGH); ledcAttach(4, 5000, 8); ledcAttach(19, 5000, 8); }
+void loop() { ledcWrite(4, 60); ledcWrite(19, 60); delay(10); }`;
 
 let nucleo: ArchivosNucleo;
 let seguidor: WebAssembly.Module;

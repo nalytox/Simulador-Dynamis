@@ -388,6 +388,9 @@ button:disabled { opacity: .55; cursor: not-allowed; }
 .aviso-campo { display: block; color: var(--error); font-size: 12.5px; margin-top: 2px; }
 .robot-centro { padding: 12px 14px 16px; display: flex; flex-direction: column; gap: 12px; }
 .robot-centro .revision { padding: 0; }
+.aviso-robot { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; padding: 12px 14px; background: var(--hielo); border-left: 4px solid var(--rosa); border-radius: 12px; font-size: 13.5px; }
+.aviso-robot[hidden] { display: none; }
+.aviso-robot p { margin: 0; }
 .robot-dibujo { width: 100%; aspect-ratio: 1; display: block; border-radius: 14px; box-shadow: 0 0 0 1px var(--hielo); }
 @media (max-width: 1100px) { .robot-cuerpo { grid-template-columns: minmax(0, 1fr); } }
 .campo-robot input[placeholder] { width: 7.5em; }

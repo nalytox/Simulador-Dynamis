@@ -14,9 +14,9 @@ beforeAll(async () => { nucleo = await cargarNucleoDesdeDisco(); });
 
 /** Avanza a toda velocidad 1,5 s (90 cm) y se detiene. */
 const IR_Y_PARAR = `void setup() {
-  pinMode(16, OUTPUT); pinMode(17, OUTPUT); pinMode(4, OUTPUT); pinMode(5, OUTPUT);
-  digitalWrite(16, HIGH); digitalWrite(17, LOW); digitalWrite(4, HIGH); digitalWrite(5, LOW);
-  analogWrite(18, 255); analogWrite(19, 255); delay(1500); analogWrite(18, 0); analogWrite(19, 0);
+  pinMode(16, OUTPUT); pinMode(17, OUTPUT); pinMode(5, OUTPUT); pinMode(18, OUTPUT); ledcAttach(4, 5000, 8); ledcAttach(19, 5000, 8);
+  digitalWrite(16, HIGH); digitalWrite(17, LOW); digitalWrite(5, HIGH); digitalWrite(18, LOW);
+  ledcWrite(4, 255); ledcWrite(19, 255); delay(1500); ledcWrite(4, 0); ledcWrite(19, 0);
 }
 void loop() {}`;
 
@@ -31,7 +31,10 @@ describe('el robot en la pista', { timeout: 120_000 }, () => {
       poseInicial: poseInicial(pista), alPasoFisica: (t, e) => juez.actualizar(t, e) });
     sim.ejecutar(3_000_000);
     expect(juez.estado).toMatchObject({ hitos: ['alcanzado'], meta: true, reinicios: 0, terminado: true });
-    expect(juez.estado.tiempo).toBeCloseTo(1.16, 1); expect(juez.estado.puntaje).toBeCloseTo(20 + (300 - 1.16) / 4, 1);
+    // El tiempo corre desde que la cola del chasis sale de la partida (x = 300) hasta detenerse (t = 1,5 s).
+    const { xDelantero, largo } = ROBOT_POR_DEFECTO.chasis;
+    const tiempo = 1.5 - (300 + largo - xDelantero - 150) / 600;
+    expect(juez.estado.tiempo).toBeCloseTo(tiempo, 1); expect(juez.estado.puntaje).toBeCloseTo(20 + (300 - tiempo) / 4, 1);
     expect(juez.estado.eventos.filter(e => e.tipo === 'perdio-linea')).toEqual([]);
   });
 

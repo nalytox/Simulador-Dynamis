@@ -35,6 +35,9 @@ DYN_IMPORTAR("serial_available") int dyn_serial_available(void);
 DYN_IMPORTAR("aviso") void dyn_aviso(const char* texto, size_t largo);
 /** mm, acotado a 8190 (sin objetivo). */
 DYN_IMPORTAR("vl53_medir") uint16_t dyn_vl53_medir(void);
+/** 1 si el VL53L0X contesta ahora en esa dirección (su canal del multiplexor abierto), 0 si no; el
+ * simulador avisa qué canal abrir, o si choca con un TCS34725 en 0x29. */
+DYN_IMPORTAR("vl53_responde") int dyn_vl53_responde(uint8_t direccion);
 /** ax ay az (m/s²), gx gy gz (rad/s), temp (°C), en el marco del sensor. Cuesta COSTOS_US.lecturaMpu. */
 DYN_IMPORTAR("mpu_leer") void dyn_mpu_leer(float* datos7);
 /** I2C directo, para lo que el simulador tiene a nivel de registros: el multiplexor TCA9548A y los

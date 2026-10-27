@@ -9,7 +9,7 @@ const DECLARACIONES: Record<string, string> = {
   's-tof': '#include <Adafruit_VL53L0X.h>\nAdafruit_VL53L0X distancia;',
   's-tcs': '#include <Adafruit_TCS34725.h>\nAdafruit_TCS34725 tcs;',
   's-mpu': '#include <Wire.h>\n#include <MPU6050_light.h>\nMPU6050 mpu(Wire);',
-  's-mot': 'const int PWM_IZQ = 18;',
+  's-mot': 'const int PWM_IZQ = 4;',
 };
 
 const desescapar = (html: string) => html.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');

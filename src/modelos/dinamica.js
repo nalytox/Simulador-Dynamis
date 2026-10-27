@@ -1,6 +1,5 @@
 // MODELO DE DINÁMICA DEL ROBOT — lo implementa el profesor.
 // Contrato y unidades: ver src/modelos/README.md.
-import { PARAMETROS } from './parametros.js';
 import { huellaRobot } from '../robot/config';
 
 /**
@@ -14,21 +13,25 @@ export function estadoInicial(pose, robot, mundo) {
 }
 
 /**
- * Altura e inclinación del chasis apoyado en el suelo: se inclina según la altura del suelo bajo su
- * frente y su cola (pitch) y bajo cada rueda (roll). z es la altura del eje de las ruedas.
- * Así el robot empieza a subir cuando su frente llega a la rampa, y un bache chico lo inclina poco.
+ * Altura e inclinación del robot apoyado en el suelo. z es la altura del suelo bajo el eje de las
+ * ruedas. El roll sale de la altura del suelo bajo cada rueda motriz. El pitch, de dos apoyos a lo
+ * largo del robot: el eje de las ruedas y el de las ruedas locas, si las tiene; si no, el frente y la
+ * cola del chasis. Así el robot empieza a subir cuando su apoyo delantero llega a la rampa, y un
+ * bache chico lo inclina poco.
  */
 function apoyo(x, y, yaw, robot, mundo) {
   const c = Math.cos(yaw);
   const s = Math.sin(yaw);
   const suelo = (adelante, izquierda) => mundo.altura(x + adelante * c - izquierda * s, y + adelante * s + izquierda * c);
-  const frente = robot.chasis.xDelantero;
-  const cola = robot.chasis.xDelantero - robot.chasis.largo;
+  const locas = robot.ruedasLocas;
+  const conLocas = locas?.instalado && locas.x !== robot.ruedas.x;
+  const delante = conLocas ? locas.x : robot.chasis.xDelantero;
+  const atras = conLocas ? robot.ruedas.x : robot.chasis.xDelantero - robot.chasis.largo;
   const medio = robot.ruedas.trocha / 2;
-  const hFrente = suelo(frente, 0);
-  const hCola = suelo(cola, 0);
-  const z = hCola + ((hFrente - hCola) * (robot.ruedas.x - cola)) / (frente - cola);
-  const pitch = -Math.atan2(hFrente - hCola, frente - cola);
+  const hDelante = suelo(delante, 0);
+  const hAtras = suelo(atras, 0);
+  const z = hAtras + ((hDelante - hAtras) * (robot.ruedas.x - atras)) / (delante - atras);
+  const pitch = -Math.atan2(hDelante - hAtras, delante - atras);
   const roll = Math.atan2(suelo(robot.ruedas.x, medio) - suelo(robot.ruedas.x, -medio), 2 * medio);
   return { z, pitch: pitch === 0 ? 0 : pitch, roll: roll === 0 ? 0 : roll };
 }
@@ -45,8 +48,8 @@ function apoyo(x, y, yaw, robot, mundo) {
 export function pasoDinamica(estado, motores, dt, mundo, robot, azar) {
   // TODO(profe): reemplazar este placeholder ideal (cinemática diferencial, sin inercia ni
   // deslizamiento) por el modelo dinámico real: masa, inercia, fricción, efecto de las rampas…
-  const vIzq = motores.izq.duty * PARAMETROS.vMaxMmS;
-  const vDer = motores.der.duty * PARAMETROS.vMaxMmS;
+  const vIzq = motores.izq.duty * robot.motores.vMaxMmS;
+  const vDer = motores.der.duty * robot.motores.vMaxMmS;
   const v = (vIzq + vDer) / 2;
   const w = (vDer - vIzq) / robot.ruedas.trocha;
   const yaw = estado.yaw + w * dt;

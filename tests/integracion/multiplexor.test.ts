@@ -3,11 +3,18 @@ import { correrSketch } from '../ayuda/correr-sketch';
 import { pistaDe } from '../ayuda/pistas';
 import { ROBOT_POR_DEFECTO, type ConfigRobot } from '../../src/robot/config';
 
-/** Dos TCS34725, uno a cada lado, en los canales 0 y 1 de un TCA9548A. */
+/** Dos TCS34725 en los canales 0 (a la derecha) y 1 (a la izquierda) de un TCA9548A. */
 const ROBOT: ConfigRobot = {
   ...ROBOT_POR_DEFECTO,
-  tcs34725: { ...ROBOT_POR_DEFECTO.tcs34725, canal: 0 },
-  tcs34725b: { ...ROBOT_POR_DEFECTO.tcs34725b, instalado: true, canal: 1 },
+  tcs34725: { x: 40, y: -46, z: 5, led: null, canal: 0 },
+  tcs34725b: { instalado: true, x: 40, y: 46, z: 5, led: null, canal: 1 },
+};
+/** Un solo TCS34725 y el láser, los dos directo en el bus (el láser con otra dirección). */
+const SIN_MUX: ConfigRobot = {
+  ...ROBOT_POR_DEFECTO,
+  tcs34725: { ...ROBOT_POR_DEFECTO.tcs34725, canal: null },
+  tcs34725b: { ...ROBOT_POR_DEFECTO.tcs34725b, instalado: false, canal: null },
+  vl53l0x: { ...ROBOT_POR_DEFECTO.vl53l0x, canal: null },
 };
 const MUX = `#include <Wire.h>
 #include <Adafruit_TCS34725.h>
@@ -50,7 +57,7 @@ void loop() {}`, { robot: ROBOT });
 
   it('sin multiplexor en el robot, escribir a 0x70 no tiene respuesta y avisa', async () => {
     const { texto, sim } = await correrSketch(`${MUX}void setup() { Serial.begin(115200); Wire.beginTransmission(0x70); Wire.write(1); Serial.println(Wire.endTransmission()); }
-void loop() {}`);
+void loop() {}`, { robot: SIN_MUX });
     expect(texto).toBe('2\r\n');
     expect(sim.avisos).toEqual(['Nadie respondió en 0x70: tu robot no tiene multiplexor. Ponle a cada TCS34725 su canal en «Mi robot».']);
   });

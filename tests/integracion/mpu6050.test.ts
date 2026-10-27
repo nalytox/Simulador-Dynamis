@@ -1,14 +1,43 @@
 import { describe, it, expect } from 'vitest';
 import { correrSketch } from '../ayuda/correr-sketch';
 import { pistaDe } from '../ayuda/pistas';
+import { ROBOT_POR_DEFECTO } from '../../src/robot/config';
 
-const GIRAR = 'pinMode(16, OUTPUT); pinMode(17, OUTPUT); pinMode(4, OUTPUT); pinMode(5, OUTPUT); digitalWrite(16, LOW); digitalWrite(17, HIGH); digitalWrite(4, HIGH); digitalWrite(5, LOW); analogWrite(18, 255); analogWrite(19, 255); delay(100);';
+// Pines del robot por defecto: izquierdo PWM 4, IN1 16, IN2 17; derecho PWM 19, IN1 5, IN2 18.
+const PINES = 'pinMode(16, OUTPUT); pinMode(17, OUTPUT); pinMode(5, OUTPUT); pinMode(18, OUTPUT); ledcAttach(4, 5000, 8); ledcAttach(19, 5000, 8);';
+/** Gira a la izquierda: la rueda izquierda hacia atrás y la derecha hacia adelante, al máximo. */
+const GIRAR = `${PINES} digitalWrite(16, LOW); digitalWrite(17, HIGH); digitalWrite(5, HIGH); digitalWrite(18, LOW); ledcWrite(4, 255); ledcWrite(19, 255); delay(100);`;
 const INICIO = '#include <Wire.h>\n#include <MPU6050_light.h>\nMPU6050 mpu(Wire);\n';
 /** Lo que gira el robot con GIRAR, en °/s, y lo que entrega el chip con `lsb` LSB por °/s (saturado a 16 bits). */
-const GIRO_DPS = 1200 / 140 * 180 / Math.PI;
+const GIRO_DPS = 1200 / 160 * 180 / Math.PI;
 const crudo = (lsb: number) => Math.max(-32768, Math.min(32767, Math.round(GIRO_DPS * lsb)));
 
+const RAMPA = pistaDe({ columnas: 3, filas: 1, baldosas: [{ c: 0, r: 0, tipo: 'recta' }, { c: 1, r: 0, tipo: 'rampa' },
+  { c: 2, r: 0, tipo: 'recta', nivel: 300 * Math.tan(20 * Math.PI / 180) }] });
+
+/** Sube la rampa a media velocidad y compara getAngleY() con el pitch del modelo, cada 20 ms. */
+async function subirRampa(orientacion: 'z-arriba-x-adelante' | 'z-arriba-x-atras') {
+  const pitch = new Map<number, number>();
+  const robot = { ...structuredClone(ROBOT_POR_DEFECTO), mpu6050: { ...ROBOT_POR_DEFECTO.mpu6050, orientacion } };
+  const { texto } = await correrSketch(`${INICIO}unsigned long ultimo = 0;
+    void setup() { Serial.begin(115200); Wire.begin(); mpu.begin(); ${PINES}
+      digitalWrite(16, HIGH); digitalWrite(17, LOW); digitalWrite(5, HIGH); digitalWrite(18, LOW); ledcWrite(4, 128); ledcWrite(19, 128); }
+    void loop() { mpu.update(); if (millis() - ultimo >= 20) { ultimo = millis(); Serial.printf("%lu %.3f\\n", ultimo, mpu.getAngleY()); } }`,
+  { pista: RAMPA, robot, pose: { x: 100, y: 150, yaw: 0 }, duracionUs: 1_600_000,
+    alPasoFisica: (tUs, estado) => pitch.set(Math.round(tUs / 1000), estado.pitch * 180 / Math.PI) });
+  return texto.trim().split('\n').map(l => l.split(' ').map(Number)).map(([ms, anguloY]) => ({ ms, anguloY, pitch: pitch.get(ms)! }));
+}
+
 describe('MPU6050 (MPU6050_light)', { timeout: 120_000 }, () => {
+  it('al subir una rampa de 20°, getAngleY() sigue al pitch del modelo sin retraso y cambia de signo con la orientación', async () => {
+    const atras = await subirRampa('z-arriba-x-atras');
+    const adelante = await subirRampa('z-arriba-x-adelante');
+    // La rampa se sube entera: el pitch llega a −20° (nariz arriba).
+    expect(Math.min(...atras.map(m => m.pitch))).toBeCloseTo(-20, 0);
+    for (const m of atras) expect(Math.abs(m.anguloY - -m.pitch), `${m.ms} ms`).toBeLessThan(1);
+    for (const m of adelante) expect(Math.abs(m.anguloY - m.pitch), `${m.ms} ms`).toBeLessThan(1);
+  });
+
   it('begin devuelve 0; en lo plano: aceleración en g, giro en °/s y temperatura; 0,4 ms por update; montaje invertido', async () => {
     const { texto, sim } = await correrSketch(`${INICIO}void setup() { Serial.begin(115200); Wire.begin(); Serial.println(mpu.begin());
       unsigned long t0 = micros(); mpu.update(); unsigned long t1 = micros();
@@ -18,13 +47,13 @@ describe('MPU6050 (MPU6050_light)', { timeout: 120_000 }, () => {
     expect(sim.avisos).toEqual([]);
   });
 
-  it('en la rampa, begin deja getAngleY en la inclinación que mide el acelerómetro', async () => {
+  it('en la rampa, begin deja getAngleY en la inclinación que mide el acelerómetro (el MPU mira hacia atrás: sube positivo)', async () => {
     const alto = 300 * Math.tan(20 * Math.PI / 180);
     const pista = pistaDe({ columnas: 3, filas: 1, baldosas: [{ c: 0, r: 0, tipo: 'recta' }, { c: 1, r: 0, tipo: 'rampa' }, { c: 2, r: 0, tipo: 'recta', nivel: alto }] });
     const { texto } = await correrSketch(`${INICIO}void setup() { Serial.begin(115200); mpu.begin();
       Serial.printf("%.2f %.2f %.1f %.1f\\n", mpu.getAccX(), mpu.getAccZ(), mpu.getAccAngleY(), mpu.getAngleY()); }\nvoid loop() {}`,
       { pista, pose: { x: 450, y: 150, yaw: 0 } });
-    expect(texto).toBe('0.34 0.94 -20.0 -20.0\n');
+    expect(texto).toBe('-0.34 0.94 20.0 20.0\n');
   });
 
   it('giro: ±500 °/s por defecto, saturación con setGyroConfig(0) y configuración inválida', async () => {

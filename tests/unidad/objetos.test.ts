@@ -44,7 +44,8 @@ it('colisiona: huella del robot contra el obstáculo, no contra baches ni hitos'
   const m = crearMundo(pistaDe({ columnas: 4, filas: 1, objetos: [caja, { tipo: 'bache', x: 200, y: 150, rot: 90 },
     { tipo: 'hito', x: 900, y: 150, rot: 0, props: { numero: 1 } },
     { tipo: 'desafio', x: 300, y: 150, rot: 0, props: { nombre: 'F1', hitoSiguiente: 1 } }] }));
-  expect(m.colisiona(huellaRobot(400, 150, 0, ROBOT_POR_DEFECTO))).toEqual({ objeto: m.pista.objetos[0], penetracion: 46 });
+  // El frente del chasis (400 + 97) entra 47 mm en la cara de la caja (x = 450).
+  expect(m.colisiona(huellaRobot(400, 150, 0, ROBOT_POR_DEFECTO))).toEqual({ objeto: m.pista.objetos[0], penetracion: 47 });
   expect(m.colisiona(huellaRobot(200, 150, 0, ROBOT_POR_DEFECTO))).toBeNull();
   expect(m.colisiona(huellaRobot(900, 150, 0, ROBOT_POR_DEFECTO))).toBeNull();
   expect(m.objetosCerca(300, 150, 210).map(o => o.tipo)).toEqual(['bache', 'obstaculo']);

@@ -20,14 +20,39 @@ it('VL53L0X: distancia al obstáculo o 8190', () => {
   expect(MODELOS_POR_DEFECTO.leerVL53L0X({ t: 0, estado: quieto, sensor: { x: 242, y: 150, z: 35, yaw: Math.PI, pitch: 0 }, mundo, azar })).toBe(8190);
 });
 
+const ADELANTE = { ...ROBOT_POR_DEFECTO.mpu6050, orientacion: 'z-arriba-x-adelante' as const };
+const ATRAS = { ...ROBOT_POR_DEFECTO.mpu6050, orientacion: 'z-arriba-x-atras' as const };
+const GRADO = Math.PI / 180;
+
 it('MPU6050: gravedad según la inclinación y gz por el cambio de rumbo', () => {
-  const enRampa = { ...quieto, pitch: -20 * Math.PI / 180, yaw: 0.01 };
-  const l = MODELOS_POR_DEFECTO.leerMPU6050({ t: 0, dt: 0.001, estado: enRampa, estadoAnterior: quieto, montaje: ROBOT_POR_DEFECTO.mpu6050, mundo, azar });
-  expect(l.ax).toBeCloseTo(9.80665 * Math.sin(20 * Math.PI / 180)); expect(l.ay).toBeCloseTo(0); expect(l.az).toBeCloseTo(9.80665 * Math.cos(20 * Math.PI / 180));
+  const enRampa = { ...quieto, pitch: -20 * GRADO, yaw: 0.01 };
+  const l = MODELOS_POR_DEFECTO.leerMPU6050({ t: 0, dt: 0.001, estado: enRampa, estadoAnterior: quieto, montaje: ADELANTE, mundo, azar });
+  expect(l.ax).toBeCloseTo(9.80665 * Math.sin(20 * GRADO)); expect(l.ay).toBeCloseTo(0); expect(l.az).toBeCloseTo(9.80665 * Math.cos(20 * GRADO));
   expect(l.gz).toBeCloseTo(10); expect(l.temp).toBe(25);
   const vuelta = MODELOS_POR_DEFECTO.leerMPU6050({ t: 0, dt: 0.001, estado: { ...quieto, yaw: -Math.PI + 0.001 },
-    estadoAnterior: { ...quieto, yaw: Math.PI - 0.001 }, montaje: ROBOT_POR_DEFECTO.mpu6050, mundo, azar });
+    estadoAnterior: { ...quieto, yaw: Math.PI - 0.001 }, montaje: ADELANTE, mundo, azar });
   expect(vuelta.gz).toBeCloseTo(2);
+});
+
+it('MPU6050: gx y gy son el cambio de roll y de pitch', () => {
+  const antes = { ...quieto, pitch: -10 * GRADO, roll: 2 * GRADO };
+  const ahora = { ...quieto, pitch: -10.5 * GRADO, roll: 2.2 * GRADO };
+  const l = MODELOS_POR_DEFECTO.leerMPU6050({ t: 0, dt: 0.01, estado: ahora, estadoAnterior: antes, montaje: ADELANTE, mundo, azar });
+  expect(l.gx).toBeCloseTo(0.2 * GRADO / 0.01, 9);
+  expect(l.gy).toBeCloseTo(-0.5 * GRADO / 0.01, 9);
+  expect(MODELOS_POR_DEFECTO.leerMPU6050({ t: 0, dt: 0.01, estado: quieto, estadoAnterior: quieto, montaje: ADELANTE, mundo, azar }))
+    .toMatchObject({ gx: 0, gy: 0, gz: 0 });
+});
+
+it('MPU6050 mirando hacia atrás: ax, ay, gx y gy cambian de signo; az y gz no', () => {
+  const antes = { ...quieto, pitch: -10 * GRADO, roll: 2 * GRADO };
+  const ahora = { ...quieto, pitch: -10.5 * GRADO, roll: 2.2 * GRADO, yaw: 0.01 };
+  const e = { t: 0, dt: 0.01, estado: ahora, estadoAnterior: antes, mundo, azar };
+  const adelante = MODELOS_POR_DEFECTO.leerMPU6050({ ...e, montaje: ADELANTE });
+  const atras = MODELOS_POR_DEFECTO.leerMPU6050({ ...e, montaje: ATRAS });
+  expect(atras).toEqual({ ...adelante, ax: -adelante.ax, ay: -adelante.ay, gx: -adelante.gx, gy: -adelante.gy });
+  // En lo plano no aparece −0 (el núcleo lo imprimiría como -0.00).
+  expect(Object.is(MODELOS_POR_DEFECTO.leerMPU6050({ ...e, estado: quieto, estadoAnterior: quieto, montaje: ATRAS }).ax, -0)).toBe(false);
 });
 
 it('TCS34725: color escalado por ganancia e integración', () =>

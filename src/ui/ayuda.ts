@@ -1,5 +1,5 @@
 import { GUIAS } from '../ayuda/guias';
-import { conexionesDe } from '../ayuda/conexiones';
+import { PLACA_V2, conexionesDe, type GrupoConexiones } from '../ayuda/conexiones';
 import { puntaje } from '../ayuda/bases';
 import type { ConfigRobot } from '../robot/config';
 
@@ -74,16 +74,18 @@ export function crearVentanaAyuda(raiz: Document, eventos: VentanaAyudaEventos):
     return fila;
   }));
 
-  const pintarConexiones = () => {
-    $('ay-conexiones-lista').replaceChildren(...conexionesDe(eventos.robot()).map(g => {
-      const tabla = el('table', 'ay-tabla');
-      tabla.append(el('caption', undefined, g.grupo), ...g.filas.map(f => {
-        const fila = el('tr');
-        fila.append(el('th', undefined, f.que), el('td', undefined, f.pin));
-        return fila;
-      }));
-      return tabla;
+  const tablaDe = (g: GrupoConexiones) => {
+    const tabla = el('table', 'ay-tabla');
+    tabla.append(el('caption', undefined, g.grupo), ...g.filas.map(f => {
+      const fila = el('tr');
+      fila.append(el('th', undefined, f.que), el('td', undefined, f.pin));
+      return fila;
     }));
+    return tabla;
+  };
+  $('ay-placa').replaceChildren(tablaDe(PLACA_V2));
+  const pintarConexiones = () => {
+    $('ay-conexiones-lista').replaceChildren(...conexionesDe(eventos.robot()).map(tablaDe));
   };
 
   $('ay-cerrar').addEventListener('click', () => ventana.close());

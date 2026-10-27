@@ -27,6 +27,8 @@ export interface Anfitrion {
   aviso(texto: string): void;
   /** Distancia del VL53L0X en mm (0…8190). */
   vl53Medir(): number;
+  /** Si el VL53L0X contesta ahora en esa dirección del bus (su canal del multiplexor abierto). */
+  vl53Responde(direccion: number): boolean;
   /** ax, ay, az (m/s²), gx, gy, gz (rad/s) y temp (°C) del MPU6050. */
   mpuLeer(): number[];
   /** I2C directo (multiplexor y TCS34725): true si algún dispositivo respondió. */
@@ -87,6 +89,7 @@ const DYNAMIS: Record<string, FabricaImport> = {
   aviso: (a, memoria) => (ptr: number, largo: number) =>
     a.aviso(new TextDecoder().decode(new Uint8Array(memoria().buffer, u32(ptr), u32(largo)))),
   vl53_medir: a => () => a.vl53Medir(),
+  vl53_responde: a => (direccion: number) => (a.vl53Responde(direccion & 0x7f) ? 1 : 0),
   mpu_leer: (a, memoria) => (ptr: number) => {
     new Float32Array(memoria().buffer, u32(ptr), 7).set(a.mpuLeer());
   },

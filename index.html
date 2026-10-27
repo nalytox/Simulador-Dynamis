@@ -159,7 +159,7 @@
         <div class="sensores" aria-label="Lo que siente el robot">
           <section class="sensor ancho">
             <div class="fila-qtr">
-              <h3>Sensor de línea <small>QTR-MX-8A · 8 sensores</small></h3>
+              <h3>Sensor de línea <small>QTRX-MD-08A · 8 sensores</small></h3>
               <span class="sub">Línea en: <b id="qtr-pos-num">3500</b> <span>(0 a 7000)</span></span>
             </div>
             <div class="qtr" id="qtr"></div>
@@ -176,7 +176,8 @@ int pos = qtr.readLineBlack(valores);  // 0 a 7000</pre>
             <div class="medidor"><b id="tof-bar" style="width:0%"></b></div>
             <div class="sub" id="tof-sub">Alcance hasta 1200 mm</div>
             <button class="como" data-snip="s-tof">¿Cómo lo uso?</button>
-            <pre id="s-tof" hidden>int mm = distancia.readRange();  // en milímetros</pre>
+            <pre id="s-tof" hidden>// con su canal (el 2) abierto en el multiplexor
+int mm = distancia.readRange();  // en milímetros</pre>
           </section>
 
           <section class="sensor">
@@ -190,7 +191,8 @@ int pos = qtr.readLineBlack(valores);  // 0 a 7000</pre>
                 <div class="rgbc" id="color2-rgbc"></div></div>
             </div>
             <button class="como" data-snip="s-tcs">¿Cómo lo uso?</button>
-            <pre id="s-tcs" hidden>uint16_t r, g, b, c;
+            <pre id="s-tcs" hidden>// con su canal (0 o 1) abierto en el multiplexor
+uint16_t r, g, b, c;
 tcs.getRawData(&amp;r, &amp;g, &amp;b, &amp;c);</pre>
           </section>
 
@@ -218,7 +220,8 @@ float giro = mpu.getAngleZ();  // en grados</pre>
             </div>
             <div class="sub">Hacia atrás ← 0 → hacia adelante</div>
             <button class="como" data-snip="s-mot">¿Cómo lo uso?</button>
-            <pre id="s-mot" hidden>analogWrite(PWM_IZQ, 150);  // 0 a 255</pre>
+            <pre id="s-mot" hidden>ledcAttach(PWM_IZQ, 5000, 8);  // en setup: PWM de 8 bits
+ledcWrite(PWM_IZQ, 150);  // 0 a 255</pre>
           </section>
         </div>
       </div>
@@ -299,7 +302,11 @@ float giro = mpu.getAngleZ();  // en grados</pre>
     <article class="card">
       <header><h2>Así se ve desde arriba</h2></header>
       <div class="robot-centro">
-        <canvas class="robot-dibujo" id="robot-dibujo" aria-label="Dibujo de tu robot visto desde arriba, mirando hacia arriba"></canvas>
+        <div class="aviso-robot" id="robot-anterior" role="status" hidden>
+          <p id="robot-anterior-texto"></p>
+          <button class="btn-sec" id="robot-por-defecto">Volver al robot por defecto</button>
+        </div>
+        <canvas class="robot-dibujo" id="robot-dibujo" aria-label="Dibujo de tu robot visto desde arriba, mirando hacia arriba: las ruedas, la placa, los sensores y el MPU6050 con una flecha en su eje x"></canvas>
         <div class="revision">
           <h3>Revisión</h3>
           <ul class="avisos-pista" id="robot-avisos"></ul>
@@ -368,8 +375,11 @@ float giro = mpu.getAngleZ();  // en grados</pre>
   <div class="ay-panel" id="ay-conexiones" role="tabpanel" aria-labelledby="ay-tab-conexiones" hidden>
     <p>Así está conectado tu robot según «Mi robot». Tu código tiene que usar estos mismos pines.</p>
     <div class="ay-tablas" id="ay-conexiones-lista"></div>
-    <p class="ay-aviso">⚠ El VL53L0X y el TCS34725 usan la misma dirección I2C (0x29). En el robot real hay que cambiar la dirección del VL53L0X con setAddress (apagando el otro con XSHUT) o usar un multiplexor I2C.</p>
+    <p class="ay-aviso">⚠ El VL53L0X y los dos TCS34725 usan la misma dirección I2C (0x29): cada uno va en su canal del multiplexor TCA9548A. Abre el canal del sensor antes de usarlo.</p>
     <button class="btn-sec" id="ay-mi-robot">Cambiar en Mi robot</button>
+    <h3>La placa del robot Dynamis</h3>
+    <p>Así está cableada la placa V2, la del robot por defecto. Los encoders de las ruedas existen en la placa, pero el simulador todavía no los modela.</p>
+    <div class="ay-tablas" id="ay-placa"></div>
   </div>
   <div class="ay-panel" id="ay-bases" role="tabpanel" aria-labelledby="ay-tab-bases" hidden>
     <h3>Cómo se puntúa</h3>

@@ -3,6 +3,7 @@ import { compilarParaPrueba } from '../ayuda/compilar-prueba';
 import { cargarNucleoDesdeDisco } from '../../src/compilador/nucleo-node';
 import { Simulador, type OpcionesSimulador } from '../../src/simulacion/simulador';
 import type { ArchivosNucleo } from '../../src/compilador/compilar';
+import { ROBOT_POR_DEFECTO } from '../../src/robot/config';
 
 let nucleo: ArchivosNucleo;
 beforeAll(async () => { nucleo = await cargarNucleoDesdeDisco(); });
@@ -13,9 +14,9 @@ async function crearSim(codigo: string, opciones: Partial<OpcionesSimulador> = {
 }
 
 const AVANZAR = `void setup() {
-  pinMode(16, OUTPUT); pinMode(17, OUTPUT); pinMode(4, OUTPUT); pinMode(5, OUTPUT);
-  digitalWrite(16, HIGH); digitalWrite(17, LOW); digitalWrite(4, HIGH); digitalWrite(5, LOW);
-  analogWrite(18, 255); analogWrite(19, 255);
+  pinMode(16, OUTPUT); pinMode(17, OUTPUT); pinMode(5, OUTPUT); pinMode(18, OUTPUT); ledcAttach(4, 5000, 8); ledcAttach(19, 5000, 8);
+  digitalWrite(16, HIGH); digitalWrite(17, LOW); digitalWrite(5, HIGH); digitalWrite(18, LOW);
+  ledcWrite(4, 255); ledcWrite(19, 255);
 }
 void loop() {}`;
 
@@ -28,9 +29,10 @@ describe('Simulador', { timeout: 120_000 }, () => {
     expect(sim.motores).toEqual({ izq: { duty: 1, modo: 'avance' }, der: { duty: 1, modo: 'avance' } });
   });
   it('girar en el lugar cambia el rumbo sin desplazarse', async () => {
-    const sim = await crearSim(AVANZAR.replace('digitalWrite(4, HIGH); digitalWrite(5, LOW)', 'digitalWrite(4, LOW); digitalWrite(5, HIGH)'));
+    const sim = await crearSim(AVANZAR.replace('digitalWrite(5, HIGH); digitalWrite(18, LOW)', 'digitalWrite(5, LOW); digitalWrite(18, HIGH)'));
     sim.ejecutar(500_000);
-    expect(sim.estado.yaw).toBeCloseTo(-(1200 / 140) * 0.5, 1); expect(Math.hypot(sim.estado.x, sim.estado.y)).toBeLessThan(1);
+    // Cada rueda a 600 mm/s, una hacia cada lado: el rumbo cambia a 1200 / trocha rad/s.
+    expect(sim.estado.yaw).toBeCloseTo(-(1200 / ROBOT_POR_DEFECTO.ruedas.trocha) * 0.5, 1); expect(Math.hypot(sim.estado.x, sim.estado.y)).toBeLessThan(1);
   });
   it('millis y delay avanzan el reloj virtual', async () => {
     const sim = await crearSim('void setup() { Serial.begin(115200); }\nvoid loop() { Serial.println(millis()); delay(100); }');

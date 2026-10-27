@@ -1,4 +1,4 @@
-import { ROBOT_POR_DEFECTO, type ConfigRobot } from './config';
+import { ORIENTACIONES_MPU, ROBOT_POR_DEFECTO, esRobotPorDefectoAnterior, type ConfigRobot } from './config';
 
 /**
  * El robot como archivo: leer y escribir robot.json, y la lista de campos que edita la
@@ -10,12 +10,15 @@ export interface CampoRobot {
   ruta: string;
   grupo: 'Medidas' | 'Sensores' | 'Pines';
   etiqueta: string;
-  unidad: 'mm' | '°' | 'pin' | null;
-  /** canal: un canal del multiplexor TCA9548A (0 a 7) o null (sin multiplexor). */
-  tipo: 'numero' | 'pin' | 'pin-opcional' | 'si-no' | 'canal';
+  unidad: 'mm' | 'mm/s' | '°' | 'pin' | null;
+  /** canal: un canal del multiplexor TCA9548A (0 a 7) o null (sin multiplexor). opcion: uno de `opciones`. */
+  tipo: 'numero' | 'pin' | 'pin-opcional' | 'si-no' | 'canal' | 'opcion';
   min?: number;
   max?: number;
+  opciones?: { valor: string; etiqueta: string }[];
 }
+
+export type ValorCampo = number | boolean | string | null;
 
 type Registro = Record<string, unknown>;
 
@@ -23,12 +26,15 @@ const NO_ES_ROBOT = 'El archivo no es un robot válido.';
 const PIN_MAXIMO = 39;
 const SENSORES_QTR = 8;
 /** Medidas que deben ser mayores que 0. */
-const POSITIVAS = new Set(['chasis.largo', 'chasis.ancho', 'chasis.alto', 'ruedas.diametro', 'ruedas.trocha', 'qtr.separacion', 'qtr.altura']);
+const POSITIVAS = new Set(['chasis.largo', 'chasis.ancho', 'chasis.alto', 'ruedas.diametro', 'ruedas.trocha', 'ruedasLocas.diametro',
+  'ruedasLocas.trocha', 'motores.vMaxMmS', 'qtr.separacion', 'qtr.altura']);
 const PINES = new Set(['motores.izq.pwm', 'motores.izq.in1', 'motores.izq.in2', 'motores.der.pwm', 'motores.der.in1', 'motores.der.in2']);
 /** Pines que pueden quedar sin conectar (null). */
 const PINES_OPCIONALES = new Set(['motores.stby', 'qtr.emisor', 'tcs34725.led', 'tcs34725b.led']);
 /** Canales del multiplexor (null: el sensor va directo en el bus). */
-const CANALES = new Set(['tcs34725.canal', 'tcs34725b.canal']);
+const CANALES = new Set(['vl53l0x.canal', 'tcs34725.canal', 'tcs34725b.canal']);
+/** Textos que solo pueden tomar algunos valores (el resto de los textos es fijo, como el driver). */
+const OPCIONES: Record<string, readonly string[]> = { 'mpu6050.orientacion': ORIENTACIONES_MPU };
 const CANAL_MAXIMO = 7;
 /** Valores opcionales que no están en ROBOT_POR_DEFECTO. */
 const OPCIONALES: Record<string, string[]> = { 'motores.izq': ['invertir'], 'motores.der': ['invertir'] };
@@ -66,7 +72,8 @@ function normalizarValor(plantilla: unknown, dato: unknown, ruta: string, avisos
     return dato;
   }
   if (typeof plantilla === 'string') {
-    if (dato !== plantilla) errores.push(`${ruta} debe ser "${plantilla}".`);
+    const validos = OPCIONES[ruta] ?? [plantilla];
+    if (!validos.includes(dato as string)) errores.push(`${ruta} debe ser ${validos.map(v => `"${v}"`).join(' o ')}.`);
     return dato;
   }
   if (CANALES.has(ruta)) {
@@ -97,6 +104,21 @@ export function normalizarRobot(datos: unknown): ResultadoRobot {
   return errores.length > 0 ? { ok: false, errores } : { ok: true, robot: robot as unknown as ConfigRobot, avisos };
 }
 
+export const AVISO_ROBOT_ANTERIOR = 'Tu robot guardado es de antes del robot Dynamis V2 y tiene cambios tuyos, así que lo dejamos como estaba. '
+  + 'Lo que le faltaba tomó los valores del Dynamis V2. Si quieres el robot nuevo completo, vuelve al robot por defecto.';
+
+/**
+ * El robot guardado en el navegador al abrir la app. Si es el robot por defecto anterior sin cambios,
+ * pasa a ser el Dynamis V2 (`actualizado`). Si es de antes y el estudiante lo cambió, se queda como
+ * está, completado con los valores por defecto, y trae un aviso. null si no hay un robot válido.
+ */
+export function migrarRobotGuardado(datos: unknown): { robot: ConfigRobot; actualizado: boolean; aviso: string | null } | null {
+  if (esRobotPorDefectoAnterior(datos)) return { robot: structuredClone(ROBOT_POR_DEFECTO), actualizado: true, aviso: null };
+  const r = datos === undefined || datos === null ? null : normalizarRobot(datos);
+  if (!r?.ok) return null;
+  return { robot: r.robot, actualizado: false, aviso: r.avisos.length > 0 ? AVISO_ROBOT_ANTERIOR : null };
+}
+
 export function leerRobot(texto: string): ResultadoRobot {
   let datos: unknown;
   try {
@@ -121,12 +143,17 @@ const pin = (ruta: string, etiqueta: string, opcional = false): CampoRobot =>
   ({ ruta, grupo: 'Pines', etiqueta, unidad: 'pin', tipo: opcional ? 'pin-opcional' : 'pin', min: 0, max: PIN_MAXIMO });
 const canal = (ruta: string, etiqueta: string): CampoRobot =>
   ({ ruta, grupo: 'Pines', etiqueta, unidad: null, tipo: 'canal', min: 0, max: CANAL_MAXIMO });
+const siNo = (ruta: string, etiqueta: string, grupo: CampoRobot['grupo']): CampoRobot => ({ ruta, grupo, etiqueta, unidad: null, tipo: 'si-no' });
 const motor = (lado: 'izq' | 'der', nombre: string): CampoRobot[] => [
   pin(`motores.${lado}.pwm`, `${nombre}: PWM`),
   pin(`motores.${lado}.in1`, `${nombre}: IN1`),
   pin(`motores.${lado}.in2`, `${nombre}: IN2`),
-  { ruta: `motores.${lado}.invertir`, grupo: 'Pines', etiqueta: `${nombre}: girar al revés`, unidad: null, tipo: 'si-no' },
+  siNo(`motores.${lado}.invertir`, `${nombre}: girar al revés`, 'Pines'),
 ];
+const ETIQUETAS_ORIENTACION: Record<string, string> = {
+  'z-arriba-x-adelante': 'Eje x hacia adelante',
+  'z-arriba-x-atras': 'Eje x hacia atrás (girado 180°)',
+};
 
 /** Los campos que se editan en "Mi robot", en el orden en que se muestran. */
 export const CAMPOS_ROBOT: CampoRobot[] = [
@@ -137,6 +164,11 @@ export const CAMPOS_ROBOT: CampoRobot[] = [
   medida('ruedas.diametro', 'Diámetro de las ruedas', 10, 150),
   medida('ruedas.trocha', 'Distancia entre las ruedas', 20, 400),
   medida('ruedas.x', 'Eje de las ruedas, hacia adelante', -200, 200),
+  { ruta: 'motores.vMaxMmS', grupo: 'Medidas', etiqueta: 'Velocidad de las ruedas con el PWM al máximo', unidad: 'mm/s', tipo: 'numero', min: 50, max: 3000 },
+  siNo('ruedasLocas.instalado', 'Ruedas locas: instaladas', 'Medidas'),
+  medida('ruedasLocas.diametro', 'Ruedas locas: diámetro', 10, 150),
+  medida('ruedasLocas.trocha', 'Ruedas locas: distancia entre ellas', 20, 400),
+  medida('ruedasLocas.x', 'Ruedas locas: eje, hacia adelante', -200, 400),
   medida('qtr.x', 'Sensor de línea: hacia adelante', -300, 300, 'Sensores'),
   medida('qtr.separacion', 'Sensor de línea: separación entre sensores', 1, 30, 'Sensores'),
   medida('qtr.altura', 'Sensor de línea: altura sobre el suelo', 0.5, 30, 'Sensores'),
@@ -147,11 +179,14 @@ export const CAMPOS_ROBOT: CampoRobot[] = [
   { ruta: 'tcs34725b.instalado', grupo: 'Sensores', etiqueta: 'Color 2 (TCS34725): instalado', unidad: null, tipo: 'si-no' },
   ...posicion('tcs34725b', 'Color 2 (TCS34725)', ['x', 'y', 'z']),
   ...posicion('mpu6050', 'Giro (MPU6050)', ['x', 'y', 'z']),
+  { ruta: 'mpu6050.orientacion', grupo: 'Sensores', etiqueta: 'Giro (MPU6050): hacia dónde apunta', unidad: null, tipo: 'opcion',
+    opciones: ORIENTACIONES_MPU.map(valor => ({ valor, etiqueta: ETIQUETAS_ORIENTACION[valor] })) },
   ...motor('izq', 'Motor izquierdo'),
   ...motor('der', 'Motor derecho'),
   pin('motores.stby', 'Driver: STBY', true),
   ...Array.from({ length: 8 }, (_, i) => pin(`qtr.pines.${i}`, `Sensor de línea: sensor ${i + 1}`)),
   pin('qtr.emisor', 'Sensor de línea: LEDs (emisor)', true),
+  canal('vl53l0x.canal', 'Distancia (VL53L0X): canal del multiplexor'),
   pin('tcs34725.led', 'Color 1: LED', true),
   canal('tcs34725.canal', 'Color 1: canal del multiplexor'),
   pin('tcs34725b.led', 'Color 2: LED', true),
@@ -160,16 +195,18 @@ export const CAMPOS_ROBOT: CampoRobot[] = [
 
 const partes = (ruta: string) => ruta.split('.');
 
-export function leerCampo(r: ConfigRobot, ruta: string): number | boolean | null {
+export function leerCampo(r: ConfigRobot, ruta: string): ValorCampo {
   let actual: unknown = r;
   for (const parte of partes(ruta)) actual = (actual as Registro)?.[parte];
   if (actual === undefined && ruta.endsWith('.invertir')) return false;
-  return actual as number | boolean | null;
+  return actual as ValorCampo;
 }
 
 /** Una copia del robot con el campo cambiado, acotado a su rango (los pines, además, enteros). */
-export function conCampo(r: ConfigRobot, ruta: string, valor: number | boolean | null): ConfigRobot {
+export function conCampo(r: ConfigRobot, ruta: string, valor: ValorCampo): ConfigRobot {
   const campo = CAMPOS_ROBOT.find(c => c.ruta === ruta);
+  // Una opción que no existe deja el valor que había.
+  if (campo?.tipo === 'opcion' && !campo.opciones?.some(o => o.valor === valor)) return structuredClone(r);
   let final = valor;
   if (typeof valor === 'number' && campo) {
     final = Math.min(campo.max ?? Infinity, Math.max(campo.min ?? -Infinity, campo.tipo === 'numero' ? valor : Math.round(valor)));

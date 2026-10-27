@@ -1,27 +1,33 @@
 import { describe, it, expect } from 'vitest';
 import { correrSketch } from '../ayuda/correr-sketch';
 import { pistaDe } from '../ayuda/pistas';
+import { ROBOT_POR_DEFECTO, type ConfigRobot } from '../../src/robot/config';
 
 const CON_OBSTACULO = pistaDe({ columnas: 4, filas: 1, baldosas: [0, 1, 2, 3].map(c => ({ c, r: 0, tipo: 'recta' })),
   objetos: [{ tipo: 'obstaculo', x: 600, y: 150, rot: 0 }] });
-const INICIO = '#include <Wire.h>\n#include <Adafruit_VL53L0X.h>\nAdafruit_VL53L0X lox = Adafruit_VL53L0X();\nVL53L0X_RangingMeasurementData_t m;\n';
+// En el robot por defecto el láser está en el canal 2 del multiplexor (0x70).
+const INICIO = '#include <Wire.h>\n#include <Adafruit_VL53L0X.h>\nAdafruit_VL53L0X lox = Adafruit_VL53L0X();\nVL53L0X_RangingMeasurementData_t m;\n'
+  + 'void canal(uint8_t c) { Wire.beginTransmission(0x70); Wire.write(1 << c); Wire.endTransmission(); }\n';
+const ABRIR = 'El VL53L0X está en el canal 2 del multiplexor (0x70): ábrelo antes de usar el láser.';
+/** El láser directo en el bus, sin multiplexor de por medio. */
+const LASER_DIRECTO: ConfigRobot = { ...ROBOT_POR_DEFECTO, vl53l0x: { ...ROBOT_POR_DEFECTO.vl53l0x, canal: null } };
 const BUS_DIRECTO = 'Nadie respondió en 0x68: por I2C directo el simulador solo tiene el multiplexor TCA9548A y los TCS34725. Para los demás sensores usa sus librerías.';
 const lineas = (...l: (string | number)[]) => [...l, ''].join('\r\n');
 
 describe('VL53L0X (Adafruit_VL53L0X) y Wire', { timeout: 120_000 }, () => {
   it('rangingTest: distancia y estado 0 en 33 ms; presupuesto configurable; readRange y readRangeStatus', async () => {
-    const { texto, sim } = await correrSketch(`${INICIO}void setup() { Serial.begin(115200); Wire.begin(); Serial.println(lox.begin());
+    const { texto, sim } = await correrSketch(`${INICIO}void setup() { Serial.begin(115200); Wire.begin(); canal(2); Serial.println(lox.begin());
       unsigned long t0 = micros(); Serial.println(lox.rangingTest(&m, false)); Serial.println((micros() - t0 + 500) / 1000);
       Serial.println(m.RangeMilliMeter); Serial.println(m.RangeStatus);
       Serial.println(lox.setMeasurementTimingBudgetMicroSeconds(10000)); Serial.println(lox.setMeasurementTimingBudgetMicroSeconds(200000)); Serial.println(lox.getMeasurementTimingBudgetMicroSeconds());
       t0 = micros(); Serial.println(lox.readRange()); Serial.println((micros() - t0 + 500) / 1000); Serial.println(lox.readRangeStatus()); Serial.println(lox.Status); }\nvoid loop() {}`,
       { pista: CON_OBSTACULO, duracionUs: 500_000 });
-    expect(texto).toBe(lineas(1, 0, 33, 308, 0, 0, 1, 200000, 308, 200, 0, 0));
+    expect(texto).toBe(lineas(1, 0, 33, 318, 0, 0, 1, 200000, 318, 200, 0, 0));
     expect(sim.avisos).toEqual([]);
   });
 
   it('sin objetivo: estado 4 («Phase Fail»); readRange entrega 8190 y readRangeResult 65535', async () => {
-    const { texto } = await correrSketch(`${INICIO}void setup() { Serial.begin(115200); lox.begin(); lox.rangingTest(&m); Serial.println(m.RangeMilliMeter); lox.printRangeStatus(&m);
+    const { texto } = await correrSketch(`${INICIO}void setup() { Serial.begin(115200); canal(2); lox.begin(); lox.rangingTest(&m); Serial.println(m.RangeMilliMeter); lox.printRangeStatus(&m);
       Serial.println(lox.readRange()); Serial.println(lox.readRangeStatus());
       Serial.println(lox.startRange()); Serial.println(lox.waitRangeComplete()); Serial.println(lox.readRangeResult()); }\nvoid loop() {}`,
       { duracionUs: 300_000 });
@@ -29,15 +35,15 @@ describe('VL53L0X (Adafruit_VL53L0X) y Wire', { timeout: 120_000 }, () => {
   });
 
   it('una medida sin esperar: startRange, isRangeComplete y readRangeResult', async () => {
-    const { texto } = await correrSketch(`${INICIO}void setup() { Serial.begin(115200); lox.begin(); Serial.println(lox.startRange());
+    const { texto } = await correrSketch(`${INICIO}void setup() { Serial.begin(115200); canal(2); lox.begin(); Serial.println(lox.startRange());
       unsigned long t0 = micros(); long vueltas = 0; while (!lox.isRangeComplete()) vueltas++;
       Serial.println((micros() - t0 + 500) / 1000); Serial.println(vueltas > 0); Serial.println(lox.readRangeResult()); }\nvoid loop() {}`,
       { pista: CON_OBSTACULO, duracionUs: 300_000 });
-    expect(texto).toBe(lineas(1, 33, 1, 308));
+    expect(texto).toBe(lineas(1, 33, 1, 318));
   });
 
   it('modo continuo: una medida por período, con readRangeResult o con readRange', async () => {
-    const { texto, sim } = await correrSketch(`${INICIO}void setup() { Serial.begin(115200); lox.begin(); Serial.println(lox.startRangeContinuous(100)); unsigned long t0 = micros();
+    const { texto, sim } = await correrSketch(`${INICIO}void setup() { Serial.begin(115200); canal(2); lox.begin(); Serial.println(lox.startRangeContinuous(100)); unsigned long t0 = micros();
       for (int i = 0; i < 2; i++) { while (!lox.isRangeComplete()) {} Serial.println((micros() - t0 + 500) / 1000); Serial.println(lox.readRangeResult()); }
       Serial.println(lox.readRangeResult());
       for (int i = 0; i < 2; i++) { Serial.println(lox.readRange()); Serial.println((micros() - t0 + 500) / 1000); }
@@ -45,12 +51,12 @@ describe('VL53L0X (Adafruit_VL53L0X) y Wire', { timeout: 120_000 }, () => {
       { pista: CON_OBSTACULO, duracionUs: 600_000 });
     // La primera medida termina un presupuesto (33 ms) después de empezar; las siguientes, una por
     // período. Sin medida nueva, readRangeResult entrega la anterior otra vez.
-    expect(texto).toBe(lineas(1, 33, 308, 133, 308, 308, 308, 233, 308, 333, 0));
+    expect(texto).toBe(lineas(1, 33, 318, 133, 318, 318, 318, 233, 318, 333, 0));
     expect(sim.avisos).toEqual(['isRangeComplete() necesita una medida en curso: llama antes a startRange() o startRangeContinuous().']);
   });
 
   it('configSensor, límites, VCSEL, dirección y la salida de debug', async () => {
-    const { texto } = await correrSketch(`${INICIO}void setup() { Serial.begin(115200);
+    const { texto } = await correrSketch(`${INICIO}void setup() { Serial.begin(115200); canal(2);
       Serial.println(lox.begin(0x30, false, &Wire, Adafruit_VL53L0X::VL53L0X_SENSE_HIGH_ACCURACY));
       Serial.println(lox.getMeasurementTimingBudgetMicroSeconds()); Serial.println(lox.getLimitCheckEnable(VL53L0X_CHECKENABLE_RANGE_IGNORE_THRESHOLD));
       Serial.println(lox.getLimitCheckValue(VL53L0X_CHECKENABLE_SIGMA_FINAL_RANGE) / 65536);
@@ -63,13 +69,13 @@ describe('VL53L0X (Adafruit_VL53L0X) y Wire', { timeout: 120_000 }, () => {
       lox.rangingTest(&m, true); }\nvoid loop() {}`,
       { pista: CON_OBSTACULO, duracionUs: 600_000 });
     expect(texto).toBe(lineas(1, 200000, 0, 18, 200, 1, 2260, 14, 0, 1, 14, 0, 1, '  VL53L0X_SENSE_LONG_RANGE', 33000,
-      'sVL53L0X: PerformSingleRangingMeasurement', 'Range Status: 0 : Range Valid', 'RANGE IGNORE THRESHOLD: 0.00', 'Measured distance: 308'));
+      'sVL53L0X: PerformSingleRangingMeasurement', 'Range Status: 0 : Range Valid', 'RANGE IGNORE THRESHOLD: 0.00', 'Measured distance: 318'));
   });
 
   it('sin begin avisa y entrega 65535; isRangeComplete y waitRangeComplete sin medida en curso avisan; Wire directo avisa', async () => {
     const { texto, sim } = await correrSketch(`${INICIO}Adafruit_VL53L0X otro;\nvoid setup() { Serial.begin(115200);
       Serial.println(otro.readRange()); Serial.println(otro.rangingTest(&m)); Serial.println(m.RangeStatus); Serial.println(otro.startRangeContinuous());
-      lox.begin(); Serial.println(lox.isRangeComplete()); Serial.println(lox.waitRangeComplete());
+      canal(2); lox.begin(); Serial.println(lox.isRangeComplete()); Serial.println(lox.waitRangeComplete());
       Wire.beginTransmission(0x68); Serial.println(Wire.endTransmission()); Serial.println(Wire.requestFrom(0x68, 2)); }\nvoid loop() {}`,
       { duracionUs: 300_000 });
     expect(texto).toBe(lineas(65535, -20, 4, 0, 0, 0, 2, 0));
@@ -79,10 +85,40 @@ describe('VL53L0X (Adafruit_VL53L0X) y Wire', { timeout: 120_000 }, () => {
   });
 
   it('un ciclo que espera al VL53L0X sin begin no congela el tiempo', { timeout: 20_000 }, async () => {
-    const { sim, resultado } = await correrSketch(`${INICIO}void setup() { while (lox.readRange() > 100) {} }\nvoid loop() {}`,
+    const { sim, resultado } = await correrSketch(`${INICIO}void setup() { canal(2); while (lox.readRange() > 100) {} }\nvoid loop() {}`,
       { duracionUs: 50_000 });
     expect(resultado.motivo).toBe('tiempo');
     expect(sim.avisos).toContain('Llama a begin() del VL53L0X antes de leerlo.');
+  });
+
+  it('con el canal 2 cerrado, begin() falla y avisa qué canal abrir', async () => {
+    const { texto, sim } = await correrSketch(`${INICIO}void setup() { Serial.begin(115200); Wire.begin();
+      Serial.println(lox.begin()); Serial.println(lox.Status); canal(0); Serial.println(lox.begin()); canal(2); Serial.println(lox.begin()); }\nvoid loop() {}`,
+      { duracionUs: 100_000 });
+    expect(texto).toBe(lineas(0, -20, 0, 1));
+    expect(sim.avisos).toEqual([ABRIR]);
+  });
+
+  it('las medidas solo llegan mientras el canal 2 está abierto: con otro canal fallan como en el chip', async () => {
+    const { texto, sim } = await correrSketch(`${INICIO}void setup() { Serial.begin(115200); Wire.begin(); canal(2); lox.begin();
+      Serial.println(lox.readRange()); canal(0); Serial.println(lox.readRange()); Serial.println(lox.rangingTest(&m)); Serial.println(m.RangeStatus);
+      Serial.println(lox.startRange()); canal(2); Serial.println(lox.readRange()); }\nvoid loop() {}`,
+      { pista: CON_OBSTACULO, duracionUs: 300_000 });
+    expect(texto).toBe(lineas(318, 65535, -20, 4, 0, 318));
+    expect(sim.avisos).toEqual([ABRIR]);
+  });
+
+  it('con el láser directo en el bus (canal null) responde sin abrir nada, como antes', async () => {
+    const { texto, sim } = await correrSketch(`${INICIO}void setup() { Serial.begin(115200); Wire.begin(); Serial.println(lox.begin()); Serial.println(lox.readRange()); }\nvoid loop() {}`,
+      { robot: LASER_DIRECTO, pista: CON_OBSTACULO, duracionUs: 200_000 });
+    expect(texto).toBe(lineas(1, 318));
+    expect(sim.avisos).toEqual([]);
+  });
+
+  it('el láser directo en el bus choca con el TCS34725 del canal que se abra', async () => {
+    const { sim } = await correrSketch(`${INICIO}void setup() { Wire.begin(); lox.begin(); canal(0); lox.readRange(); }\nvoid loop() {}`,
+      { robot: LASER_DIRECTO, pista: CON_OBSTACULO, duracionUs: 200_000 });
+    expect(sim.avisos).toEqual(['El VL53L0X y un TCS34725 responden a la vez en 0x29: abre en el multiplexor solo el canal del sensor que vas a usar.']);
   });
 
   it('el sketch clásico del MPU6050 por I2C directo compila, avisa y no congela el tiempo', { timeout: 20_000 }, async () => {

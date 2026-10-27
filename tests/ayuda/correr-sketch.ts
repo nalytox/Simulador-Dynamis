@@ -1,6 +1,6 @@
 import { cargarNucleoDesdeDisco } from '../../src/compilador/nucleo-node';
 import type { ArchivosNucleo } from '../../src/compilador/compilar';
-import { Simulador, type Pose, type ResultadoEjecucion } from '../../src/simulacion/simulador';
+import { Simulador, type EstadoRobot, type Pose, type ResultadoEjecucion } from '../../src/simulacion/simulador';
 import type { ModelosSensores } from '../../src/simulacion/sensores';
 import { crearMundo } from '../../src/mundo/pista';
 import { poseInicial } from '../../src/pista/serializacion';
@@ -17,6 +17,8 @@ export interface OpcionesSketch {
   modelos?: Partial<ModelosSensores>;
   pose?: Pose;
   duracionUs?: number;
+  /** Se llama después de cada paso de física. */
+  alPasoFisica?: (tUs: number, estado: EstadoRobot) => void;
 }
 
 /**
@@ -29,7 +31,7 @@ export async function correrSketch(codigo: string, o: OpcionesSketch = {}): Prom
   const modulo = await compilarParaPrueba({ 'p.ino': codigo }, await nucleo, 'p');
   const sim = await Simulador.crear({
     modulo, mundo: crearMundo(pista), robot: o.robot, modelos: o.modelos, ambiente: pista.ambiente,
-    poseInicial: o.pose ?? poseInicial(pista),
+    poseInicial: o.pose ?? poseInicial(pista), alPasoFisica: o.alPasoFisica,
   });
   const resultado = sim.ejecutar(o.duracionUs ?? 100_000);
   return { sim, texto: sim.tomarSerial(), resultado };

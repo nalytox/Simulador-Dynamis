@@ -5,7 +5,7 @@ const uint8_t LECTURAS_POR_CALIBRACION = 10;
 const uint32_t ESPERA_ENCENDER_US = 300;
 const uint32_t ESPERA_APAGAR_US = 1200;
 
-/** OddEven y OddEvenAndOff se leen como On y OnAndOff: el QTR-MX-8A tiene un solo pin de emisores. */
+/** OddEven y OddEvenAndOff se leen como On y OnAndOff: el QTRX-MD-08A tiene un solo pin de emisores. */
 QTRReadMode conUnSoloPin(QTRReadMode modo) {
   if (modo == QTRReadMode::OddEven) return QTRReadMode::On;
   if (modo == QTRReadMode::OddEvenAndOff) return QTRReadMode::OnAndOff;
