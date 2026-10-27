@@ -38,7 +38,10 @@ it('la meta exige detenerse 1 s sobre la línea y suma el tiempo', () => {
   const x = (t: number) => 150 + 600 * Math.min(t, 1.5);
   pasar(j, 0, 2.4, x); expect(j.estado.meta).toBe(false);
   pasar(j, 2.4, 2.6, x); expect(j.estado).toMatchObject({ meta: true, terminado: true });
-  expect(j.estado.tiempo).toBeCloseTo(1.15, 1); expect(j.estado.puntaje).toBeCloseTo(30 + (300 - 1.15) / 4, 1);
+  // El tiempo corre desde que la cola del chasis sale de la partida (x = 300) hasta que llega a la meta (t = 1,5 s).
+  const { xDelantero, largo } = ROBOT_POR_DEFECTO.chasis;
+  const tiempo = 1.5 - (300 + largo - xDelantero - 150) / 600;
+  expect(j.estado.tiempo).toBeCloseTo(tiempo, 1); expect(j.estado.puntaje).toBeCloseTo(30 + (300 - tiempo) / 4, 1);
 });
 
 it('reinicios: volver, saltar solo lo intentado, máximo 3 y el tiempo sigue sumando', () => {

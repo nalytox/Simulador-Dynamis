@@ -4,12 +4,12 @@ import { correrSketch } from '../ayuda/correr-sketch';
 const SEGUIDOR = `#include <QTRSensors.h>
 QTRSensors qtr; const uint8_t PINES[8] = {36, 39, 34, 35, 32, 33, 25, 26}; uint16_t v[8];
 void motores(int izq, int der) {
-  digitalWrite(16, izq >= 0); digitalWrite(17, izq < 0); digitalWrite(4, der >= 0); digitalWrite(5, der < 0);
-  analogWrite(18, constrain(abs(izq), 0, 255)); analogWrite(19, constrain(abs(der), 0, 255));
+  digitalWrite(16, izq >= 0); digitalWrite(17, izq < 0); digitalWrite(5, der >= 0); digitalWrite(18, der < 0);
+  ledcWrite(4, constrain(abs(izq), 0, 255)); ledcWrite(19, constrain(abs(der), 0, 255));
 }
 void girarCalibrando(int sentido, unsigned long ms) { unsigned long t0 = millis(); motores(-128 * sentido, 128 * sentido); while (millis() - t0 < ms) qtr.calibrate(); }
 void setup() {
-  pinMode(16, OUTPUT); pinMode(17, OUTPUT); pinMode(4, OUTPUT); pinMode(5, OUTPUT);
+  pinMode(16, OUTPUT); pinMode(17, OUTPUT); pinMode(5, OUTPUT); pinMode(18, OUTPUT); ledcAttach(4, 5000, 8); ledcAttach(19, 5000, 8);
   qtr.setTypeAnalog(); qtr.setSensorPins(PINES, 8);
   girarCalibrando(1, 150); girarCalibrando(-1, 300); girarCalibrando(1, 150); motores(0, 0);
 }

@@ -1,6 +1,6 @@
 import { confirmar } from './dialogo';
 import { dibujarFichaRobot } from './dibujo';
-import { CAMPOS_ROBOT, conCampo, escribirRobot, leerCampo, leerRobot, type CampoRobot } from '../robot/archivo';
+import { CAMPOS_ROBOT, conCampo, escribirRobot, leerCampo, leerRobot, type CampoRobot, type ValorCampo } from '../robot/archivo';
 import { ROBOT_POR_DEFECTO, validarRobot, type AvisoRobot, type ConfigRobot } from '../robot/config';
 
 /** Medio lado del dibujo del robot, en mm: el robot de las bases mide hasta 20 cm. */
@@ -8,7 +8,7 @@ const MEDIO_DIBUJO_MM = 170;
 const TAMANO_MAXIMO = 1024 * 1024;
 
 const idDe = (ruta: string) => `rb-${ruta.replaceAll('.', '-')}`;
-const texto = (v: number | boolean | null) => (v === null || typeof v === 'boolean' ? '' : String(v));
+const texto = (v: ValorCampo) => (v === null || typeof v === 'boolean' ? '' : String(v));
 
 /** Los campos donde se muestra un aviso de validarRobot: el suyo, los pines repetidos o la posición del sensor. */
 function camposDelAviso(a: AvisoRobot, r: ConfigRobot): string[] {
@@ -25,7 +25,7 @@ function camposDelAviso(a: AvisoRobot, r: ConfigRobot): string[] {
  * los avisos de validarRobot junto a cada campo. Cada cambio se aplica al tiro (el robot nuevo se
  * usa en la próxima prueba). Exporta e importa robot.json y vuelve a los valores del profe.
  */
-export function crearVentanaRobot(raiz: Document, eventos: { robot(): ConfigRobot; alCambiar(r: ConfigRobot): void }): { abrir(): void } {
+export function crearVentanaRobot(raiz: Document, eventos: { robot(): ConfigRobot; alCambiar(r: ConfigRobot): void }, avisoGuardado: string | null = null): { abrir(): void } {
   const $ = <E extends HTMLElement>(id: string) => raiz.getElementById(id) as E;
   const ventana = $<HTMLDialogElement>('ventana-robot');
   const lienzo = $<HTMLCanvasElement>('robot-dibujo');
@@ -33,8 +33,12 @@ export function crearVentanaRobot(raiz: Document, eventos: { robot(): ConfigRobo
   const cajaError = $('robot-error');
   const importado = $('robot-importado');
   const entrada = $<HTMLInputElement>('in-robot');
+  // El robot guardado era de antes del Dynamis V2 y tenía cambios: se avisa hasta volver al robot por defecto.
+  const anterior = $('robot-anterior');
+  $('robot-anterior-texto').textContent = avisoGuardado ?? '';
+  anterior.hidden = avisoGuardado === null;
   const contenedores: Record<CampoRobot['grupo'], HTMLElement> = { Medidas: $('robot-medidas'), Sensores: $('robot-sensores'), Pines: $('robot-pines') };
-  const entradas = new Map<string, HTMLInputElement>();
+  const entradas = new Map<string, HTMLInputElement | HTMLSelectElement>();
   const notas = new Map<string, HTMLElement>();
 
   const dibujar = (r: ConfigRobot) => {
@@ -77,7 +81,7 @@ export function crearVentanaRobot(raiz: Document, eventos: { robot(): ConfigRobo
   const mostrarValores = (r: ConfigRobot) => {
     for (const [ruta, input] of entradas) {
       const v = leerCampo(r, ruta);
-      if (input.type === 'checkbox') input.checked = v === true;
+      if (input instanceof HTMLInputElement && input.type === 'checkbox') input.checked = v === true;
       else input.value = texto(v);
     }
   };
@@ -89,17 +93,36 @@ export function crearVentanaRobot(raiz: Document, eventos: { robot(): ConfigRobo
   };
 
   for (const campo of CAMPOS_ROBOT) {
-    const input = raiz.createElement('input');
-    input.id = idDe(campo.ruta);
     const etiqueta = raiz.createElement('label');
     etiqueta.className = 'campo-robot';
-    etiqueta.htmlFor = input.id;
     const nombre = raiz.createElement('span');
     nombre.textContent = campo.etiqueta;
     const nota = raiz.createElement('span');
     nota.className = 'aviso-campo';
-    nota.id = `${input.id}-aviso`;
+    nota.id = `${idDe(campo.ruta)}-aviso`;
     nota.hidden = true;
+    const caja = raiz.createElement('div');
+    if (campo.tipo === 'opcion') {
+      const select = raiz.createElement('select');
+      select.id = idDe(campo.ruta);
+      etiqueta.htmlFor = select.id;
+      select.append(...(campo.opciones ?? []).map(o => {
+        const opcion = raiz.createElement('option');
+        opcion.value = o.valor;
+        opcion.textContent = o.etiqueta;
+        return opcion;
+      }));
+      select.addEventListener('change', () => aplicar(conCampo(eventos.robot(), campo.ruta, select.value)));
+      etiqueta.append(nombre, select);
+      caja.append(etiqueta, nota);
+      contenedores[campo.grupo].append(caja);
+      entradas.set(campo.ruta, select);
+      notas.set(campo.ruta, nota);
+      continue;
+    }
+    const input = raiz.createElement('input');
+    input.id = idDe(campo.ruta);
+    etiqueta.htmlFor = input.id;
     if (campo.tipo === 'si-no') {
       input.type = 'checkbox';
       input.addEventListener('change', () => aplicar(conCampo(eventos.robot(), campo.ruta, input.checked)));
@@ -134,7 +157,6 @@ export function crearVentanaRobot(raiz: Document, eventos: { robot(): ConfigRobo
       fila.append(input, unidad);
       etiqueta.append(nombre, fila);
     }
-    const caja = raiz.createElement('div');
     caja.append(etiqueta, nota);
     contenedores[campo.grupo].append(caja);
     entradas.set(campo.ruta, input);
@@ -187,12 +209,15 @@ export function crearVentanaRobot(raiz: Document, eventos: { robot(): ConfigRobo
     cargar(r.robot);
     importado.textContent = r.avisos.length > 0 ? `Importé tu robot. ${r.avisos.join(' ')}` : 'Importé tu robot.';
   });
-  $('robot-profe').addEventListener('click', async () => {
-    const seguir = await confirmar(raiz, { titulo: '¿Volver a los valores del profe? Se pierden los cambios de tu robot.', boton: 'Volver a los del profe' });
+  const volverAlPorDefecto = async (titulo: string, boton: string) => {
+    const seguir = await confirmar(raiz, { titulo: `${titulo} Se pierden los cambios de tu robot.`, boton });
     if (!seguir) return;
     cargar(structuredClone(ROBOT_POR_DEFECTO));
     importado.textContent = '';
-  });
+    anterior.hidden = true;
+  };
+  $('robot-profe').addEventListener('click', () => volverAlPorDefecto('¿Volver a los valores del profe?', 'Volver a los del profe'));
+  $('robot-por-defecto').addEventListener('click', () => volverAlPorDefecto('¿Volver al robot por defecto, el Dynamis V2?', 'Volver al robot por defecto'));
   $('robot-listo').addEventListener('click', () => ventana.close());
 
   return {

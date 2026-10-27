@@ -1,4 +1,4 @@
-// MODELO DEL SENSOR DE LÍNEA QTR-MX-8A — lo implementa el profesor.
+// MODELO DEL SENSOR DE LÍNEA QTRX-MD-08A — lo implementa el profesor.
 // Contrato y unidades: ver src/modelos/README.md.
 
 /**

@@ -30,7 +30,7 @@ import { ClienteSimulacion } from '../simulacion/cliente';
 import type { FinEjecucion, Instantanea } from '../simulacion/ejecucion';
 import { puntosDePartida } from '../pista/puntos';
 import { ROBOT_POR_DEFECTO, type ConfigRobot } from '../robot/config';
-import { normalizarRobot } from '../robot/archivo';
+import { migrarRobotGuardado } from '../robot/archivo';
 import { abrirAlmacen, conRetardo, type Almacen, type DatosGuardados, type Preferencias } from '../proyecto/almacen';
 import { baseDeDatosDe, claveRecorridoDe, olvidarPerfil } from '../proyecto/perfiles';
 import type { Proyecto } from '../proyecto/proyecto';
@@ -93,9 +93,10 @@ export async function iniciarAplicacion(raiz: Document, sesion: Pick<Storage, 'g
   let pista = (await leer(almacen, 'pista')) ?? PISTA_INICIAL;
   let pistaEditada = pista;
   // El robot de "Mi robot", con la misma regla: el editado pasa a Programar cuando no corre una prueba.
-  const robotGuardado = await leer(almacen, 'robot');
-  const robotLeido = robotGuardado ? normalizarRobot(robotGuardado) : null;
-  let robot: ConfigRobot = robotLeido?.ok ? robotLeido.robot : structuredClone(ROBOT_POR_DEFECTO);
+  // El robot por defecto anterior sin cambios pasa a ser el Dynamis V2; uno con cambios se queda y se avisa.
+  const robotGuardado = migrarRobotGuardado(await leer(almacen, 'robot'));
+  if (robotGuardado?.actualizado) await almacen?.guardar('robot', robotGuardado.robot).catch(() => {});
+  let robot: ConfigRobot = robotGuardado?.robot ?? structuredClone(ROBOT_POR_DEFECTO);
   let robotEditado = robot;
   const preferencias: Preferencias = (await leer(almacen, 'preferencias')) ?? { velocidad: 100 };
   const guardar = <K extends keyof DatosGuardados>(clave: K) => conRetardo((valor: DatosGuardados[K]) => { void almacen?.guardar(clave, valor).catch(() => {}); });
@@ -168,7 +169,8 @@ export async function iniciarAplicacion(raiz: Document, sesion: Pick<Storage, 'g
       guardarRobot(r);
       if (!simulacion.corriendo) dejarListo();
     },
-  });
+  }, robotGuardado?.aviso ?? null);
+  if (robotGuardado?.aviso) mensajeSistema(`${robotGuardado.aviso} Míralo en «Mi robot».`);
   $('btn-mi-robot').addEventListener('click', () => ventanaRobot.abrir());
   const recorrido = crearRecorrido(raiz, claveRecorridoDe(perfil), almacenLocal(raiz));
   // Cambiar de perfil: guarda ya lo que el autoguardado tenía pendiente y vuelve a preguntar.

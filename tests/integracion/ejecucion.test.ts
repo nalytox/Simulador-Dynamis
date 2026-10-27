@@ -21,9 +21,9 @@ const PISTA = pistaDe({ columnas: 4, filas: 1,
 /** Avanza a toda velocidad 1,5 s (90 cm) y se detiene en la meta. */
 const IR_Y_PARAR = `void setup() {
   Serial.begin(115200); Serial.println("setup");
-  pinMode(16, OUTPUT); pinMode(17, OUTPUT); pinMode(4, OUTPUT); pinMode(5, OUTPUT);
-  digitalWrite(16, HIGH); digitalWrite(17, LOW); digitalWrite(4, HIGH); digitalWrite(5, LOW);
-  analogWrite(18, 255); analogWrite(19, 255); delay(1500); analogWrite(18, 0); analogWrite(19, 0);
+  pinMode(16, OUTPUT); pinMode(17, OUTPUT); pinMode(5, OUTPUT); pinMode(18, OUTPUT); ledcAttach(4, 5000, 8); ledcAttach(19, 5000, 8);
+  digitalWrite(16, HIGH); digitalWrite(17, LOW); digitalWrite(5, HIGH); digitalWrite(18, LOW);
+  ledcWrite(4, 255); ledcWrite(19, 255); delay(1500); ledcWrite(4, 0); ledcWrite(19, 0);
 }
 void loop() {}`;
 

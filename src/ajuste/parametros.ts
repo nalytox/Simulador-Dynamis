@@ -3,7 +3,7 @@ import type { ParametroAgente } from './contrato';
 
 /** Grupos de @ajustar con nombre y sensor amigables; cualquier otro es un "grupo propio". */
 export const GRUPOS: { id: string; nombre: string; sensor: string }[] = [
-  { id: 'siguelineas', nombre: 'Siguelíneas', sensor: 'QTR-MX-8A' },
+  { id: 'siguelineas', nombre: 'Siguelíneas', sensor: 'QTRX-MD-08A' },
   { id: 'giroscopio', nombre: 'Giroscopio', sensor: 'MPU6050' },
   { id: 'distancia', nombre: 'Distancia', sensor: 'VL53L0X' },
   { id: 'posicion', nombre: 'Posición', sensor: 'Posición del robot' },

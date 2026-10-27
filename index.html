@@ -159,7 +159,7 @@
         <div class="sensores" aria-label="Lo que siente el robot">
           <section class="sensor ancho">
             <div class="fila-qtr">
-              <h3>Sensor de línea <small>QTR-MX-8A · 8 sensores</small></h3>
+              <h3>Sensor de línea <small>QTRX-MD-08A · 8 sensores</small></h3>
               <span class="sub">Línea en: <b id="qtr-pos-num">3500</b> <span>(0 a 7000)</span></span>
             </div>
             <div class="qtr" id="qtr"></div>
@@ -299,7 +299,11 @@ float giro = mpu.getAngleZ();  // en grados</pre>
     <article class="card">
       <header><h2>Así se ve desde arriba</h2></header>
       <div class="robot-centro">
-        <canvas class="robot-dibujo" id="robot-dibujo" aria-label="Dibujo de tu robot visto desde arriba, mirando hacia arriba"></canvas>
+        <div class="aviso-robot" id="robot-anterior" role="status" hidden>
+          <p id="robot-anterior-texto"></p>
+          <button class="btn-sec" id="robot-por-defecto">Volver al robot por defecto</button>
+        </div>
+        <canvas class="robot-dibujo" id="robot-dibujo" aria-label="Dibujo de tu robot visto desde arriba, mirando hacia arriba: las ruedas, la placa, los sensores y el MPU6050 con una flecha en su eje x"></canvas>
         <div class="revision">
           <h3>Revisión</h3>
           <ul class="avisos-pista" id="robot-avisos"></ul>

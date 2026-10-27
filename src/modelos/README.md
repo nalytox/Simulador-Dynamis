@@ -34,8 +34,8 @@ export function pasoDinamica(estado, motores, dt, mundo, robot, azar) → nuevo 
 | `azar` | `() => número en [0, 1)` con la semilla de la ejecución. |
 
 **El placeholder actual:**
-- cinemática diferencial ideal con `vMaxMmS` de `parametros.js`;
-- `z`, `pitch` y `roll` salen de `mundo.altura` bajo el frente y la cola del chasis y bajo cada rueda: el robot empieza a inclinarse cuando su frente llega a una rampa, y un bache de 6 mm lo inclina apenas unos grados;
+- cinemática diferencial ideal con `robot.motores.vMaxMmS` (la velocidad de cada rueda con duty = 1, que se edita en «Mi robot»);
+- `z`, `pitch` y `roll` salen de `mundo.altura`. El pitch: si el robot tiene ruedas locas (`robot.ruedasLocas.instalado`), con la altura bajo el eje de las ruedas motrices (`ruedas.x`) y bajo el de las locas (`ruedasLocas.x`), así que se inclina cuando las locas llegan a la rampa; sin ruedas locas, con la altura bajo el frente y la cola del chasis. El roll, con la altura bajo cada rueda motriz. Un bache de 6 mm lo inclina apenas unos grados;
 - si el robot choca, no avanza.
 
 ## El mundo de la pista
@@ -122,7 +122,11 @@ export function leerVL53L0X({ t, estado, sensor, mundo, azar }) → number
   - con 8190 la medida de `Adafruit_VL53L0X` queda con `RangeStatus` 4 (sin objetivo);
   - `rangingTest` y `readRange` esperan el presupuesto de medición (33 ms por defecto) y después
     llaman a tu modelo;
-  - en modo continuo la medida se calcula con la pose del momento de la lectura.
+  - en modo continuo la medida se calcula con la pose del momento de la lectura;
+  - si el robot tiene el láser en un canal del multiplexor (`robot.vl53l0x.canal`, el 2 en el
+    Dynamis V2), `begin()` y las medidas solo funcionan con ese canal abierto: si no, `begin()`
+    devuelve `false`, la medida falla como en el chip (`readRange()` da 65535) y la consola dice qué
+    canal abrir. Tu modelo no se llama en ese caso.
 
 ### `mpu6050.js`
 
@@ -135,13 +139,16 @@ export function leerMPU6050({ t, dt, estado, estadoAnterior, montaje, mundo, aza
 |---|---|---|
 | `dt` | s | El tiempo entre `estadoAnterior` y `estado` (un paso de física). |
 | `estadoAnterior` | — | El estado del paso de física anterior, para derivar velocidades. |
-| `montaje` | mm | `robot.mpu6050`: `{ x, y, z, orientacion }`. Con `'z-arriba-x-adelante'` el marco del sensor coincide con el del robot. |
+| `montaje` | mm | `robot.mpu6050`: `{ x, y, z, orientacion }`. Con `'z-arriba-x-adelante'` el marco del sensor coincide con el del robot. Con `'z-arriba-x-atras'` (el Dynamis V2) el chip está girado 180° sobre z: `ax`, `ay`, `gx` y `gy` cambian de signo; `az` y `gz` quedan igual. |
 | **devuelve** | m/s², rad/s, °C | La aceleración, la velocidad angular y la temperatura, en el marco del sensor. |
 
 El acelerómetro mide la fuerza específica: en reposo sobre el piso da `az = +9,81`.
 
-- **Placeholder:** solo la gravedad, proyectada según `pitch` y `roll`, y `gz = Δyaw / dt`. Sin
-  aceleración lineal, vibraciones, sesgo ni ruido. La temperatura es 25 °C.
+- **Placeholder:** solo la gravedad, proyectada según `pitch` y `roll`, y el giro como el cambio de
+  los ángulos: `gx = Δroll / dt`, `gy = Δpitch / dt` y `gz = Δyaw / dt` (con esos signos,
+  MPU6050_light los integra en el mismo sentido que sus ángulos del acelerómetro, así que su ángulo
+  filtrado sigue la rampa sin retraso). Sin aceleración lineal, vibraciones, sesgo ni ruido. La
+  temperatura es 25 °C.
 - **Qué hace el núcleo:**
   - **Cuantiza a `int16` como el chip, según el rango elegido.** Acelerómetro: 16384, 8192, 4096 o
     2048 LSB/g. Giroscopio: 131, 65,5, 32,8 o 16,4 LSB/(°/s). Satura en ±32767.
@@ -179,6 +186,6 @@ export function leerTCS34725({ t, estado, sensor, tiempoIntegracionMs, ganancia,
 
 ### Para el estudiante: el QTR con `analogRead`
 
-El QTR-MX-8A es analógico: cada sensor es un pin del ADC. Además de usar `QTRSensors`, el
+El QTRX-MD-08A es analógico: cada sensor es un pin del ADC. Además de usar `QTRSensors`, el
 estudiante puede leerlo con `analogRead(36)`, `analogRead(39)`, etc. Recibe el mismo valor que vería
 en el robot (0–4095, más alto es más oscuro) y lo puede calibrar a mano.

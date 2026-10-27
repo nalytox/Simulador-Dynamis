@@ -3,8 +3,9 @@ import type { LecturaTCS } from './sensores';
 
 /**
  * El bus I2C a nivel de registros, para lo que se usa por I2C directo: el multiplexor TCA9548A y los
- * TCS34725 detrás de él. Los demás sensores se simulan a nivel de librería y aquí no
- * responden. El simulador no distingue Wire de Wire1: los dos llegan a este mismo bus.
+ * TCS34725 detrás de él. Los demás sensores se simulan a nivel de librería y aquí no responden; el
+ * VL53L0X solo pregunta si está al alcance (su canal abierto). El simulador no distingue Wire de
+ * Wire1: los dos llegan a este mismo bus.
  */
 export const DIRECCION_MUX = 0x70;
 export const DIRECCION_TCS = 0x29;
@@ -43,6 +44,8 @@ const ID_TCS34725 = 0x44;
 const GANANCIAS = [1, 4, 16, 60];
 
 const AVISO_DOS_TCS = 'Dos TCS34725 responden a la vez en 0x29: abre un solo canal del multiplexor.';
+const AVISO_CHOQUE_LASER = 'El VL53L0X y un TCS34725 responden a la vez en 0x29: abre en el multiplexor solo el canal del sensor que vas a usar.';
+const AVISO_LASER_DIRECTO = 'En 0x29 está el VL53L0X, pero el simulador no lo tiene por I2C directo: usa la librería Adafruit_VL53L0X.';
 const hex = (direccion: number) => `0x${direccion.toString(16).toUpperCase().padStart(2, '0')}`;
 
 class ChipTCS {
@@ -135,6 +138,10 @@ class ChipTCS {
 
 export class BusI2C {
   private readonly chips: ChipTCS[];
+  /** El canal del VL53L0X en el multiplexor, o null si está directo en el bus. */
+  private readonly canalLaser: number | null;
+  /** Dónde escucha el VL53L0X: 0x29 al encenderse, o la que le puso setAddress. */
+  private direccionLaser = DIRECCION_TCS;
   private readonly hayMux: boolean;
   /** Los canales abiertos del multiplexor, un bit por canal. */
   private canales = 0;
@@ -144,11 +151,30 @@ export class BusI2C {
     const sensores = [robot.tcs34725, ...(robot.tcs34725b?.instalado ? [robot.tcs34725b] : [])]
       .map(s => ({ ...s, canal: s.canal ?? null }));
     this.chips = sensores.map(s => new ChipTCS(s, entorno));
-    this.hayMux = sensores.some(s => s.canal !== null);
+    this.canalLaser = robot.vl53l0x.canal ?? null;
+    this.hayMux = sensores.some(s => s.canal !== null) || this.canalLaser !== null;
+  }
+
+  private alAlcance(canal: number | null): boolean {
+    return canal === null || (this.hayMux && ((this.canales >> canal) & 1) === 1);
   }
 
   private visibles(): ChipTCS[] {
-    return this.chips.filter(c => c.sensor.canal === null || (this.hayMux && (this.canales >> c.sensor.canal) & 1));
+    return this.chips.filter(c => this.alAlcance(c.sensor.canal));
+  }
+
+  /**
+   * Si el VL53L0X contesta ahora en `direccion` (0x29, o la que le puso setAddress). En su canal
+   * cerrado no contesta y se avisa qué canal abrir; si en 0x29 también escucha un TCS34725, chocan.
+   */
+  vl53Responde(direccion: number): boolean {
+    this.direccionLaser = direccion;
+    if (!this.alAlcance(this.canalLaser)) {
+      this.entorno.avisar(`El VL53L0X está en el canal ${this.canalLaser} del multiplexor (${hex(DIRECCION_MUX)}): ábrelo antes de usar el láser.`);
+      return false;
+    }
+    if (direccion === DIRECCION_TCS && this.visibles().length > 0) this.entorno.avisar(AVISO_CHOQUE_LASER);
+    return true;
   }
 
   /** Una escritura: true si algún dispositivo respondió (ACK). */
@@ -160,7 +186,16 @@ export class BusI2C {
     const chips = direccion === DIRECCION_TCS ? this.visibles() : [];
     for (const c of chips) c.escribir(bytes);
     if (chips.length === 0) this.sinRespuesta(direccion);
+    else this.revisarChoqueLaser(direccion);
     return chips.length > 0;
+  }
+
+  private laserEn(direccion: number): boolean {
+    return direccion === this.direccionLaser && this.alAlcance(this.canalLaser);
+  }
+
+  private revisarChoqueLaser(direccion: number): void {
+    if (direccion === DIRECCION_TCS && this.laserEn(direccion)) this.entorno.avisar(AVISO_CHOQUE_LASER);
   }
 
   /** Una lectura de `largo` bytes, o null si nadie respondió. */
@@ -172,6 +207,7 @@ export class BusI2C {
       return null;
     }
     if (chips.length > 1) this.entorno.avisar(AVISO_DOS_TCS);
+    this.revisarChoqueLaser(direccion);
     return chips[0].leer(largo);
   }
 
@@ -179,6 +215,8 @@ export class BusI2C {
     const inicio = `Nadie respondió en ${hex(direccion)}:`;
     if (direccion === DIRECCION_MUX) {
       this.entorno.avisar(`${inicio} tu robot no tiene multiplexor. Ponle a cada TCS34725 su canal en «Mi robot».`);
+    } else if (direccion === DIRECCION_TCS && this.laserEn(direccion)) {
+      this.entorno.avisar(AVISO_LASER_DIRECTO);
     } else if (direccion === DIRECCION_TCS && this.hayMux) {
       this.entorno.avisar(`${inicio} abre el canal del multiplexor donde está el TCS34725.`);
     } else {

@@ -1,7 +1,7 @@
 # Simulador Dynamis
 
 Simulador web del robot de **Dynamis** (Fundación Mustakis) para estudiantes de 14 a 16 años.
-Los estudiantes escriben el código **Arduino real** del robot (ESP32, QTR-MX-8A, VL53L0X, MPU6050 y
+Los estudiantes escriben el código **Arduino real** del robot (ESP32, QTRX-MD-08A, VL53L0X, MPU6050 y
 TCS34725) y lo prueban en una pista virtual que sigue las bases de Rescue Line FIRVI 2026, antes de
 subirlo al robot físico.
 

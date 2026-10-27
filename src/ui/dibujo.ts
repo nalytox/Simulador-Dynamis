@@ -12,9 +12,12 @@ import { poseVL53, type LecturaTCS } from '../simulacion/sensores';
 import type { EstadoRobot, Pose } from '../simulacion/simulador';
 import type { Instantanea } from '../simulacion/ejecucion';
 import type { ConfigRobot } from '../robot/config';
+import { piezasRobot } from './figura-robot';
 
 /** Colores de la paleta de Dynamis. */
 const C = { azul: '#0B0F98', celeste: '#65C7F7', hielo: '#DDF4FF', sol: '#FFD166', rosa: '#FF9FAD', tinta: '#12164A', rejilla: '#CFE7F7' };
+/** El verde de la placa de circuito. */
+const PLACA = '#1E7B5A';
 /** Una lectura del QTR sobre esto se considera "ve línea" en el dibujo. */
 const QTR_VE_LINEA = 2000;
 const SIN_OBJETIVO_MM = 8190;
@@ -284,37 +287,34 @@ export function dibujarRobot(ctx: CanvasRenderingContext2D, v: Vista, i: Instant
   const estado: EstadoRobot = i ? { ...i.estado } : { x: pose.x, y: pose.y, z: 0, yaw: pose.yaw, pitch: 0, roll: 0 };
   if (i) rayoVL53(ctx, estado, robot, i.sensores.distanciaMm);
 
-  const { chasis, ruedas, qtr, tcs34725, tcs34725b, vl53l0x } = robot;
+  const { chasis, qtr, tcs34725, tcs34725b, vl53l0x } = robot;
   ctx.save();
   ctx.translate(estado.x, estado.y);
   ctx.rotate(estado.yaw);
   const escala = 1 + Math.min(Math.max(estado.z, 0), 200) / 400;
   ctx.scale(escala, escala);
-  // Ruedas, chasis y cara (marco del robot: x adelante, y a la izquierda).
-  ctx.fillStyle = '#23285E';
-  for (const lado of [1, -1]) {
+  // Ruedas (las motrices y las locas), chasis y placa (marco del robot: x adelante, y a la izquierda).
+  const piezas = piezasRobot(robot);
+  for (const r of piezas.ruedas) {
+    ctx.fillStyle = r.tipo === 'motriz' ? '#23285E' : '#4A5090';
     ctx.beginPath();
-    ctx.roundRect(ruedas.x - ruedas.diametro / 2, lado * ruedas.trocha / 2 - 9, ruedas.diametro, 18, 6);
+    ctx.roundRect(r.x - r.largo / 2, r.y - r.ancho / 2, r.largo, r.ancho, Math.min(6, r.ancho / 2));
     ctx.fill();
   }
   const atras = chasis.xDelantero - chasis.largo;
   ctx.fillStyle = C.azul;
   ctx.beginPath();
-  ctx.roundRect(atras, -chasis.ancho / 2, chasis.largo, chasis.ancho, 30);
+  ctx.roundRect(atras, -chasis.ancho / 2, chasis.largo, chasis.ancho, Math.min(30, chasis.largo / 4, chasis.ancho / 4));
   ctx.fill();
-  ctx.fillStyle = C.hielo;
+  const { placa } = piezas;
+  ctx.fillStyle = PLACA;
   ctx.beginPath();
-  ctx.roundRect(chasis.xDelantero - 74, -42, 50, 84, 20);
+  ctx.roundRect(placa.x - placa.largo / 2, -placa.ancho / 2, placa.largo, placa.ancho, 6);
   ctx.fill();
-  ctx.fillStyle = C.azul;
+  // El ESP32 sobre la placa.
+  ctx.fillStyle = C.tinta;
   ctx.beginPath();
-  ctx.arc(chasis.xDelantero - 44, 17, 9, 0, 2 * Math.PI);
-  ctx.arc(chasis.xDelantero - 44, -17, 9, 0, 2 * Math.PI);
-  ctx.fill();
-  ctx.fillStyle = C.rosa;
-  ctx.beginPath();
-  ctx.arc(chasis.xDelantero - 66, 34, 6, 0, 2 * Math.PI);
-  ctx.arc(chasis.xDelantero - 66, -34, 6, 0, 2 * Math.PI);
+  ctx.roundRect(placa.x - placa.largo / 4, -placa.ancho / 5, placa.largo / 4, placa.ancho * 2 / 5, 3);
   ctx.fill();
   // Sensores: la barra del QTR (el sensor 0 es el de la izquierda, +y), los TCS y el VL53L0X.
   const medio = (qtr.pines.length - 1) / 2;
@@ -348,7 +348,7 @@ export function dibujarRobot(ctx: CanvasRenderingContext2D, v: Vista, i: Instant
 
 /**
  * El robot solo, visto desde arriba y mirando hacia arriba, para la ventana "Mi robot": el mismo
- * dibujo de la pista, el contorno del chasis y un punto para el MPU6050.
+ * dibujo de la pista, el contorno del chasis y el MPU6050 con una flecha en su eje x.
  */
 export function dibujarFichaRobot(ctx: CanvasRenderingContext2D, v: Vista, robot: ConfigRobot): void {
   const pose: Pose = { x: 0, y: 0, yaw: Math.PI / 2 };
@@ -362,11 +362,26 @@ export function dibujarFichaRobot(ctx: CanvasRenderingContext2D, v: Vista, robot
   ctx.setLineDash([6 * px, 4 * px]);
   ctx.strokeRect(robot.chasis.xDelantero - robot.chasis.largo, -robot.chasis.ancho / 2, robot.chasis.largo, robot.chasis.ancho);
   ctx.setLineDash([]);
+  // El MPU6050 y una flecha hacia donde apunta su eje x.
+  const { desde, hasta } = piezasRobot(robot).flechaMPU;
+  const sentido = Math.sign(hasta.x - desde.x) || 1;
+  ctx.strokeStyle = C.sol;
   ctx.fillStyle = C.sol;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(desde.x, desde.y);
+  ctx.lineTo(hasta.x, hasta.y);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(hasta.x + sentido * 6, hasta.y);
+  ctx.lineTo(hasta.x - sentido * 4, hasta.y + 6);
+  ctx.lineTo(hasta.x - sentido * 4, hasta.y - 6);
+  ctx.closePath();
+  ctx.fill();
   ctx.strokeStyle = C.tinta;
   ctx.lineWidth = 1.5 * px;
   ctx.beginPath();
-  ctx.arc(robot.mpu6050.x, robot.mpu6050.y, 6, 0, 2 * Math.PI);
+  ctx.roundRect(desde.x - 6, desde.y - 6, 12, 12, 2);
   ctx.fill();
   ctx.stroke();
   ctx.restore();

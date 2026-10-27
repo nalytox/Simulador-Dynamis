@@ -34,7 +34,12 @@ boolean Adafruit_VL53L0X::begin(uint8_t i2c_addr, boolean debug, TwoWire* i2c, V
   (void)debug;
   (void)i2c;
   deFabrica();
-  iniciado = true;
+  // Al encenderse el chip está en 0x29; si no contesta (su canal cerrado), begin falla como en el robot.
+  iniciado = dyn_vl53_responde(VL53L0X_I2C_ADDR) != 0;
+  if (!iniciado) {
+    Status = VL53L0X_ERROR_CONTROL_INTERFACE;
+    return false;
+  }
   Status = VL53L0X_ERROR_NONE;
   if (!setAddress(i2c_addr)) return false;
   configSensor(vl_config);
@@ -109,6 +114,13 @@ void Adafruit_VL53L0X::entregarLaMedida() {
 /** Sin begin() el chip no responde: avisa y la medida queda como "nada a la vista". */
 void Adafruit_VL53L0X::sinIniciar(VL53L0X_RangingMeasurementData_t* m) {
   dynAvisar("Llama a begin() del VL53L0X antes de leerlo.");
+  sinRespuesta(m);
+}
+
+bool Adafruit_VL53L0X::contesta() { return dyn_vl53_responde(direccion) != 0; }
+
+/** Una medida que no llegó (el simulador ya avisó por qué): queda como "nada a la vista". */
+void Adafruit_VL53L0X::sinRespuesta(VL53L0X_RangingMeasurementData_t* m) {
   memset(m, 0, sizeof(*m));
   m->RangeMilliMeter = SIN_OBJETIVO_MM;
   m->RangeStatus = FUERA_DE_ALCANCE;
@@ -119,6 +131,9 @@ VL53L0X_Error Adafruit_VL53L0X::getSingleRangingMeasurement(VL53L0X_RangingMeasu
   if (debug) Serial.println("sVL53L0X: PerformSingleRangingMeasurement");
   if (!iniciado) {
     sinIniciar(m);
+    estado = VL53L0X_ERROR_CONTROL_INTERFACE;
+  } else if (!contesta()) {
+    sinRespuesta(m);
     estado = VL53L0X_ERROR_CONTROL_INTERFACE;
   } else {
     // En modo continuo entrega la próxima medida del período; si no, mide una vez.
@@ -159,6 +174,10 @@ boolean Adafruit_VL53L0X::startRange(void) {
     Status = VL53L0X_ERROR_CONTROL_INTERFACE;
     return false;
   }
+  if (!contesta()) {
+    Status = VL53L0X_ERROR_CONTROL_INTERFACE;
+    return false;
+  }
   modo = Unica;
   listaUs = micros() + presupuestoUs;
   Status = VL53L0X_ERROR_NONE;
@@ -169,6 +188,10 @@ boolean Adafruit_VL53L0X::isRangeComplete(void) {
   if (!iniciado) {
     // Como la librería: con error, dice que terminó.
     dynAvisar("Llama a begin() del VL53L0X antes de leerlo.");
+    Status = VL53L0X_ERROR_CONTROL_INTERFACE;
+    return true;
+  }
+  if (!contesta()) {
     Status = VL53L0X_ERROR_CONTROL_INTERFACE;
     return true;
   }
@@ -183,6 +206,10 @@ boolean Adafruit_VL53L0X::isRangeComplete(void) {
 boolean Adafruit_VL53L0X::waitRangeComplete(void) {
   if (!iniciado) {
     dynAvisar("Llama a begin() del VL53L0X antes de leerlo.");
+    Status = VL53L0X_ERROR_CONTROL_INTERFACE;
+    return false;
+  }
+  if (!contesta()) {
     Status = VL53L0X_ERROR_CONTROL_INTERFACE;
     return false;
   }
@@ -202,6 +229,9 @@ uint16_t Adafruit_VL53L0X::readRangeResult(void) {
   if (!iniciado) {
     sinIniciar(&m);
     Status = VL53L0X_ERROR_CONTROL_INTERFACE;
+  } else if (!contesta()) {
+    sinRespuesta(&m);
+    Status = VL53L0X_ERROR_CONTROL_INTERFACE;
   } else {
     if (modo != Quieto && terminoLaMedida()) {
       medir(&m);
@@ -220,6 +250,10 @@ uint16_t Adafruit_VL53L0X::readRangeResult(void) {
 boolean Adafruit_VL53L0X::startRangeContinuous(uint16_t period_ms) {
   if (!iniciado) {
     dynAvisar("Llama a begin() del VL53L0X antes de leerlo.");
+    Status = VL53L0X_ERROR_CONTROL_INTERFACE;
+    return false;
+  }
+  if (!contesta()) {
     Status = VL53L0X_ERROR_CONTROL_INTERFACE;
     return false;
   }

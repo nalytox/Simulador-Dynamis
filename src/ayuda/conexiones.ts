@@ -16,25 +16,28 @@ export function conexionesDe(r: ConfigRobot): GrupoConexiones[] {
   return [
     { grupo: 'Motor izquierdo', filas: motor(r.motores.izq) },
     { grupo: 'Motor derecho', filas: motor(r.motores.der) },
-    { grupo: 'Driver', filas: [{ que: 'STBY', pin: pin(r.motores.stby) }] },
+    { grupo: 'Driver', filas: [{ que: 'STBY', pin: pin(r.motores.stby, 'a 3V3 (siempre activo)') }] },
     { grupo: 'Sensor de línea', filas: [
       ...r.qtr.pines.map((p, i) => ({ que: `S${i + 1}${i === 0 ? ' (izquierda)' : i === ultimo ? ' (derecha)' : ''}`, pin: pin(p) })),
-      { que: 'Emisores', pin: pin(r.qtr.emisor, 'siempre encendidos') },
+      { que: 'Emisores (LEDON)', pin: pin(r.qtr.emisor, 'siempre encendidos') },
     ] },
     { grupo: 'Bus I2C', filas: busI2C(r) },
   ];
 }
 
-// Un TCS34725 directo en el bus choca con el VL53L0X (los dos usan 0x29): por eso el ⚠.
+// El VL53L0X y los TCS34725 usan 0x29: si dos quedan en el mismo canal (o directo en el bus), chocan y llevan ⚠.
 function busI2C(r: ConfigRobot): { que: string; pin: string }[] {
   const colores = [r.tcs34725, ...(r.tcs34725b.instalado ? [r.tcs34725b] : [])];
   const nombre = (i: number) => (colores.length > 1 ? `TCS34725 (color ${i + 1})` : 'TCS34725');
-  const hayMux = colores.some(c => c.canal !== null);
+  const laser = r.vl53l0x.canal;
+  const hayMux = laser !== null || colores.some(c => c.canal !== null);
+  const en = (canal: number | null, choca: boolean) =>
+    `${canal === null ? '0x29' : `0x29, canal ${canal} del multiplexor`}${choca ? ' ⚠' : ''}`;
   return [
     { que: 'SDA', pin: String(SDA) }, { que: 'SCL', pin: String(SCL) },
-    { que: 'VL53L0X', pin: '0x29' },
     ...(hayMux ? [{ que: 'Multiplexor TCA9548A', pin: '0x70' }] : []),
-    ...colores.map((c, i) => ({ que: nombre(i), pin: c.canal === null ? '0x29 ⚠' : `0x29, canal ${c.canal} del multiplexor` })),
+    { que: 'VL53L0X', pin: en(laser, colores.some(c => c.canal === laser)) },
+    ...colores.map((c, i) => ({ que: nombre(i), pin: en(c.canal, c.canal === laser) })),
     { que: 'MPU6050', pin: '0x68' },
     ...colores.map((c, i) => ({ que: `LED del ${nombre(i)}`, pin: pin(c.led, 'encendido, salvo con setInterrupt(true)') })),
   ];

@@ -23,6 +23,7 @@ export function crearAnfitrionFalso(): { anfitrion: Anfitrion; llamadas: unknown
     ledcAttach: registrar('ledcAttach', true), ledcWrite: registrar('ledcWrite', true), ledcDetach: registrar('ledcDetach', true),
     serialBegin: registrar('serialBegin'), serialWrite: escribir('serialWrite'), serialAvailable: registrar('serialAvailable', 0),
     aviso: (texto: string) => { llamadas.push(['aviso', texto]); }, vl53Medir: registrar('vl53Medir', 0),
+    vl53Responde: (direccion: number) => { llamadas.push(['vl53Responde', direccion]); return true; },
     mpuLeer: () => { llamadas.push(['mpuLeer']); return [0, 0, 0, 0, 0, 0, 0]; },
     i2cEscribir: (direccion: number, bytes: Uint8Array) => { llamadas.push(['i2cEscribir', direccion, [...bytes]]); return false; },
     i2cLeer: (direccion: number, largo: number) => { llamadas.push(['i2cLeer', direccion, largo]); return null; },

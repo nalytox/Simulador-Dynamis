@@ -8,7 +8,7 @@ const ajustable = (nombre: string, valor: number, min: number | null = null, max
 
 it('los grupos con nombre amigable', () => {
   expect(GRUPOS).toEqual([
-    { id: 'siguelineas', nombre: 'Siguelíneas', sensor: 'QTR-MX-8A' },
+    { id: 'siguelineas', nombre: 'Siguelíneas', sensor: 'QTRX-MD-08A' },
     { id: 'giroscopio', nombre: 'Giroscopio', sensor: 'MPU6050' },
     { id: 'distancia', nombre: 'Distancia', sensor: 'VL53L0X' },
     { id: 'posicion', nombre: 'Posición', sensor: 'Posición del robot' },

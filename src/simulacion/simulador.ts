@@ -333,6 +333,7 @@ export class Simulador {
       serialWrite: bytes => this.escribirSerial(bytes),
       aviso: texto => { this.avisar(texto); this.avanzar(COSTOS_US.aviso); },
       vl53Medir: () => acotar(this.leerVL53(this.azarModelos), SIN_OBJETIVO_VL53_MM),
+      vl53Responde: direccion => this.busI2C.vl53Responde(direccion),
       mpuLeer: () => {
         this.avanzar(COSTOS_US.lecturaMpu);
         const l = this.leerMPU(this.azarModelos);

@@ -3,13 +3,15 @@ import { Pines } from '../../src/simulacion/pines';
 import { pinesAMotores } from '../../src/simulacion/motores';
 import { ROBOT_POR_DEFECTO } from '../../src/robot/config';
 
-const M = ROBOT_POR_DEFECTO.motores; // izq: pwm 18, in1 16, in2 17 · der: pwm 19, in1 4, in2 5
+const M = ROBOT_POR_DEFECTO.motores; // izq: pwm 4, in1 16, in2 17 · der: pwm 19, in1 5, in2 18
 
 function conDireccion(in1: number, in2: number, pwm?: number): Pines {
   const p = new Pines();
-  for (const pin of [16, 17, 4, 5]) p.pinMode(pin, 0x03);
-  p.digitalWrite(16, in1); p.digitalWrite(17, in2); p.digitalWrite(4, in1); p.digitalWrite(5, in2);
-  if (pwm !== undefined) { p.analogWrite(18, pwm); p.analogWrite(19, pwm); }
+  for (const lado of [M.izq, M.der]) {
+    p.pinMode(lado.in1, 0x03); p.pinMode(lado.in2, 0x03);
+    p.digitalWrite(lado.in1, in1); p.digitalWrite(lado.in2, in2);
+    if (pwm !== undefined) p.analogWrite(lado.pwm, pwm);
+  }
   return p;
 }
 
@@ -36,7 +38,7 @@ describe('driver TB6612', () => {
   });
   it('el PWM puede venir de ledcAttach y ledcWrite', () => {
     const p = conDireccion(1, 0);
-    p.ledcAttach(18, 5000, 10); p.ledcWrite(18, 1023);
+    p.ledcAttach(M.izq.pwm, 5000, 10); p.ledcWrite(M.izq.pwm, 1023);
     expect(pinesAMotores(p, M).izq.duty).toBe(1);
   });
 });

@@ -23,14 +23,23 @@ const int DISTANCIA_MINIMA = 80;     // mm: si hay algo más cerca, se detiene
 unsigned long ultimoMensaje = 0;
 unsigned long inicioRecorrido = 0;
 
-// Mueve los motores: valores de -255 (atrás) a 255 (adelante).
+// Mueve los motores: valores de -255 (atrás) a 255 (adelante). En el ESP32 el PWM se hace con
+// ledcWrite, en los pines que setup() preparó con ledcAttach.
 void motores(int izq, int der) {
   digitalWrite(PIN_IN1_IZQ, izq >= 0);
   digitalWrite(PIN_IN2_IZQ, izq < 0);
   digitalWrite(PIN_IN1_DER, der >= 0);
   digitalWrite(PIN_IN2_DER, der < 0);
-  analogWrite(PIN_PWM_IZQ, constrain(abs(izq), 0, 255));
-  analogWrite(PIN_PWM_DER, constrain(abs(der), 0, 255));
+  ledcWrite(PIN_PWM_IZQ, constrain(abs(izq), 0, 255));
+  ledcWrite(PIN_PWM_DER, constrain(abs(der), 0, 255));
+}
+
+// Abre un canal del multiplexor TCA9548A: desde ahí el bus I2C llega al sensor de ese canal.
+// El VL53L0X y los TCS34725 usan la misma dirección (0x29), por eso cada uno va en su canal.
+void abrirCanal(uint8_t canal) {
+  Wire.beginTransmission(DIRECCION_MUX);
+  Wire.write(1 << canal);
+  Wire.endTransmission();
 }
 
 // Gira sobre su eje mientras el sensor aprende qué es blanco y qué es negro.
@@ -40,11 +49,12 @@ void girarCalibrando(int sentido, unsigned long ms) {
   while (millis() - inicio < ms) qtr.calibrate();
 }
 
-// La inclinación en grados: positiva con la nariz hacia arriba. En el Dynamis el eje x del MPU6050
-// apunta hacia adelante, y con la nariz hacia arriba getAngleY() es negativo: por eso el signo menos.
+// La inclinación en grados: positiva con la nariz hacia arriba. En el Dynamis V2 el MPU6050 va
+// girado: su eje x apunta hacia atrás, y con la nariz hacia arriba getAngleY() es positivo.
+// (Con el eje x hacia adelante sería al revés: habría que devolver -mpu.getAngleY().)
 float inclinacion() {
   mpu.update();  // lee el sensor: hay que llamarlo seguido
-  return -mpu.getAngleY();
+  return mpu.getAngleY();
 }
 
 // La meta tiene una barra atravesada: casi todos los sensores ven negro a la vez.
@@ -63,15 +73,19 @@ void setup() {
   pinMode(PIN_IN2_IZQ, OUTPUT);
   pinMode(PIN_IN1_DER, OUTPUT);
   pinMode(PIN_IN2_DER, OUTPUT);
+  ledcAttach(PIN_PWM_IZQ, 5000, 8);  // PWM de 5 kHz y 8 bits: de 0 a 255
+  ledcAttach(PIN_PWM_DER, 5000, 8);
   qtr.setTypeAnalog();
   qtr.setSensorPins(PINES_QTR, 8);
+  qtr.setEmitterPin(PIN_LEDON_QTR);  // la librería enciende los emisores al leer
   Wire.begin();
   if (mpu.begin() != 0) {  // 0 quiere decir que el sensor respondió
     Serial.println("No encuentro el MPU6050. Revisa los cables SDA y SCL.");
     while (true) delay(1000);
   }
+  abrirCanal(CANAL_LASER);  // el VL53L0X está en el canal 2; el MPU6050 está directo en el bus
   if (!distancia.begin()) {
-    Serial.println("No encuentro el VL53L0X. Revisa los cables SDA y SCL.");
+    Serial.println("No encuentro el VL53L0X. Revisa los cables SDA y SCL y el canal del multiplexor.");
     while (true) delay(1000);
   }
   distancia.startRangeContinuous(40);  // una medida nueva cada 40 ms (cada medida tarda 33 ms)

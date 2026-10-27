@@ -122,4 +122,7 @@ private:
   void medir(VL53L0X_RangingMeasurementData_t* m);
   void entregarLaMedida();
   void sinIniciar(VL53L0X_RangingMeasurementData_t* m);
+  /** Si el chip contesta ahora en el bus (en el robot, su canal del multiplexor tiene que estar abierto). */
+  bool contesta();
+  void sinRespuesta(VL53L0X_RangingMeasurementData_t* m);
 };
