@@ -18,7 +18,9 @@ const int VELOCIDAD_SUBIDA = 160;    // velocidad al subir
 const int VELOCIDAD_BAJADA = 60;     // velocidad al bajar
 const float KP = 0.03;               // cuánto corrige por cada unidad de error
 const float INCLINACION_RAMPA = 8;   // desde cuántos grados se considera rampa
-const int DISTANCIA_MINIMA = 80;     // mm: si hay algo más cerca, se detiene
+// mm: si hay algo más cerca, se detiene. El láser va a 2 cm del piso y ve la subida de una rampa
+// a unos 4 cm antes de inclinarse, así que el límite tiene que ser menor que eso.
+const int DISTANCIA_MINIMA = 30;
 
 unsigned long ultimoMensaje = 0;
 unsigned long inicioRecorrido = 0;

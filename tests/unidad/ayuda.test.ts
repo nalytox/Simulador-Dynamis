@@ -1,5 +1,5 @@
 import { it, expect } from 'vitest';
-import { conexionesDe } from '../../src/ayuda/conexiones';
+import { PLACA_V2, conexionesDe } from '../../src/ayuda/conexiones';
 import { puntaje } from '../../src/ayuda/bases';
 import { GUIAS } from '../../src/ayuda/guias';
 import { ROBOT_POR_DEFECTO } from '../../src/robot/config';
@@ -50,6 +50,20 @@ it('un pin opcional muestra su número, o qué pasa si no está conectado', () =
   expect(filas).toContainEqual({ que: 'STBY', pin: '23' });
   expect(filas).toContainEqual({ que: 'Emisores (LEDON)', pin: 'siempre encendidos' });
   expect(filas).toContainEqual({ que: 'LED del TCS34725 (color 1)', pin: '14' });
+});
+
+it('la tabla de la placa Dynamis V2: QTR, motores, I2C, multiplexor, MPU6050 y encoders', () => {
+  expect(PLACA_V2).toEqual({ grupo: 'Placa Dynamis V2', filas: [
+    { que: 'Sensor de línea QTRX-MD-08A (a 7 mm del piso)', pin: 'D36, D39, D34, D35, D32, D33, D25 y D26, de izquierda a derecha' },
+    { que: 'Emisores del QTR (LEDON)', pin: 'D27' },
+    { que: 'Motor izq. (PWM, IN1, IN2)', pin: 'D4, D16 y D17' },
+    { que: 'Motor der. (PWM, IN1, IN2)', pin: 'D19, D5 y D18' },
+    { que: 'STBY del TB6612', pin: '3V3: siempre activo' },
+    { que: 'Bus I2C (SDA, SCL)', pin: 'D21 y D22' },
+    { que: 'Multiplexor TCA9548A', pin: '0x70: canal 0 el TCS34725 izquierdo, 1 el derecho y 2 el VL53L0X' },
+    { que: 'MPU6050', pin: '0x68, directo en el bus, mirando hacia atrás (su eje x apunta a la cola)' },
+    { que: 'Encoders', pin: 'D13 y D14 (el simulador todavía no los modela)' },
+  ] });
 });
 
 it('puntaje sale de las constantes del juez', () => {

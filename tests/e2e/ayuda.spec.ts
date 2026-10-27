@@ -27,7 +27,9 @@ test('Conexiones de mi robot sigue a Mi robot', async ({ page }) => {
   await page.goto('/');
   await abrirAyuda(page);
   await page.locator('#ay-tab-conexiones').click();
-  await expect(fila(page, 'Motor izquierdo', 'PWM')).toContainText('18');
+  await expect(fila(page, 'Motor izquierdo', 'PWM')).toContainText('4');
+  await expect(page.locator('#ay-placa')).toContainText('D13 y D14 (el simulador todavía no los modela)');
+  await expect(fila(page, 'Bus I2C', 'VL53L0X')).toContainText('0x29, canal 2 del multiplexor');
   await page.locator('#ay-mi-robot').click();
   await expect(page.locator('#ventana-robot')).toBeVisible();
   await page.locator('#rb-motores-izq-pwm').fill('23');

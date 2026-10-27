@@ -12,10 +12,12 @@ uint16_t valores[8];
 
 const int VELOCIDAD = 100;              // velocidad hacia adelante, de 0 a 255
 const float KP = 0.03;                  // cuánto corrige por cada unidad de error
-// Más cerca que esto, esquiva. Ojo: el sensor también ve el piso o una rampa a unos 10 cm
-// cuando el robot se inclina, así que el límite tiene que ser menor que eso.
-const int DISTANCIA_PARA_ESQUIVAR = 80;   // mm
-const unsigned long GIRO_90 = 365;        // ms girando sobre su eje para girar unos 90°
+// Más cerca que esto, esquiva. Ojo: el láser va a 2 cm del piso y también ve la subida de una
+// rampa (a unos 4 cm antes de inclinarse) y el piso al terminar de bajarla (a unos 5 cm), así que
+// el límite tiene que ser menor que eso.
+const int DISTANCIA_PARA_ESQUIVAR = 35;   // mm
+const unsigned long RETROCESO = 150;      // ms hacia atrás para que las esquinas no toquen el obstáculo al girar
+const unsigned long GIRO_90 = 420;        // ms girando sobre su eje para girar unos 90°
 const unsigned long APARTARSE = 570;      // ms avanzando para apartarse unos 20 cm
 const unsigned long ARCO_MINIMO = 900;    // ms de arco antes de buscar la línea otra vez
 const unsigned long AL_CENTRO = 390;      // ms para llevar las ruedas sobre la línea
@@ -60,10 +62,12 @@ void girarHastaLaLinea(int sentido) {
   while (!veLineaAlCentro()) delay(1);
 }
 
-// Rodea el obstáculo por la derecha: se aparta, hace un arco amplio hacia la izquierda hasta
-// encontrar otra vez la línea, y se pone sobre ella mirando hacia adelante.
+// Rodea el obstáculo por la derecha: retrocede un poco, se aparta, hace un arco amplio hacia la
+// izquierda hasta encontrar otra vez la línea, y se pone sobre ella mirando hacia adelante.
 void esquivar() {
   Serial.println("¡Un obstáculo! Lo rodeo por la derecha.");
+  motores(-128, -128);         // retrocede: al girar sobre su eje, las esquinas del chasis barren un círculo
+  delay(RETROCESO);
   motores(128, -128);          // gira unos 90° a la derecha
   delay(GIRO_90);
   motores(150, 150);           // se aparta del obstáculo

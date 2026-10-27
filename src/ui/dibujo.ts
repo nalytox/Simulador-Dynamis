@@ -293,19 +293,23 @@ export function dibujarRobot(ctx: CanvasRenderingContext2D, v: Vista, i: Instant
   ctx.rotate(estado.yaw);
   const escala = 1 + Math.min(Math.max(estado.z, 0), 200) / 400;
   ctx.scale(escala, escala);
-  // Ruedas (las motrices y las locas), chasis y placa (marco del robot: x adelante, y a la izquierda).
+  // Chasis, placa y ruedas (marco del robot: x adelante, y a la izquierda). Las ruedas quedan bajo
+  // la base, pero se dibujan encima, con borde claro, para que se vean las cuatro.
   const piezas = piezasRobot(robot);
-  for (const r of piezas.ruedas) {
-    ctx.fillStyle = r.tipo === 'motriz' ? '#23285E' : '#4A5090';
-    ctx.beginPath();
-    ctx.roundRect(r.x - r.largo / 2, r.y - r.ancho / 2, r.largo, r.ancho, Math.min(6, r.ancho / 2));
-    ctx.fill();
-  }
   const atras = chasis.xDelantero - chasis.largo;
   ctx.fillStyle = C.azul;
   ctx.beginPath();
   ctx.roundRect(atras, -chasis.ancho / 2, chasis.largo, chasis.ancho, Math.min(30, chasis.largo / 4, chasis.ancho / 4));
   ctx.fill();
+  ctx.strokeStyle = C.hielo;
+  ctx.lineWidth = 2;
+  for (const r of piezas.ruedas) {
+    ctx.fillStyle = r.tipo === 'motriz' ? '#23285E' : '#4A5090';
+    ctx.beginPath();
+    ctx.roundRect(r.x - r.largo / 2, r.y - r.ancho / 2, r.largo, r.ancho, Math.min(6, r.ancho / 2));
+    ctx.fill();
+    ctx.stroke();
+  }
   const { placa } = piezas;
   ctx.fillStyle = PLACA;
   ctx.beginPath();
