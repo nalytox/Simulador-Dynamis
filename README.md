@@ -10,7 +10,9 @@ subirlo al robot físico.
 - **Programar:** editor con pestañas; abrir una carpeta o un `.zip`, descargar el proyecto y
   autoguardado. **"Probar mi robot"** compila en el navegador y muestra al robot en la pista, con
   pausa, velocidad y "Volver al inicio". Muestra los mensajes del `Serial`, lo que miden los
-  sensores, el juez virtual y los errores de compilación explicados en español.
+  sensores, el juez virtual y los errores de compilación explicados en español. Bajo «Mi programa»
+  se elige la versión de la placa esp32 con que se compila: **3.x** o **2.0.14**, la misma que tenga
+  el Arduino IDE con que se sube el programa al robot.
 - **Construir pista:** las piezas de las bases (líneas, cortes, cruces con marcas, rampas, F1 y F2,
   partida y meta, obstáculos, baches e hitos), sus propiedades, una revisión según las bases, y
   guardar o abrir la pista como `.json`.
@@ -43,7 +45,10 @@ subirlo al robot físico.
 El núcleo Arduino del ESP32 y las librerías de los sensores están reimplementados en
 [`src/nucleo/`](src/nucleo/), compatibles con la API pública de cada librería:
 
-- Arduino / ESP32 core 3.x: pines, tiempo, `Serial`, `String`, `Wire` y `Wire1`;
+- Arduino / ESP32 core 3.x o 2.0.14 (a elección, excluyentes): pines, tiempo, `Serial`, `String`,
+  `Wire` y `Wire1`. Lo que cambia entre las dos es el PWM: en la 3.x va por pin (`ledcAttach`,
+  `ledcWrite(pin, …)`) y en la 2.0.14 por canal (`ledcSetup`, `ledcAttachPin`, `ledcWrite(canal, …)`).
+  `ESP_ARDUINO_VERSION_MAJOR` dice cuál se eligió;
 - `QTRSensors` de Pololu (v4);
 - `Adafruit_VL53L0X`;
 - `MPU6050_light` (de rfetick);
