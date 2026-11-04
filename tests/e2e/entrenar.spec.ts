@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures';
+import { test, expect } from '@playwright/test';
 import { abrirProyecto, entrenar, usarAjusteDePrueba, vivos } from './ayuda/ajuste';
 
 test('sin el agente del profe, Empezar explica qué falta y no deja workers', async ({ page }) => {

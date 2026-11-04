@@ -1,4 +1,4 @@
-import { test, expect, type Page } from './fixtures';
+import { test, expect, type Page } from '@playwright/test';
 
 async function abrirAyuda(page: Page) {
   await page.locator('#btn-ayuda').click();

@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures';
+import { test, expect } from '@playwright/test';
 
 test('la página carga aislada, con la banda y la vista Programar', async ({ page }) => {
   await page.goto('/');

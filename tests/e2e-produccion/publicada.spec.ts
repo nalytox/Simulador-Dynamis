@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '../e2e/fixtures';
+import { test, expect, type Page } from '@playwright/test';
 
 
 /** Espera a que la página quede aislada; la primera vez se recarga sola, y mientras tanto evaluate puede fallar. */

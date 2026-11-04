@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { test, expect, type Page } from './fixtures';
+import { test, expect, type Page } from '@playwright/test';
 import { abrirEditor, clicCelda, elegirPieza } from './ayuda/editor';
 import { leerRobot } from '../../src/robot/archivo';
 import { ROBOT_POR_DEFECTO, ROBOT_POR_DEFECTO_ANTERIOR } from '../../src/robot/config';
@@ -18,7 +18,7 @@ async function cambiar(page: Page, ruta: string, valor: string) {
 }
 /** Escribe un robot en el almacén del perfil de Marco, como si lo hubiera guardado una versión anterior. */
 const guardarRobot = (page: Page, robot: unknown) => page.evaluate(r => new Promise<void>(resolver => {
-  const pedido = indexedDB.open('simulador-dynamis-marco', 1);
+  const pedido = indexedDB.open('simulador-dynamis', 1);
   pedido.onsuccess = () => {
     const tx = pedido.result.transaction('datos', 'readwrite');
     tx.objectStore('datos').put(r, 'robot');
@@ -26,7 +26,7 @@ const guardarRobot = (page: Page, robot: unknown) => page.evaluate(r => new Prom
   };
 }), robot);
 const robotGuardado = (page: Page) => page.evaluate(() => new Promise<{ ruedas: { trocha: number } } | null>(resolver => {
-  const pedido = indexedDB.open('simulador-dynamis-marco', 1);
+  const pedido = indexedDB.open('simulador-dynamis', 1);
   pedido.onsuccess = () => {
     const leer = pedido.result.transaction('datos').objectStore('datos').get('robot');
     leer.onsuccess = () => resolver(leer.result ?? null);
@@ -90,7 +90,7 @@ test('los cambios se guardan y se usan en la prueba', async ({ page }) => {
   await expect(ventana(page)).toBeHidden();
   // Se autoguarda (medio segundo después del último cambio): al recargar sigue igual.
   await expect.poll(() => page.evaluate(() => new Promise<number | null>(resolver => {
-    const pedido = indexedDB.open('simulador-dynamis-marco', 1);
+    const pedido = indexedDB.open('simulador-dynamis', 1);
     pedido.onsuccess = () => {
       const leer = pedido.result.transaction('datos').objectStore('datos').get('robot');
       leer.onsuccess = () => resolver(leer.result?.ruedas.trocha ?? null);

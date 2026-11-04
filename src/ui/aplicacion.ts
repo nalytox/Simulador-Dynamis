@@ -15,7 +15,6 @@ import { crearArchivoPista } from './archivo-pista';
 import { crearVentanaRobot } from './mi-robot';
 import { crearVentanaEjemplos } from './ejemplos';
 import { crearRecorrido } from './recorrido';
-import { elegirPerfil } from './perfil';
 import { crearVentanaAyuda } from './ayuda';
 import { escucharInstalacion } from '../pwa/instalar';
 import { crearVentanaAjuste, type PedidoEntrenamiento, type FinVentana } from './ajustar';
@@ -32,13 +31,15 @@ import { puntosDePartida } from '../pista/puntos';
 import { ROBOT_POR_DEFECTO, type ConfigRobot } from '../robot/config';
 import { migrarRobotGuardado } from '../robot/archivo';
 import { abrirAlmacen, conRetardo, type Almacen, type DatosGuardados, type Preferencias } from '../proyecto/almacen';
-import { baseDeDatosDe, claveRecorridoDe, olvidarPerfil } from '../proyecto/perfiles';
+import { recorridoVistoEnPerfiles, recuperarDePerfiles } from '../proyecto/recuperar-perfiles';
 import type { Proyecto } from '../proyecto/proyecto';
 import type { Pista } from '../pista/tipos';
 import { PROYECTO_INICIAL, PISTA_INICIAL, PISTAS_DE_EJEMPLO } from '../ejemplos';
 import { buscarAjustables, formatearValor } from '../compilador/ajustables';
 
 const SIN_AISLAMIENTO = 'Para usar el simulador, recarga la página o usa Chrome, Edge o Firefox recientes.';
+/** Dónde se recuerda que ya se vio el recorrido de la primera visita. */
+const CLAVE_RECORRIDO = 'dynamis.recorrido';
 const SIN_AUTOGUARDADO = 'No se pudo activar el guardado automático en este navegador: descarga tu proyecto para no perderlo.';
 const CICLO_SIN_FIN = 'Tu programa parece atrapado en un ciclo sin fin. ¿Falta un `delay` o leer un sensor dentro del `while`?';
 const SIN_COMPILADOR = { titulo: 'No pudimos preparar el compilador', mensaje: 'Revisa tu conexión a internet.' };
@@ -75,19 +76,20 @@ async function leer<K extends keyof DatosGuardados>(almacen: Almacen | null, cla
 }
 
 /**
- * Pregunta quién va a programar, arma la vista Programar sobre el HTML de index.html con lo que
- * guardó ese perfil y conecta "Probar mi robot".
+ * Arma la vista Programar sobre el HTML de index.html con lo que quedó guardado en este navegador
+ * (un solo usuario por computador) y conecta "Probar mi robot".
  */
-export async function iniciarAplicacion(raiz: Document, sesion: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>): Promise<void> {
+export async function iniciarAplicacion(raiz: Document): Promise<void> {
   if (!crossOriginIsolated) {
     mostrarAvisoGlobal(raiz, SIN_AISLAMIENTO);
     return;
   }
   const $ = (id: string) => raiz.getElementById(id)!;
-  const perfil = await elegirPerfil(raiz, sesion);
-  $('perfil-nombre').textContent = perfil.nombre;
-  $('btn-perfil').setAttribute('aria-label', `${perfil.nombre}: cambiar de perfil`);
-  const almacen = await abrirAlmacen(baseDeDatosDe(perfil));
+  const almacen = await abrirAlmacen();
+  // Lo guardado cuando el simulador tenía perfiles pasa a este almacén, una sola vez.
+  const recuperado = almacen ? await recuperarDePerfiles(almacen).catch(() => null) : null;
+  // Que el navegador no borre el trabajo guardado cuando le falte espacio.
+  void raiz.defaultView?.navigator.storage?.persist?.().catch(() => false);
   const proyectoGuardado = await leer(almacen, 'proyecto');
   /** La pista de Programar: la de la prueba en curso. La del editor pasa a Programar cuando no corre una prueba. */
   let pista = (await leer(almacen, 'pista')) ?? PISTA_INICIAL;
@@ -172,18 +174,17 @@ export async function iniciarAplicacion(raiz: Document, sesion: Pick<Storage, 'g
   }, robotGuardado?.aviso ?? null);
   if (robotGuardado?.aviso) mensajeSistema(`${robotGuardado.aviso} Míralo en «Mi robot».`);
   $('btn-mi-robot').addEventListener('click', () => ventanaRobot.abrir());
-  const recorrido = crearRecorrido(raiz, claveRecorridoDe(perfil), almacenLocal(raiz));
-  // Cambiar de perfil: guarda ya lo que el autoguardado tenía pendiente y vuelve a preguntar.
-  $('btn-perfil').addEventListener('click', async () => {
-    await Promise.all([
-      almacen?.guardar('proyecto', programa.proyecto()),
-      almacen?.guardar('pista', pistaEditada),
-      almacen?.guardar('robot', robotEditado),
-      almacen?.guardar('preferencias', { ...preferencias }),
-    ]).catch(() => {});
-    olvidarPerfil(sesion);
-    raiz.defaultView!.location.reload();
-  });
+  if (recuperado?.recuperado) {
+    const otros = recuperado.otros.length > 0 ? ` (también había trabajo de ${recuperado.otros.join(', ')}, que no se abrió)` : '';
+    mensajeSistema(`Ya no hay perfiles: abrí el trabajo que estaba guardado como ${recuperado.recuperado}${otros}.`);
+  }
+  const local = almacenLocal(raiz);
+  try {
+    if (local && local.getItem(CLAVE_RECORRIDO) === null && recorridoVistoEnPerfiles(local)) local.setItem(CLAVE_RECORRIDO, 'visto');
+  } catch {
+    // Sin almacenamiento local el recorrido vuelve a aparecer: no es grave.
+  }
+  const recorrido = crearRecorrido(raiz, CLAVE_RECORRIDO, local);
   const ventanaAyuda = crearVentanaAyuda(raiz, {
     robot: () => robotEditado,
     abrirMiRobot: () => ventanaRobot.abrir(),

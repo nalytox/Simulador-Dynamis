@@ -1,4 +1,4 @@
-import { test, expect, type Page } from './fixtures';
+import { test, expect, type Page } from '@playwright/test';
 
 const pestanas = (page: Page) => page.locator('#pestanas [role="tab"]');
 const codigo = (page: Page) => page.locator('#editor .cm-content');
