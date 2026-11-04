@@ -175,6 +175,7 @@ void loop() {
       'Cada motor usa tres pines: IN1 e IN2 dicen hacia dónde gira (HIGH y LOW: adelante; LOW y HIGH: atrás) y PWM dice qué tan rápido (de 0 a 255).',
       'En la placa V2: motor izquierdo PWM en D4, IN1 en D16 e IN2 en D17; motor derecho PWM en D19, IN1 en D5 e IN2 en D18. STBY va a 3V3, así que el driver siempre está activo.',
       'En el ESP32 el PWM lo hace el periférico LEDC: ledcAttach(pin, frecuencia, bits) prepara el pin y ledcWrite(pin, valor) fija la velocidad.',
+      'Eso es con la versión 3.x de la placa esp32. Con la 2.0.14 (elígela bajo «Mi programa») el PWM va por canal: ledcSetup(canal, 5000, 8) prepara el canal, ledcAttachPin(PWM_IZQ, canal) le conecta el pin y ledcWrite(canal, valor) fija la velocidad.',
       'Para girar, una rueda va más rápido que la otra, o una hacia adelante y la otra hacia atrás.',
     ],
     programa: `const int PWM_IZQ = 4, IN1_IZQ = 16, IN2_IZQ = 17;

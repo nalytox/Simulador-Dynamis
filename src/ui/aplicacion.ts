@@ -15,6 +15,7 @@ import { crearArchivoPista } from './archivo-pista';
 import { crearVentanaRobot } from './mi-robot';
 import { crearVentanaEjemplos } from './ejemplos';
 import { crearRecorrido } from './recorrido';
+import { crearSelectorVersion } from './version';
 import { crearVentanaAyuda } from './ayuda';
 import { escucharInstalacion } from '../pwa/instalar';
 import { crearVentanaAjuste, type PedidoEntrenamiento, type FinVentana } from './ajustar';
@@ -25,6 +26,7 @@ import { describirError, entrenar } from '../ajuste/entrenamiento';
 import { crearPool } from '../ajuste/pool';
 import { ClienteCompilador } from '../compilador/cliente';
 import { primerError } from '../compilador/amigables';
+import { esVersionEsp32, VERSION_POR_DEFECTO } from '../compilador/version';
 import { ClienteSimulacion } from '../simulacion/cliente';
 import type { FinEjecucion, Instantanea } from '../simulacion/ejecucion';
 import { puntosDePartida } from '../pista/puntos';
@@ -101,6 +103,8 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
   let robot: ConfigRobot = robotGuardado?.robot ?? structuredClone(ROBOT_POR_DEFECTO);
   let robotEditado = robot;
   const preferencias: Preferencias = (await leer(almacen, 'preferencias')) ?? { velocidad: 100 };
+  /** Con qué versión del core ESP32 se compila (el interruptor bajo «Mi programa»). */
+  const versionEsp32 = () => (esVersionEsp32(preferencias.versionEsp32) ? preferencias.versionEsp32 : VERSION_POR_DEFECTO);
   const guardar = <K extends keyof DatosGuardados>(clave: K) => conRetardo((valor: DatosGuardados[K]) => { void almacen?.guardar(clave, valor).catch(() => {}); });
   const guardarProyecto = guardar('proyecto');
   const guardarPreferencias = guardar('preferencias');
@@ -125,6 +129,11 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
     alCambiarActivo: ruta => { preferencias.archivoAbierto = ruta; guardarPreferencias({ ...preferencias }); },
     mensajeSistema,
     mostrarError: (titulo, mensaje) => burbuja.mostrar({ titulo, mensaje }),
+  });
+  // La versión elegida vale desde la próxima prueba: no cambia la que está corriendo.
+  crearSelectorVersion(raiz, versionEsp32(), v => {
+    preferencias.versionEsp32 = v;
+    guardarPreferencias({ ...preferencias });
   });
 
   // Las dos vistas: al volver a Programar, los mensajes se muestran desde el final.
@@ -324,7 +333,7 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
     } catch {
       return { motivo: 'no-compila', mensaje: `${sinCompilador().titulo}. ${sinCompilador().mensaje}` };
     }
-    const r = await compilador.compilar(programa.proyecto());
+    const r = await compilador.compilar(programa.proyecto(), versionEsp32());
     if (!r.ok) return { motivo: 'no-compila', mensaje: 'Tu programa tiene errores: pruébalo con «Probar mi robot» para verlos.' };
     if (pedido.senal.aborted) return { motivo: 'detenido', mejor: null };
     const pool = crearPool({
@@ -381,7 +390,7 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
     }
     mostrar('compilando');
     const proyecto: Proyecto = programa.proyecto();
-    const r = await compilador.compilar(proyecto);
+    const r = await compilador.compilar(proyecto, versionEsp32());
     if (mio !== intento) return;
     if (!r.ok) {
       const error = primerError(r.diagnosticos, Object.keys(proyecto.archivos));

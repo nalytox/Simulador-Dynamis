@@ -108,6 +108,16 @@ main.gutter { padding-block: 18px 28px; }
 .card h2 svg.ico { color: var(--azul); }
 .chip { font-size: 12.5px; background: var(--hielo); color: var(--azul); padding: 3px 10px; border-radius: 999px; font-weight: 500; font-variant-numeric: tabular-nums; }
 .header-der { margin-left: auto; display: flex; gap: 8px; }
+/* Versión de la placa esp32, bajo «Mi programa»: dos botones de radio como un interruptor. */
+.version-esp32 { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0; padding: 8px 16px; border: 0; border-bottom: 2px solid var(--hielo); font-size: 13.5px; }
+.version-esp32 legend { float: left; padding: 0; font-weight: 600; color: var(--azul); }
+.segmentos { display: inline-flex; padding: 3px; border-radius: 999px; background: var(--hielo); }
+.segmentos label { position: relative; }
+.segmentos input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.segmentos span { display: block; padding: 4px 14px; border-radius: 999px; color: var(--azul); font-weight: 600; font-variant-numeric: tabular-nums; }
+.segmentos input:checked + span { background: var(--azul); color: var(--blanco); }
+.segmentos input:focus-visible + span { outline: 3px solid var(--sol); outline-offset: 1px; }
+.nota-version { color: var(--tinta-suave); font-size: 12.5px; }
 .btn-mini { border: 0; background: var(--hielo); color: var(--azul); font-size: 13px; font-weight: 600; padding: 6px 12px; border-radius: 999px; display: inline-flex; align-items: center; gap: 6px; }
 .btn-mini:hover { background: #C9EBFF; }
 .btn-mini svg.ico { width: 16px; height: 16px; }

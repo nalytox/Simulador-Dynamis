@@ -1,5 +1,6 @@
 import { cargarNucleoDesdeDisco } from '../../src/compilador/nucleo-node';
 import type { ArchivosNucleo } from '../../src/compilador/compilar';
+import type { VersionEsp32 } from '../../src/compilador/version';
 import { Simulador, type EstadoRobot, type Pose, type ResultadoEjecucion } from '../../src/simulacion/simulador';
 import type { ModelosSensores } from '../../src/simulacion/sensores';
 import { crearMundo } from '../../src/mundo/pista';
@@ -19,6 +20,8 @@ export interface OpcionesSketch {
   duracionUs?: number;
   /** Se llama después de cada paso de física. */
   alPasoFisica?: (tUs: number, estado: EstadoRobot) => void;
+  /** La versión del core ESP32 con que se compila (por defecto, 3.x). */
+  version?: VersionEsp32;
 }
 
 /**
@@ -28,7 +31,7 @@ export interface OpcionesSketch {
 export async function correrSketch(codigo: string, o: OpcionesSketch = {}): Promise<{ sim: Simulador; texto: string; resultado: ResultadoEjecucion }> {
   nucleo ??= cargarNucleoDesdeDisco();
   const pista = o.pista ?? pistaDe({ columnas: 6, filas: 1, baldosas: [0, 1, 2, 3, 4, 5].map(c => ({ c, r: 0, tipo: 'recta' })) });
-  const modulo = await compilarParaPrueba({ 'p.ino': codigo }, await nucleo, 'p');
+  const modulo = await compilarParaPrueba({ 'p.ino': codigo }, await nucleo, 'p', { version: o.version });
   const sim = await Simulador.crear({
     modulo, mundo: crearMundo(pista), robot: o.robot, modelos: o.modelos, ambiente: pista.ambiente,
     poseInicial: o.pose ?? poseInicial(pista), alPasoFisica: o.alPasoFisica,

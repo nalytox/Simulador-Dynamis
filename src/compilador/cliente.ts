@@ -2,6 +2,7 @@ import type { Proyecto } from '../proyecto/proyecto';
 import type { Diagnostico } from './diagnosticos';
 import type { ResultadoCompilacion } from './compilar';
 import type { MensajeAlCompilador, MensajeDelCompilador } from './trabajador';
+import { VERSION_POR_DEFECTO, type VersionEsp32 } from './version';
 
 export type CompilacionWeb =
   | { ok: true; modulo: WebAssembly.Module; diagnosticos: Diagnostico[] }
@@ -21,7 +22,7 @@ interface Preparacion {
 
 /**
  * Habla con el worker del compilador desde el hilo principal. Guarda el último módulo que compiló
- * bien: si el proyecto no cambió, lo devuelve sin volver a compilar.
+ * bien: si el proyecto y la versión del ESP32 no cambiaron, lo devuelve sin volver a compilar.
  */
 export class ClienteCompilador {
   private trabajador: Worker | null = null;
@@ -49,12 +50,12 @@ export class ClienteCompilador {
     return promesa;
   }
 
-  async compilar(p: Proyecto): Promise<CompilacionWeb> {
-    const firma = firmaProyecto(p);
+  async compilar(p: Proyecto, version: VersionEsp32 = VERSION_POR_DEFECTO): Promise<CompilacionWeb> {
+    const firma = `${version} ${firmaProyecto(p)}`;
     if (this.cache?.firma === firma) return this.cache.resultado;
     const id = this.siguienteId++;
     const respuesta = new Promise<ResultadoCompilacion>(resolver => this.pendientes.set(id, resolver));
-    this.enviar({ tipo: 'compilar', id, proyecto: p });
+    this.enviar({ tipo: 'compilar', id, proyecto: p, version });
     const r = await respuesta;
     if (!r.ok) return r;
     const resultado: CompilacionWeb = { ok: true, modulo: await WebAssembly.compile(r.wasm), diagnosticos: r.diagnosticos };

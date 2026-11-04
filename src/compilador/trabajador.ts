@@ -1,10 +1,11 @@
 import { compilar, prepararCompilador, type ArchivosNucleo, type ResultadoCompilacion } from './compilar';
 import { cargarNucleoWeb } from './nucleo-web';
 import type { Proyecto } from '../proyecto/proyecto';
+import type { VersionEsp32 } from './version';
 import type { AmbitoTrabajador } from '../ui/ambito';
 
 /** Worker del compilador: descarga LLVM y el núcleo una vez y compila proyectos a pedido. */
-export type MensajeAlCompilador = { tipo: 'preparar' } | { tipo: 'compilar'; id: number; proyecto: Proyecto };
+export type MensajeAlCompilador = { tipo: 'preparar' } | { tipo: 'compilar'; id: number; proyecto: Proyecto; version: VersionEsp32 };
 export type MensajeDelCompilador =
   | { tipo: 'progreso'; hecho: number; total: number }
   | { tipo: 'preparado' }
@@ -24,9 +25,9 @@ function cargarNucleo(): Promise<ArchivosNucleo> {
   return nucleo;
 }
 
-async function compilarProyecto(proyecto: Proyecto): Promise<ResultadoCompilacion> {
+async function compilarProyecto(proyecto: Proyecto, version: VersionEsp32): Promise<ResultadoCompilacion> {
   try {
-    return await compilar(proyecto, await cargarNucleo());
+    return await compilar(proyecto, await cargarNucleo(), { version });
   } catch (e) {
     return { ok: false, diagnosticos: [{ archivo: null, linea: null, columna: null, severidad: 'error', mensaje: `No se pudo compilar: ${textoDe(e)}`, detalle: '' }] };
   }
@@ -43,6 +44,6 @@ ambito.onmessage = async ({ data }) => {
     }
     return;
   }
-  const resultado = await compilarProyecto(m.proyecto);
+  const resultado = await compilarProyecto(m.proyecto, m.version);
   enviar({ tipo: 'compilado', id: m.id, resultado }, resultado.ok ? [resultado.wasm.buffer] : []);
 };

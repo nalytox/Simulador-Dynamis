@@ -87,6 +87,14 @@
             <input type="file" id="in-carpeta" webkitdirectory multiple hidden>
             <input type="file" id="in-zip" accept=".zip" hidden>
           </header>
+          <fieldset class="version-esp32" id="version-esp32">
+            <legend>Versión de la placa esp32</legend>
+            <span class="segmentos">
+              <label><input type="radio" name="version-esp32" value="3.x" checked><span>3.x</span></label>
+              <label><input type="radio" name="version-esp32" value="2.0.14"><span>2.0.14</span></label>
+            </span>
+            <span class="nota-version" id="nota-version"></span>
+          </fieldset>
           <div class="barra-pestanas" id="pestanas" role="tablist" aria-label="Archivos del proyecto"></div>
           <div class="editor" id="editor" aria-label="Código del programa"></div>
           <div class="burbuja" id="burbuja" hidden>
