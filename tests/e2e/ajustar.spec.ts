@@ -1,4 +1,4 @@
-import { test, expect, type Page } from './fixtures';
+import { test, expect, type Page } from '@playwright/test';
 
 const ventana = (page: Page) => page.locator('#ventana-ajuste');
 

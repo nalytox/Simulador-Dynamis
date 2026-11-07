@@ -1,4 +1,4 @@
-import { test, expect, type Page } from './fixtures';
+import { test, expect, type Page } from '@playwright/test';
 
 // Una visita nueva: sin la marca de "recorrido visto" que traen las demás pruebas.
 test.use({ storageState: { cookies: [], origins: [] } });

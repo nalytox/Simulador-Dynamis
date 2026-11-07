@@ -1,10 +1,18 @@
 import type { Proyecto } from './proyecto';
 import type { Pista } from '../pista/tipos';
 import type { ConfigRobot } from '../robot/config';
+import type { VersionEsp32 } from '../compilador/version';
 
 /** Autoguardado en IndexedDB: el proyecto, la pista, el robot y las preferencias. */
-export interface Preferencias { velocidad: number; archivoAbierto?: string }
-export interface DatosGuardados { proyecto: Proyecto; pista: Pista; robot: ConfigRobot; preferencias: Preferencias }
+export interface Preferencias { velocidad: number; archivoAbierto?: string; versionEsp32?: VersionEsp32 }
+export interface DatosGuardados {
+  proyecto: Proyecto; pista: Pista; robot: ConfigRobot; preferencias: Preferencias;
+  /** Ya se revisaron las bases de los perfiles que tuvo el simulador (ver recuperar-perfiles.ts). */
+  perfilesRevisados: boolean;
+}
+
+/** La base del autoguardado: una por navegador, la de quien usa ese computador. */
+export const BASE_DATOS = 'simulador-dynamis';
 
 export interface Almacen {
   leer<K extends keyof DatosGuardados>(clave: K): Promise<DatosGuardados[K] | undefined>;
@@ -21,10 +29,10 @@ function esperar<T>(pedido: IDBRequest<T>): Promise<T> {
 }
 
 /**
- * El autoguardado guardado en la base `base` (una por perfil). null si el navegador no deja usar
- * IndexedDB (ventana privada, cuota llena…): la app sigue sin autoguardado.
+ * El autoguardado guardado en la base `base`. null si el navegador no deja usar IndexedDB (ventana
+ * privada, cuota llena…): la app sigue sin autoguardado.
  */
-export async function abrirAlmacen(base: string, fabrica: IDBFactory | undefined = globalThis.indexedDB): Promise<Almacen | null> {
+export async function abrirAlmacen(base = BASE_DATOS, fabrica: IDBFactory | undefined = globalThis.indexedDB): Promise<Almacen | null> {
   if (!fabrica) return null;
   try {
     const db = await new Promise<IDBDatabase>((resolver, rechazar) => {

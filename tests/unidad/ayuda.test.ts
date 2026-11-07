@@ -103,4 +103,5 @@ it('las guías usan la placa Dynamis V2: emisores del QTR, canales del multiplex
   expect(programa('motores')).toContain('const int PWM_IZQ = 4, IN1_IZQ = 16, IN2_IZQ = 17;');
   expect(programa('motores')).toContain('const int PWM_DER = 19, IN1_DER = 5, IN2_DER = 18;');
   for (const g of GUIAS) expect(g.programa, g.id).not.toContain('analogWrite');
+  expect(GUIAS.find(g => g.id === 'motores')!.explicacion.join(' ')).toContain('ledcSetup(canal, 5000, 8)');
 });

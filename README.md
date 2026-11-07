@@ -7,12 +7,12 @@ subirlo al robot físico.
 
 ## Qué incluye
 
-- **Perfiles:** al abrir, cada estudiante elige su nombre (sin contraseña) y su trabajo se guarda
-  aparte del de los demás.
 - **Programar:** editor con pestañas; abrir una carpeta o un `.zip`, descargar el proyecto y
   autoguardado. **"Probar mi robot"** compila en el navegador y muestra al robot en la pista, con
   pausa, velocidad y "Volver al inicio". Muestra los mensajes del `Serial`, lo que miden los
-  sensores, el juez virtual y los errores de compilación explicados en español.
+  sensores, el juez virtual y los errores de compilación explicados en español. Bajo «Mi programa»
+  se elige la versión de la placa esp32 con que se compila: **3.x** o **2.0.14**, la misma que tenga
+  el Arduino IDE con que se sube el programa al robot.
 - **Construir pista:** las piezas de las bases (líneas, cortes, cruces con marcas, rampas, F1 y F2,
   partida y meta, obstáculos, baches e hitos), sus propiedades, una revisión según las bases, y
   guardar o abrir la pista como `.json`.
@@ -31,22 +31,24 @@ subirlo al robot físico.
 
 1. Abre la dirección publicada (`https://<usuario>.github.io/Simulador-Dynamis/`) en Chrome o Edge
    (también en Chromebooks). No hay que instalar nada ni crear una cuenta.
-2. Elige tu nombre. Cada perfil guarda su propio programa, pista, robot y preferencias en este
-   navegador, así que otro estudiante que use el mismo computador no cambia tu trabajo. El botón con
-   tu nombre, en la banda de arriba, sirve para cambiar de perfil. La lista de nombres está en
-   `src/proyecto/perfiles.ts`.
-3. La app abre con un seguidor de línea y la pista de práctica: presiona **"Probar mi robot"**. La
+2. La app abre con un seguidor de línea y la pista de práctica: presiona **"Probar mi robot"**. La
    primera vez descarga el compilador; después queda guardado.
-4. **Todo se guarda solo** en el navegador. "Descargar mi proyecto" entrega un `.zip` que se abre
-   en el Arduino IDE para subirlo al robot.
-5. **"Instalar en este computador"** deja un ícono en el escritorio, si el navegador lo permite.
+3. **Todo se guarda solo** en el navegador de ese computador (un usuario por computador): el
+   programa, la pista, el robot y las preferencias siguen ahí al volver. No viaja a otro computador
+   ni sobrevive a una ventana de incógnito o a borrar los datos del navegador: para llevarlo,
+   "Descargar mi proyecto" entrega un `.zip` que también se abre en el Arduino IDE para subirlo al
+   robot.
+4. **"Instalar en este computador"** deja un ícono en el escritorio, si el navegador lo permite.
 
 ## Librerías soportadas
 
 El núcleo Arduino del ESP32 y las librerías de los sensores están reimplementados en
 [`src/nucleo/`](src/nucleo/), compatibles con la API pública de cada librería:
 
-- Arduino / ESP32 core 3.x: pines, tiempo, `Serial`, `String`, `Wire` y `Wire1`;
+- Arduino / ESP32 core 3.x o 2.0.14 (a elección, excluyentes): pines, tiempo, `Serial`, `String`,
+  `Wire` y `Wire1`. Lo que cambia entre las dos es el PWM: en la 3.x va por pin (`ledcAttach`,
+  `ledcWrite(pin, …)`) y en la 2.0.14 por canal (`ledcSetup`, `ledcAttachPin`, `ledcWrite(canal, …)`).
+  `ESP_ARDUINO_VERSION_MAJOR` dice cuál se eligió;
 - `QTRSensors` de Pololu (v4);
 - `Adafruit_VL53L0X`;
 - `MPU6050_light` (de rfetick);

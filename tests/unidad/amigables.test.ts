@@ -32,6 +32,18 @@ describe('errores amigables', () => {
     expect(mensajeDe(mensaje)).toBe(esperado);
   });
 
+  it('la API del PWM de la otra versión del ESP32 dice qué versión elegir bajo «Mi programa»', () => {
+    const DE_LA_2 = 'es de la versión 2.0.14 del ESP32, pero bajo «Mi programa» está elegida la 3.x. Elige 2.0.14, o usa la forma de la 3.x: ledcAttach(pin, frecuencia, bits) y después ledcWrite(pin, valor).';
+    const DE_LA_3 = 'es de la versión 3.x del ESP32, pero bajo «Mi programa» está elegida la 2.0.14. Elige 3.x, o usa la forma de la 2.0.14: ledcSetup(canal, frecuencia, bits), ledcAttachPin(pin, canal) y después ledcWrite(canal, valor).';
+    expect(mensajeDe("use of undeclared identifier 'ledcSetup'")).toBe(`\`ledcSetup\` ${DE_LA_2}`);
+    expect(mensajeDe("use of undeclared identifier 'ledcAttachPin'")).toBe(`\`ledcAttachPin\` ${DE_LA_2}`);
+    expect(mensajeDe("use of undeclared identifier 'ledcDetachPin'")).toBe(`\`ledcDetachPin\` ${DE_LA_2}`);
+    expect(mensajeDe("use of undeclared identifier 'ledcAttach'")).toBe(`\`ledcAttach\` ${DE_LA_3}`);
+    expect(mensajeDe("use of undeclared identifier 'ledcDetach'; did you mean 'ledcDetachPin'?")).toBe(`\`ledcDetach\` ${DE_LA_3}`);
+    expect(mensajeDe("no matching function for call to 'analogWriteResolution'")).toBe(
+      'En la versión 3.x del ESP32 se escribe `analogWriteResolution(pin, bits)`, y en la 2.0.14, `analogWriteResolution(bits)`. Revisa la versión elegida bajo «Mi programa».');
+  });
+
   it('el título nombra la línea y el archivo del proyecto', () => {
     const m = traducirDiagnostico(diag("expected ';' after expression"), RUTAS);
     expect(m).toMatchObject({ titulo: 'Ups, revisa la línea 20 de seguidor.ino', archivo: 'seguidor.ino', linea: 20 });

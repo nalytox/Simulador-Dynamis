@@ -17,9 +17,16 @@ const PUNTO_Y_COMA = 'Falta un punto y coma `;` al final. En C++ cada instrucci�
 const LLAVES = 'Las llaves `{ }` no están parejas.';
 const TIPOS = 'Estás guardando un dato de un tipo en una variable de otro tipo.';
 const GENERICO = 'El compilador encontró un problema que no sé explicar. Mira el mensaje técnico.';
+// El PWM cambia entre las dos versiones del core ESP32 que se eligen bajo «Mi programa» (version.ts).
+const DE_LA_2 = 'es de la versión 2.0.14 del ESP32, pero bajo «Mi programa» está elegida la 3.x. Elige 2.0.14, o usa la forma de la 3.x: ledcAttach(pin, frecuencia, bits) y después ledcWrite(pin, valor).';
+const DE_LA_3 = 'es de la versión 3.x del ESP32, pero bajo «Mi programa» está elegida la 2.0.14. Elige 3.x, o usa la forma de la 2.0.14: ledcSetup(canal, frecuencia, bits), ledcAttachPin(pin, canal) y después ledcWrite(canal, valor).';
+const RESOLUCION_PWM = 'En la versión 3.x del ESP32 se escribe `analogWriteResolution(pin, bits)`, y en la 2.0.14, `analogWriteResolution(bits)`. Revisa la versión elegida bajo «Mi programa».';
 
 const PATRONES: [RegExp, (m: RegExpMatchArray) => string][] = [
   [/expected ';'/, () => PUNTO_Y_COMA],
+  [/use of undeclared identifier '(ledcSetup|ledcAttachPin|ledcDetachPin)'/, m => `\`${m[1]}\` ${DE_LA_2}`],
+  [/use of undeclared identifier '(ledcAttach|ledcAttachChannel|ledcDetach)'/, m => `\`${m[1]}\` ${DE_LA_3}`],
+  [/no matching function for call to 'analogWriteResolution'/, () => RESOLUCION_PWM],
   [/use of undeclared identifier '([^']+)'/, m => `No conozco \`${m[1]}\`. ¿Está bien escrito? ¿Lo declaraste antes de usarlo?`],
   [/'([^']+)' file not found/, m => `No encontramos \`${m[1]}\`. Las librerías disponibles son: ${LIBRERIAS_DISPONIBLES.join(', ')}.`],
   [/expected '\}'|extraneous closing brace/, () => LLAVES],

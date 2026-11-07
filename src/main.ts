@@ -13,22 +13,21 @@ import { registrarPrueba } from './ui/pruebas';
 import { prepararAislamiento } from './pwa/registrar';
 
 /** sessionStorage, o uno en memoria si el navegador no deja usarlo. */
-function sesion(): Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> {
+function sesion(): Pick<Storage, 'getItem' | 'setItem'> {
   try {
     return window.sessionStorage;
   } catch {
     const memoria = new Map<string, string>();
-    return { getItem: k => memoria.get(k) ?? null, setItem: (k, v) => { memoria.set(k, v); }, removeItem: k => { memoria.delete(k); } };
+    return { getItem: k => memoria.get(k) ?? null, setItem: (k, v) => { memoria.set(k, v); } };
   }
 }
 
 registrarPrueba('compilador', new ClienteCompilador());
-const sesionDeLaPestana = sesion();
 const estado = await prepararAislamiento({
   aislado: crossOriginIsolated,
   produccion: import.meta.env.PROD,
   sw: 'serviceWorker' in navigator ? navigator.serviceWorker : undefined,
-  sesion: sesionDeLaPestana,
+  sesion: sesion(),
   recargar: () => location.reload(),
 });
-if (estado !== 'recargando') void iniciarAplicacion(document, sesionDeLaPestana);
+if (estado !== 'recargando') void iniciarAplicacion(document);

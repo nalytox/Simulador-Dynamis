@@ -13,8 +13,8 @@ type Almacen = Pick<Storage, 'getItem' | 'setItem'>;
 
 /**
  * El recorrido de la primera visita: un bocadillo con la mascota junto a cada parte de la pantalla.
- * Que ya se vio se recuerda en el navegador con `clave` (una por perfil); es una comodidad, no un dato
- * del trabajo: si no se puede guardar, igual funciona y simplemente se muestra otra vez.
+ * Que ya se vio se recuerda en el navegador con `clave`; es una comodidad, no un dato del trabajo: si
+ * no se puede guardar, igual funciona y simplemente se muestra otra vez.
  */
 export function crearRecorrido(raiz: Document, clave: string, almacen?: Almacen): { mostrar(): void; mostrarSiEsPrimeraVez(): void } {
   const $ = (id: string) => raiz.getElementById(id)!;

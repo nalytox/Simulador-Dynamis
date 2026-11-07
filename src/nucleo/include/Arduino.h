@@ -1,4 +1,5 @@
-// Arduino.h — API del ESP32 Arduino core 3.x, simulada para Dynamis.
+// Arduino.h — API del ESP32 Arduino core, simulada para Dynamis. La del PWM (LEDC) depende de la
+// versión: la 3.x lo maneja por pin y la 2.0.14 por canal (ver esp_arduino_version.h).
 #pragma once
 
 #include <stdint.h>
@@ -10,6 +11,7 @@
 #include <string.h>
 #include <inttypes.h>
 #include <math.h>
+#include "esp_arduino_version.h"
 #include "dynamis_host.h"
 #include "pgmspace.h"
 #include "pins_arduino.h"
@@ -70,10 +72,33 @@ static inline uint16_t analogRead(uint8_t pin) { return dyn_analog_read(pin); }
 static inline void analogReadResolution(uint8_t bits) { dyn_analog_read_resolution(bits); }
 static inline void analogWrite(uint8_t pin, int valor) { dyn_analog_write(pin, valor); }
 // La frecuencia del PWM no cambia lo que ve el simulador: solo se acepta la llamada.
+#if DYN_ESP32_CORE >= 3
+// Core 3.x: el PWM se maneja por pin.
 static inline void analogWriteFrequency(uint8_t pin, uint32_t freq) { (void)pin; (void)freq; }
 static inline bool ledcAttach(uint8_t pin, uint32_t freq, uint8_t bits) { return dyn_ledc_attach(pin, freq, bits); }
+static inline bool ledcAttachChannel(uint8_t pin, uint32_t freq, uint8_t bits, uint8_t canal) {
+  (void)canal;
+  return dyn_ledc_attach(pin, freq, bits);
+}
 static inline bool ledcWrite(uint8_t pin, uint32_t duty) { return dyn_ledc_write(pin, duty); }
 static inline bool ledcDetach(uint8_t pin) { return dyn_ledc_detach(pin); }
+#else
+// Core 2.0.14: el PWM se maneja por canal (0 a 15); cada pin se conecta a un canal. Los canales los
+// lleva la biblioteca del núcleo (ledc_v2.cpp).
+uint32_t dynLedcSetup(uint8_t canal, uint32_t freq, uint8_t bits);
+void dynLedcAttachPin(uint8_t pin, uint8_t canal);
+void dynLedcWrite(uint8_t canal, uint32_t duty);
+void dynLedcDetachPin(uint8_t pin);
+uint32_t dynLedcRead(uint8_t canal);
+uint32_t dynLedcReadFreq(uint8_t canal);
+static inline void analogWriteFrequency(uint32_t freq) { (void)freq; }
+static inline uint32_t ledcSetup(uint8_t canal, uint32_t freq, uint8_t bits) { return dynLedcSetup(canal, freq, bits); }
+static inline void ledcAttachPin(uint8_t pin, uint8_t canal) { dynLedcAttachPin(pin, canal); }
+static inline void ledcWrite(uint8_t canal, uint32_t duty) { dynLedcWrite(canal, duty); }
+static inline void ledcDetachPin(uint8_t pin) { dynLedcDetachPin(pin); }
+static inline uint32_t ledcRead(uint8_t canal) { return dynLedcRead(canal); }
+static inline uint32_t ledcReadFreq(uint8_t canal) { return dynLedcReadFreq(canal); }
+#endif
 // Bluetooth (esp32-hal-bt.h): el simulador no tiene radio, así que siempre está apagada.
 static inline bool btStarted(void) { return false; }
 static inline bool btStop(void) { return true; }
@@ -90,8 +115,12 @@ using std::abs;
 using std::max;
 using std::min;
 
+#if DYN_ESP32_CORE >= 3
 inline void analogWriteResolution(uint8_t pin, uint8_t bits) { dyn_analog_write_resolution(pin, bits); }
+#else
+// En la 2.0.14 la resolución vale para todos los pines.
 inline void analogWriteResolution(uint8_t bits) { dyn_analog_write_resolution(255, bits); }
+#endif
 
 long map(long x, long in_min, long in_max, long out_min, long out_max);
 long random(long howbig);

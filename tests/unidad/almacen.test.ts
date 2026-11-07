@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto';
 import { describe, it, expect, vi } from 'vitest';
-import { abrirAlmacen, conRetardo } from '../../src/proyecto/almacen';
+import { abrirAlmacen, BASE_DATOS, conRetardo } from '../../src/proyecto/almacen';
 import { pistaDe } from '../ayuda/pistas';
 
 describe('almacén del navegador', () => {
@@ -30,12 +30,11 @@ describe('almacén del navegador', () => {
     expect(await abrirAlmacen('prueba', conError)).toBeNull();
   });
 
-  it('dos bases (dos perfiles) no ven lo que guarda la otra', async () => {
-    const marco = await abrirAlmacen('perfil-marco');
-    const maite = await abrirAlmacen('perfil-maite');
-    await marco!.guardar('proyecto', { nombre: 'p', archivos: { 'p.ino': '// de Marco' } });
-    expect(await maite!.leer('proyecto')).toBeUndefined();
-    expect((await (await abrirAlmacen('perfil-marco'))!.leer('proyecto'))?.archivos['p.ino']).toBe('// de Marco');
+  it('sin nombre usa la base única del navegador; dos bases distintas no se mezclan', async () => {
+    const unica = await abrirAlmacen();
+    await unica!.guardar('proyecto', { nombre: 'p', archivos: { 'p.ino': '// mío' } });
+    expect((await (await abrirAlmacen(BASE_DATOS))!.leer('proyecto'))?.archivos['p.ino']).toBe('// mío');
+    expect(await (await abrirAlmacen('otra-base'))!.leer('proyecto')).toBeUndefined();
   });
 
   it('conRetardo junta varias llamadas en una', () => {

@@ -11,9 +11,10 @@ class TrabajadorFalso {
   onerror: ((e: { message: string }) => void) | null = null;
   compilaciones = 0;
   preparaciones = 0;
+  versiones: string[] = [];
   constructor(private fallosAlPreparar = 0) {}
   private responder(data: unknown) { queueMicrotask(() => this.onmessage?.({ data })); }
-  postMessage(m: { tipo: string; id?: number; proyecto?: Proyecto }) {
+  postMessage(m: { tipo: string; id?: number; proyecto?: Proyecto; version?: string }) {
     if (m.tipo === 'preparar') {
       this.preparaciones++;
       if (this.fallosAlPreparar-- > 0) return this.responder({ tipo: 'error-preparar', mensaje: 'sin red' });
@@ -21,6 +22,7 @@ class TrabajadorFalso {
       this.responder({ tipo: 'preparado' });
     } else if (m.tipo === 'compilar') {
       this.compilaciones++;
+      this.versiones.push(m.version!);
       const conError = Object.values(m.proyecto!.archivos).some(t => t.includes('ERROR'));
       this.responder({ tipo: 'compilado', id: m.id, resultado: conError
         ? { ok: false, diagnosticos: [{ archivo: 'p.ino', linea: 1, columna: 1, severidad: 'error', mensaje: 'x', detalle: '' }] }
@@ -86,6 +88,15 @@ describe('cliente del compilador', () => {
     expect(malo1.ok || malo2.ok).toBe(false);
     if (!malo1.ok) expect(malo1.diagnosticos[0].linea).toBe(1);
     expect(falso.compilaciones).toBe(4);
+  });
+
+  it('la versión del ESP32 llega al trabajador y es parte de la caché', async () => {
+    const falso = new TrabajadorFalso();
+    const c = cliente(falso);
+    await c.compilar(proyecto('void setup() {}'), '2.0.14');
+    await c.compilar(proyecto('void setup() {}'), '2.0.14');
+    await c.compilar(proyecto('void setup() {}'));
+    expect(falso.versiones).toEqual(['2.0.14', '3.x']);
   });
 
   it('preparar reenvía el progreso y rechaza con el mensaje si la descarga falla; la segunda llamada reintenta', async () => {

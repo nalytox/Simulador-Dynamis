@@ -4,14 +4,15 @@ import { crearAnfitrionFalso } from '../ayuda/anfitrion-falso';
 import { crearImports } from '../../src/simulacion/puente';
 import { cargarNucleoDesdeDisco } from '../../src/compilador/nucleo-node';
 import type { ArchivosNucleo } from '../../src/compilador/compilar';
+import type { VersionEsp32 } from '../../src/compilador/version';
 
 type Exports = { _initialize(): void; dyn_setup(): void; memory: WebAssembly.Memory };
 let nucleo: ArchivosNucleo;
 beforeAll(async () => { nucleo = await cargarNucleoDesdeDisco(); });
 
-async function correrSetup(cuerpo: string) {
+async function correrSetup(cuerpo: string, version?: VersionEsp32) {
   const { anfitrion, llamadas, texto } = crearAnfitrionFalso();
-  const modulo = await compilarParaPrueba({ 'p.ino': `void setup() { ${cuerpo} }\nvoid loop() {}` }, nucleo, 'p');
+  const modulo = await compilarParaPrueba({ 'p.ino': `void setup() { ${cuerpo} }\nvoid loop() {}` }, nucleo, 'p', { version });
   let instancia: WebAssembly.Instance | undefined;
   instancia = await WebAssembly.instantiate(modulo, crearImports(modulo, anfitrion, () => (instancia!.exports as Exports).memory));
   const ex = instancia.exports as Exports;
@@ -31,9 +32,16 @@ describe('núcleo Arduino del ESP32', { timeout: 120_000 }, () => {
     const { texto } = await correrSetup('Serial.begin(115200); Serial.println("hola"); Serial.println(3.14159); Serial.println(42); Serial.print(255, HEX); Serial.printf(" %d", 7); Serial.println(1.0 / 0.0);');
     expect(texto()).toBe('hola\r\n3.14\r\n42\r\nFF 7inf\r\n');
   });
-  it('las funciones de pines usan los valores del ESP32', async () => {
-    const { llamadas } = await correrSetup('pinMode(18, OUTPUT); digitalWrite(18, HIGH); analogWrite(19, 128); analogWriteResolution(10); ledcAttach(21, 5000, 10); ledcWrite(21, 512); pinMode(4, INPUT_PULLUP);');
-    expect(llamadas).toEqual([['pinMode', 18, 3], ['digitalWrite', 18, 1], ['analogWrite', 19, 128], ['analogWriteResolution', 255, 10], ['ledcAttach', 21, 5000, 10], ['ledcWrite', 21, 512], ['pinMode', 4, 5]]);
+  it('las funciones de pines usan los valores del ESP32 (core 3.x: el PWM va por pin)', async () => {
+    const { llamadas } = await correrSetup('pinMode(18, OUTPUT); digitalWrite(18, HIGH); analogWrite(19, 128); analogWriteResolution(19, 10); ledcAttach(21, 5000, 10); ledcWrite(21, 512); pinMode(4, INPUT_PULLUP);');
+    expect(llamadas).toEqual([['pinMode', 18, 3], ['digitalWrite', 18, 1], ['analogWrite', 19, 128], ['analogWriteResolution', 19, 10], ['ledcAttach', 21, 5000, 10], ['ledcWrite', 21, 512], ['pinMode', 4, 5]]);
+  });
+  it('core 2.0.14: el PWM va por canal; ledcAttachPin conecta el pin al canal y ledcWrite escribe en todos sus pines', async () => {
+    const { llamadas } = await correrSetup('analogWriteResolution(10); ledcSetup(3, 5000, 10); ledcAttachPin(21, 3); ledcAttachPin(22, 3); ledcWrite(3, 512); ledcDetachPin(22); ledcWrite(3, 100);', '2.0.14');
+    expect(llamadas.filter(l => l[0] !== 'aviso')).toEqual([
+      ['analogWriteResolution', 255, 10], ['ledcAttach', 21, 5000, 10], ['ledcWrite', 21, 0], ['ledcAttach', 22, 5000, 10], ['ledcWrite', 22, 0],
+      ['ledcWrite', 21, 512], ['ledcWrite', 22, 512], ['ledcDetach', 22], ['ledcWrite', 21, 100],
+    ]);
   });
   it('map, constrain, min y max funcionan como en el ESP32', async () => {
     const { texto } = await correrSetup('Serial.begin(9600); Serial.println(map(512, 0, 1023, 0, 255)); Serial.println(constrain(300, 0, 255)); Serial.println(min(3, 7)); Serial.println(max(3, 7));');

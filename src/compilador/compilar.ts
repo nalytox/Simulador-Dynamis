@@ -5,12 +5,18 @@ import { conAjustables } from './ajustables';
 import { parsearDiagnosticos, diagnosticosDeFallo, type Diagnostico } from './diagnosticos';
 import { aArbol, leerDeArbol, type Arbol } from './arbol';
 import opciones from './opciones.json';
+import { definicionDe, VERSION_POR_DEFECTO, type VersionEsp32 } from './version';
 
 export interface ArchivosNucleo {
   /** Cabeceras del núcleo, con rutas relativas a include/. */
   cabeceras: Record<string, string>;
   /** nucleo.a precompilado (null en pruebas con un núcleo falso). */
   biblioteca: Uint8Array | null;
+}
+
+export interface OpcionesCompilacion {
+  /** La versión del core ESP32 (por defecto, la 3.x). */
+  version?: VersionEsp32;
 }
 
 export type ResultadoCompilacion =
@@ -52,17 +58,19 @@ async function ejecutarClang(args: string[], archivos: Arbol): Promise<{ arbol: 
   }
 }
 
-const argumentosDeUnidad = (u: UnidadCompilacion) => [
+const argumentosDeUnidad = (u: UnidadCompilacion, version: VersionEsp32) => [
   u.lenguaje === 'c' ? 'clang' : 'clang++',
   ...(u.lenguaje === 'c' ? opciones.c : opciones.cpp),
-  `-I${DIR_NUCLEO}/include`, '-c', u.ruta, '-o', `${u.ruta}.o`,
+  definicionDe(version), `-I${DIR_NUCLEO}/include`, '-c', u.ruta, '-o', `${u.ruta}.o`,
 ];
 
 /**
- * Compila un proyecto Arduino a un módulo WebAssembly enlazado con el núcleo. Los valores marcados con
- * @ajustar pasan por __dyn_ajustable, sin cambiar los números de línea.
+ * Compila un proyecto Arduino a un módulo WebAssembly enlazado con el núcleo, con la API de la versión
+ * del core ESP32 elegida. Los valores marcados con @ajustar pasan por __dyn_ajustable, sin cambiar los
+ * números de línea.
  */
-export async function compilar(original: Proyecto, nucleo: ArchivosNucleo): Promise<ResultadoCompilacion> {
+export async function compilar(original: Proyecto, nucleo: ArchivosNucleo, o: OpcionesCompilacion = {}): Promise<ResultadoCompilacion> {
+  const version = o.version ?? VERSION_POR_DEFECTO;
   await prepararCompilador();
   const p = conAjustables(original);
   let unidades: UnidadCompilacion[];
@@ -82,7 +90,7 @@ export async function compilar(original: Proyecto, nucleo: ArchivosNucleo): Prom
   const objetos: Record<string, Uint8Array> = {};
   let fallo = false;
   for (const u of unidades) {
-    const { arbol, salida } = await ejecutarClang(argumentosDeUnidad(u), aArbol(planos));
+    const { arbol, salida } = await ejecutarClang(argumentosDeUnidad(u, version), aArbol(planos));
     const objeto = arbol && leerDeArbol(arbol, `${u.ruta}.o`);
     if (objeto instanceof Uint8Array) {
       objetos[`${u.ruta}.o`] = objeto;
