@@ -24,15 +24,23 @@ describe('Simulador', { timeout: 120_000 }, () => {
   it('un sketch que avanza mueve al robot hacia adelante', async () => {
     const sim = await crearSim(AVANZAR);
     expect(sim.ejecutar(2_000_000)).toEqual({ motivo: 'tiempo', tiempoUs: 2_000_000 });
-    expect(sim.estado.x).toBeGreaterThan(1195); expect(sim.estado.x).toBeLessThanOrEqual(1200 + 1e-6); // 600 mm/s × 2 s (con error de punto flotante)
-    expect(Math.abs(sim.estado.y)).toBeLessThan(1);
+    // A 600 mm/s, 2 s serían 1200 mm: los motores tardan unos 50 ms en llevarlo a esa velocidad y la rodadura lo frena un poco.
+    expect(sim.estado.x).toBeGreaterThan(1120); expect(sim.estado.x).toBeLessThan(1200);
+    expect(sim.estado.v).toBeGreaterThan(0.97 * 600); expect(sim.estado.v).toBeLessThan(600);
+    // El agarre desparejo de las ruedas y la rugosidad del piso lo desvían unos milímetros, como a un robot real.
+    expect(Math.abs(sim.estado.y)).toBeLessThan(5);
     expect(sim.motores).toEqual({ izq: { duty: 1, modo: 'avance' }, der: { duty: 1, modo: 'avance' } });
   });
   it('girar en el lugar cambia el rumbo sin desplazarse', async () => {
     const sim = await crearSim(AVANZAR.replace('digitalWrite(5, HIGH); digitalWrite(18, LOW)', 'digitalWrite(5, LOW); digitalWrite(18, HIGH)'));
     sim.ejecutar(500_000);
-    // Cada rueda a 600 mm/s, una hacia cada lado: el rumbo cambia a 1200 / trocha rad/s.
-    expect(sim.estado.yaw).toBeCloseTo(-(1200 / ROBOT_POR_DEFECTO.ruedas.trocha) * 0.5, 1); expect(Math.hypot(sim.estado.x, sim.estado.y)).toBeLessThan(1);
+    // Cada rueda a 600 mm/s, una hacia cada lado: el rumbo cambiaría a 1200 / trocha rad/s. El agarre limita el arranque
+    // (las ruedas tardan unos 60 ms en llegar) y la rodadura de las ruedas locas frena un poco el giro.
+    const maximo = 1200 / ROBOT_POR_DEFECTO.ruedas.trocha;
+    const w = -(sim.estado.w as number);
+    expect(w).toBeGreaterThan(0.97 * maximo); expect(w).toBeLessThan(maximo);
+    expect(-sim.estado.yaw).toBeGreaterThan(maximo * (0.5 - 0.08)); expect(-sim.estado.yaw).toBeLessThan(maximo * 0.5);
+    expect(Math.hypot(sim.estado.x, sim.estado.y)).toBeLessThan(1);
   });
   it('millis y delay avanzan el reloj virtual', async () => {
     const sim = await crearSim('void setup() { Serial.begin(115200); }\nvoid loop() { Serial.println(millis()); delay(100); }');

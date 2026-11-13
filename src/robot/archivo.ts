@@ -10,7 +10,7 @@ export interface CampoRobot {
   ruta: string;
   grupo: 'Medidas' | 'Sensores' | 'Pines';
   etiqueta: string;
-  unidad: 'mm' | 'mm/s' | '°' | 'pin' | null;
+  unidad: 'mm' | 'mm/s' | 'g' | 'kg·cm' | '°' | 'pin' | null;
   /** canal: un canal del multiplexor TCA9548A (0 a 7) o null (sin multiplexor). opcion: uno de `opciones`. */
   tipo: 'numero' | 'pin' | 'pin-opcional' | 'si-no' | 'canal' | 'opcion';
   min?: number;
@@ -26,8 +26,8 @@ const NO_ES_ROBOT = 'El archivo no es un robot válido.';
 const PIN_MAXIMO = 39;
 const SENSORES_QTR = 8;
 /** Medidas que deben ser mayores que 0. */
-const POSITIVAS = new Set(['chasis.largo', 'chasis.ancho', 'chasis.alto', 'ruedas.diametro', 'ruedas.trocha', 'ruedasLocas.diametro',
-  'ruedasLocas.trocha', 'motores.vMaxMmS', 'qtr.separacion', 'qtr.altura']);
+const POSITIVAS = new Set(['chasis.largo', 'chasis.ancho', 'chasis.alto', 'chasis.masa', 'chasis.alturaLibre', 'ruedas.diametro',
+  'ruedas.trocha', 'ruedasLocas.diametro', 'ruedasLocas.trocha', 'motores.vMaxMmS', 'motores.torqueKgCm', 'qtr.separacion', 'qtr.altura']);
 const PINES = new Set(['motores.izq.pwm', 'motores.izq.in1', 'motores.izq.in2', 'motores.der.pwm', 'motores.der.in1', 'motores.der.in2']);
 /** Pines que pueden quedar sin conectar (null). */
 const PINES_OPCIONALES = new Set(['motores.stby', 'qtr.emisor', 'tcs34725.led', 'tcs34725b.led']);
@@ -161,10 +161,14 @@ export const CAMPOS_ROBOT: CampoRobot[] = [
   medida('chasis.ancho', 'Ancho del chasis', 20, 400),
   medida('chasis.alto', 'Alto del chasis', 10, 400),
   medida('chasis.xDelantero', 'Borde delantero, desde el eje de las ruedas', -200, 400),
+  { ruta: 'chasis.masa', grupo: 'Medidas', etiqueta: 'Masa del robot', unidad: 'g', tipo: 'numero', min: 50, max: 5000 },
+  medida('chasis.xCentroMasa', 'Centro de masa, hacia adelante desde el eje de las ruedas', -200, 400),
+  medida('chasis.alturaLibre', 'Altura libre: del suelo a la base, entre las ruedas', 1, 100),
   medida('ruedas.diametro', 'Diámetro de las ruedas', 10, 150),
   medida('ruedas.trocha', 'Distancia entre las ruedas', 20, 400),
   medida('ruedas.x', 'Eje de las ruedas, hacia adelante', -200, 200),
   { ruta: 'motores.vMaxMmS', grupo: 'Medidas', etiqueta: 'Velocidad de las ruedas con el PWM al máximo', unidad: 'mm/s', tipo: 'numero', min: 50, max: 3000 },
+  { ruta: 'motores.torqueKgCm', grupo: 'Medidas', etiqueta: 'Torque de cada motor con la rueda frenada', unidad: 'kg·cm', tipo: 'numero', min: 0.1, max: 50 },
   siNo('ruedasLocas.instalado', 'Ruedas locas: instaladas', 'Medidas'),
   medida('ruedasLocas.diametro', 'Ruedas locas: diámetro', 10, 150),
   medida('ruedasLocas.trocha', 'Ruedas locas: distancia entre ellas', 20, 400),

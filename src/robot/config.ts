@@ -19,14 +19,21 @@ export type OrientacionMPU = 'z-arriba-x-adelante' | 'z-arriba-x-atras';
 export const ORIENTACIONES_MPU: readonly OrientacionMPU[] = ['z-arriba-x-adelante', 'z-arriba-x-atras'];
 
 export interface ConfigRobot {
-  /** xDelantero: borde delantero del chasis en el marco del robot. */
-  chasis: { largo: number; ancho: number; alto: number; xDelantero: number };
+  /**
+   * xDelantero: borde delantero del chasis en el marco del robot. masa en gramos. xCentroMasa: dónde
+   * está el centro de masa, hacia adelante desde el eje de las ruedas (reparte el peso entre las ruedas
+   * y las ruedas locas). alturaLibre: del suelo a la parte más baja de la base entre las ruedas.
+   */
+  chasis: { largo: number; ancho: number; alto: number; xDelantero: number; masa: number; xCentroMasa: number; alturaLibre: number };
   /** Las ruedas motrices. */
   ruedas: { diametro: number; trocha: number; x: number };
   /** Dos ruedas que giran libres y tocan el piso. Sin ellas, el chasis se apoya en su frente y su cola. */
   ruedasLocas: { instalado: boolean; diametro: number; x: number; trocha: number };
-  /** vMaxMmS: la velocidad de cada rueda con el PWM al máximo. */
-  motores: { driver: 'TB6612'; izq: PinesMotor; der: PinesMotor; stby: number | null; vMaxMmS: number };
+  /**
+   * vMaxMmS: la velocidad de cada rueda con el PWM al máximo, sin carga. torqueKgCm: el torque de cada
+   * motor con la rueda frenada (torque de bloqueo) y el PWM al máximo, como lo dan las hojas de datos.
+   */
+  motores: { driver: 'TB6612'; izq: PinesMotor; der: PinesMotor; stby: number | null; vMaxMmS: number; torqueKgCm: number };
   qtr: { pines: number[]; emisor: number | null; x: number; separacion: number; altura: number };
   /**
    * yaw y pitch del montaje en grados (pitch > 0 apunta hacia abajo, REP-103). canal: el canal del
@@ -46,11 +53,18 @@ export interface ConfigRobot {
  */
 export const ROBOT_POR_DEFECTO: ConfigRobot = {
   // alto: con el asa; xDelantero: el frente de las ruedas locas.
-  chasis: { largo: 125, ancho: 180, alto: 117, xDelantero: 97 },
+  chasis: {
+    largo: 125, ancho: 180, alto: 117, xDelantero: 97,
+    masa: 800 /* estimado, medir */, xCentroMasa: 20 /* estimado, medir */, alturaLibre: 15 /* estimado, medir */,
+  },
   ruedas: { diametro: 60, trocha: 160 /* estimado, medir */, x: 0 },
   ruedasLocas: { instalado: true, diametro: 55, x: 70, trocha: 160 /* estimado, medir */ },
   // En la placa, STBY va a 3V3.
-  motores: { driver: 'TB6612', izq: { pwm: 4, in1: 16, in2: 17 }, der: { pwm: 19, in1: 5, in2: 18 }, stby: null, vMaxMmS: 600 /* estimado, medir */ },
+  // torqueKgCm: un GA25-370 con reducción, a 7,4 V.
+  motores: {
+    driver: 'TB6612', izq: { pwm: 4, in1: 16, in2: 17 }, der: { pwm: 19, in1: 5, in2: 18 }, stby: null,
+    vMaxMmS: 600 /* estimado, medir */, torqueKgCm: 2 /* estimado, medir */,
+  },
   // QTRX-MD-08A: 8 sensores a 8 mm; el índice 0 es el de la izquierda. LEDON en el pin 27.
   qtr: { pines: [36, 39, 34, 35, 32, 33, 25, 26], emisor: 27, x: 74, separacion: 8, altura: 7 },
   // Los TCS34725 y el láser usan 0x29: van en los canales 0, 1 y 2 del multiplexor TCA9548A (0x70).
@@ -143,6 +157,9 @@ export function validarRobot(r: ConfigRobot): AvisoRobot[] {
   if (r.ruedasLocas.instalado) {
     if (!dentro(r.ruedasLocas.x, 0)) avisar('ruedasLocas.x', 'Las ruedas locas quedan fuera del chasis.');
     else if (r.ruedasLocas.x === r.ruedas.x) avisar('ruedasLocas.x', 'Las ruedas locas no pueden estar en el eje de las ruedas.');
+    else if (r.chasis.xCentroMasa < Math.min(r.ruedas.x, r.ruedasLocas.x) || r.chasis.xCentroMasa > Math.max(r.ruedas.x, r.ruedasLocas.x)) {
+      avisar('chasis.xCentroMasa', 'El centro de masa queda fuera de los apoyos (entre el eje de las ruedas y las ruedas locas): el robot se volcaría.');
+    }
   }
   if (r.tcs34725b.instalado && r.tcs34725b.canal === r.tcs34725.canal) {
     avisar('tcs34725b.canal', 'Los dos TCS34725 usan la dirección 0x29: ponlos en canales distintos del multiplexor.');
