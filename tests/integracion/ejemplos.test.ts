@@ -101,3 +101,36 @@ describe('proyectos de ejemplo', { timeout: 300_000 }, () => {
     expect(avisos).toEqual([]);
   });
 });
+
+describe('ejemplos de la memoria del robot (Preferences)', { timeout: 300_000 }, () => {
+  it('Contar arranques cuenta las veces que partió, con la memoria de la vez anterior', async () => {
+    const primera = await correrEjemplo('contar-arranques', { segundos: 2 });
+    expect(primera.serial).toContain('Es la vez número 1 que parto.');
+    const segunda = await correrEjemplo('contar-arranques', { segundos: 2, memoria: primera.memoria });
+    expect(segunda.serial).toContain('Es la vez número 2 que parto.');
+    const espacio = segunda.memoria.espacios.arranques;
+    expect(espacio.veces).toEqual({ tipo: 'u32', bytes: [2, 0, 0, 0] });
+    expect(espacio.nombre.tipo).toBe('str');
+    expect(espacio.voltaje.tipo).toBe('blob');
+    expect(espacio.voltaje.bytes).toHaveLength(4);
+    expect(segunda.avisos).toEqual([]);
+  });
+
+  it('Recordar la calibración calibra la primera vez y después parte sin calibrar', async () => {
+    const primera = await correrEjemplo('recordar-calibracion');
+    expect(primera.serial).toContain('Calibrando');
+    expect(primera.fin.juez.meta).toBe(true);
+    expect(primera.eventos).not.toContain('perdio-linea');
+    expect(primera.memoria.espacios.calibracion.minimos.bytes).toHaveLength(16);
+
+    const segunda = await correrEjemplo('recordar-calibracion', { memoria: primera.memoria });
+    expect(segunda.serial).toContain('Usé la calibración guardada.');
+    expect(segunda.serial).not.toContain('Calibrando');
+    // Sin calibrar no gira al partir: el primer medio segundo va derecho.
+    const rumbo = segunda.estados[0].yaw;
+    for (const e of segunda.estados.slice(0, 50)) expect(Math.abs(giro(rumbo, e.yaw))).toBeLessThan(5 * GRADOS);
+    expect(segunda.fin.juez.meta).toBe(true);
+    expect(segunda.eventos).not.toContain('perdio-linea');
+    expect(segunda.avisos).toEqual([]);
+  });
+});
