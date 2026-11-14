@@ -43,6 +43,7 @@ const FICHAS: Ficha[] = [
   { id: 'contar-arranques', nombre: 'Contar arranques', descripcion: 'Guarda en la memoria del robot cuántas veces partió: no se borra al apagarlo.', pista: 'practica' },
   { id: 'recordar-calibracion', nombre: 'Recordar la calibración', descripcion: 'Calibra el sensor de línea una vez, lo guarda en la memoria y las veces siguientes parte sin calibrar.', pista: 'practica' },
   { id: 'seguidor-q', nombre: 'Seguidor que aprende solo', descripcion: 'Aprendizaje por refuerzo: aprende a seguir la línea probando y guarda lo aprendido en su memoria.', pista: 'circuito' },
+  { id: 'recorrido-completo', nombre: 'Recorrido completo', descripcion: 'Un programa de competencia: línea, cortes, cruces con marcas, rampa, baches, obstáculo, F2 y F1. Sus valores se entrenan con «Ajustar parámetros».', pista: 'completa' },
   { id: 'cruzar-cortes', nombre: 'Cruzar cortes', descripcion: 'Sigue la línea aunque tenga cortes: si la pierde, sigue derecho un poco.', pista: 'cruces' },
   { id: 'marcas-color', nombre: 'Leer marcas de color en cruces', descripcion: 'Lee las marcas verdes antes de cada cruce y gira hacia donde indican.', pista: 'cruces' },
   { id: 'subir-rampa', nombre: 'Subir la rampa', descripcion: 'Mide la inclinación con el MPU6050 y acelera para subir la rampa.', pista: 'rampa' },

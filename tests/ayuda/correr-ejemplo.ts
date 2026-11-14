@@ -9,6 +9,7 @@ import { Simulador } from '../../src/simulacion/simulador';
 import type { ErrorEjecucion } from '../../src/simulacion/errores';
 import type { Instantanea } from '../../src/simulacion/ejecucion';
 import { compilarParaPrueba } from './compilar-prueba';
+import type { Pista } from '../../src/pista/tipos';
 import type { MemoriaNvs } from '../../src/simulacion/memoria';
 
 let nucleo: Promise<ArchivosNucleo> | null = null;
@@ -32,10 +33,10 @@ export interface CorridaEjemplo {
  * Corre un proyecto de ejemplo en su pista, desde la partida, con el juez, la semilla 1 y sin ritmo de
  * tiempo real. Termina cuando el juez la termina, o a los `segundos` de tiempo virtual.
  */
-export async function correrEjemplo(id: string, o: { segundos?: number; memoria?: MemoriaNvs; ajustes?: Record<string, number> } = {}): Promise<CorridaEjemplo> {
+export async function correrEjemplo(id: string, o: { segundos?: number; memoria?: MemoriaNvs; ajustes?: Record<string, number>; pista?: Pista } = {}): Promise<CorridaEjemplo> {
   const ejemplo = PROYECTOS_DE_EJEMPLO.find(e => e.id === id);
   if (!ejemplo) throw new Error(`No hay un ejemplo ${id}.`);
-  const pista = PISTAS_DE_EJEMPLO.find(p => p.id === ejemplo.pista)!.pista;
+  const pista = o.pista ?? PISTAS_DE_EJEMPLO.find(p => p.id === ejemplo.pista)!.pista;
   nucleo ??= cargarNucleoDesdeDisco();
   const modulo = await compilarParaPrueba(ejemplo.proyecto.archivos, await nucleo, ejemplo.proyecto.nombre);
   const mundo = crearMundo(pista);
