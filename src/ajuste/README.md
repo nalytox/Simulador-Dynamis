@@ -35,6 +35,8 @@ Los tipos están en [`contrato.ts`](contrato.ts).
    - con los valores propuestos;
    - en la partida de la pista;
    - con una semilla nueva;
+   - con la memoria del robot (`Preferences`) que esté guardada: cada prueba usa una copia, así que
+     ninguna cambia la memoria ni afecta a las otras;
    - sin ritmo de tiempo real;
    - hasta la duración elegida, hasta que `debeTerminar` diga que pare, o hasta que el juez la dé
      por terminada.

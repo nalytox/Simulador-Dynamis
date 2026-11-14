@@ -18,10 +18,22 @@ subirlo al robot físico.
   guardar o abrir la pista como `.json`.
 - **Mi robot:** las medidas, la posición de los sensores y los pines del robot, con un dibujo y
   avisos. Se exporta e importa como `robot.json`.
+- **Memoria del robot:** lo que el programa guarda con `Preferences.h` (la flash del ESP32) se ve
+  en la tarjeta «Memoria del robot»: cada clave con su tipo y su valor, y cuánto espacio queda. Es
+  la memoria del robot, no del programa: sigue ahí al volver a probar, al recargar y al cambiar de
+  programa, hasta que se aprieta «Borrar la memoria».
 - **Ajustar parámetros:** prueba muchas veces los valores marcados con `@ajustar` en el código, con
   varias pruebas a la vez, un gráfico de recompensa y "Usar estos valores".
 - **Ejemplos:** proyectos para cada sensor (motores, línea, seguidores, cortes, marcas de color,
-  rampa, obstáculo y giroscopio) y tres pistas.
+  rampa, obstáculo y giroscopio) y para la memoria («Contar arranques», «Recordar la
+  calibración»). Además:
+  - **Seguidor que aprende solo:** aprendizaje por refuerzo (Q-learning) dentro del robot. Aprende a
+    seguir la línea vuelta a vuelta en la pista «Circuito» y guarda su tabla en la memoria.
+  - **Recorrido completo:** un programa de competencia, repartido en pestañas, que resuelve todos
+    los casos de la «Pista completa»: cortes, línea invertida, cruces con marcas y vuelta en U,
+    uniones en T, giros en L, rampa, baches, obstáculo, F2 y F1. Sus valores `@ajustar` se entrenan
+    con «Ajustar parámetros».
+  - Cinco pistas: Práctica, Cruces con marcas, Rampa y baches, Circuito y Pista completa.
 - **Ayuda:** una guía de cada sensor con un programa para copiar, las conexiones del robot, cómo se
   puntúa según las bases y un recorrido para la primera visita.
 - **Funciona en el navegador:** se publica en GitHub Pages, se puede instalar y funciona sin
@@ -34,7 +46,7 @@ subirlo al robot físico.
 2. La app abre con un seguidor de línea y la pista de práctica: presiona **"Probar mi robot"**. La
    primera vez descarga el compilador; después queda guardado.
 3. **Todo se guarda solo** en el navegador de ese computador (un usuario por computador): el
-   programa, la pista, el robot y las preferencias siguen ahí al volver. No viaja a otro computador
+   programa, la pista, el robot, su memoria y las preferencias siguen ahí al volver. No viaja a otro computador
    ni sobrevive a una ventana de incógnito o a borrar los datos del navegador: para llevarlo,
    "Descargar mi proyecto" entrega un `.zip` que también se abre en el Arduino IDE para subirlo al
    robot.
@@ -53,7 +65,10 @@ El núcleo Arduino del ESP32 y las librerías de los sensores están reimplement
 - `Adafruit_VL53L0X`;
 - `MPU6050_light` (de rfetick);
 - `Adafruit_TCS34725`, con uno o dos sensores, también detrás de un multiplexor TCA9548A (se
-  configura en "Mi robot" y se usa por I2C directo, como en el robot real).
+  configura en "Mi robot" y se usa por I2C directo, como en el robot real);
+- `Preferences` (de la placa esp32): la memoria NVS, con el espacio contado como en la partición
+  por defecto (504 entradas de 32 bytes), nombres de hasta 15 letras y avisos si se usa mal o se
+  escribe sin parar.
 
 ## Ajustar parámetros
 
