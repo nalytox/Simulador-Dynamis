@@ -1,0 +1,102 @@
+{
+  "version": 1,
+  "nombre": "Circuito",
+  "tamanoBaldosa": 300,
+  "columnas": 6,
+  "filas": 3,
+  "ambiente": {
+    "luz": "normal"
+  },
+  "inicio": {
+    "x": 450,
+    "y": 150,
+    "yaw": 0
+  },
+  "baldosas": [
+    {
+      "c": 1,
+      "r": 0,
+      "rot": 0,
+      "tipo": "partida"
+    },
+    {
+      "c": 2,
+      "r": 0,
+      "rot": 0,
+      "tipo": "recta"
+    },
+    {
+      "c": 3,
+      "r": 0,
+      "rot": 0,
+      "tipo": "giroSuave"
+    },
+    {
+      "c": 3,
+      "r": 1,
+      "rot": 180,
+      "tipo": "giroSuave"
+    },
+    {
+      "c": 4,
+      "r": 1,
+      "rot": 0,
+      "tipo": "recta"
+    },
+    {
+      "c": 5,
+      "r": 1,
+      "rot": 0,
+      "tipo": "giroSuave"
+    },
+    {
+      "c": 5,
+      "r": 2,
+      "rot": 90,
+      "tipo": "giroSuave"
+    },
+    {
+      "c": 4,
+      "r": 2,
+      "rot": 180,
+      "tipo": "recta"
+    },
+    {
+      "c": 3,
+      "r": 2,
+      "rot": 180,
+      "tipo": "recta"
+    },
+    {
+      "c": 2,
+      "r": 2,
+      "rot": 180,
+      "tipo": "recta"
+    },
+    {
+      "c": 1,
+      "r": 2,
+      "rot": 180,
+      "tipo": "recta"
+    },
+    {
+      "c": 0,
+      "r": 2,
+      "rot": 180,
+      "tipo": "giroSuave"
+    },
+    {
+      "c": 0,
+      "r": 1,
+      "rot": 270,
+      "tipo": "recta"
+    },
+    {
+      "c": 0,
+      "r": 0,
+      "rot": 270,
+      "tipo": "giroSuave"
+    }
+  ],
+  "objetos": []
+}

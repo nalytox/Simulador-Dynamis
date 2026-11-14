@@ -3,11 +3,12 @@ import pines from './seguidor/pines.h?raw';
 import practica from './pistas/practica.json';
 import cruces from './pistas/cruces.json';
 import rampa from './pistas/rampa.json';
+import circuito from './pistas/circuito.json';
 import { normalizarPista } from '../pista/serializacion';
 import type { Pista } from '../pista/tipos';
 import type { Proyecto } from '../proyecto/proyecto';
 
-export type IdPista = 'practica' | 'cruces' | 'rampa';
+export type IdPista = 'practica' | 'cruces' | 'rampa' | 'circuito';
 export interface EjemploPista { id: IdPista; nombre: string; descripcion: string; pista: Pista }
 export interface EjemploProyecto { id: string; nombre: string; descripcion: string; pista: IdPista; proyecto: Proyecto }
 
@@ -22,6 +23,7 @@ export const PISTAS_DE_EJEMPLO: EjemploPista[] = [
   { id: 'practica', descripcion: 'La pista para empezar: rectas, curvas suaves y la meta.', pista: leerPista(practica) },
   { id: 'cruces', descripcion: 'Cruces con marcas de color y una línea cortada.', pista: leerPista(cruces) },
   { id: 'rampa', descripcion: 'Una rampa para subir y bajar, baches y el obstáculo.', pista: leerPista(rampa) },
+  { id: 'circuito', descripcion: 'Un circuito cerrado, sin meta, para dar vueltas: ahí el robot aprende solo.', pista: leerPista(circuito) },
 ].map(e => ({ ...e, id: e.id as IdPista, nombre: e.pista.nombre }));
 
 /** Con lo que abre la app la primera vez: el seguidor de línea y la pista de práctica. */
@@ -38,6 +40,7 @@ const FICHAS: Ficha[] = [
   { id: 'leer-giroscopio', nombre: 'Leer el giroscopio', descripcion: 'Gira 90° midiendo el giro con el MPU6050.', pista: 'practica' },
   { id: 'contar-arranques', nombre: 'Contar arranques', descripcion: 'Guarda en la memoria del robot cuántas veces partió: no se borra al apagarlo.', pista: 'practica' },
   { id: 'recordar-calibracion', nombre: 'Recordar la calibración', descripcion: 'Calibra el sensor de línea una vez, lo guarda en la memoria y las veces siguientes parte sin calibrar.', pista: 'practica' },
+  { id: 'seguidor-q', nombre: 'Seguidor que aprende solo', descripcion: 'Aprendizaje por refuerzo: aprende a seguir la línea probando y guarda lo aprendido en su memoria.', pista: 'circuito' },
   { id: 'cruzar-cortes', nombre: 'Cruzar cortes', descripcion: 'Sigue la línea aunque tenga cortes: si la pierde, sigue derecho un poco.', pista: 'cruces' },
   { id: 'marcas-color', nombre: 'Leer marcas de color en cruces', descripcion: 'Lee las marcas verdes antes de cada cruce y gira hacia donde indican.', pista: 'cruces' },
   { id: 'subir-rampa', nombre: 'Subir la rampa', descripcion: 'Mide la inclinación con el MPU6050 y acelera para subir la rampa.', pista: 'rampa' },

@@ -134,3 +134,24 @@ describe('ejemplos de la memoria del robot (Preferences)', { timeout: 300_000 },
     expect(segunda.avisos).toEqual([]);
   });
 });
+
+describe('Seguidor que aprende solo (Q-learning con su tabla en la memoria)', { timeout: 600_000 }, () => {
+  const vueltas = (serial: string) => [...serial.matchAll(/Vuelta (\d+): (\d+) % del tiempo centrado/g)].map(m => ({ n: Number(m[1]), centrado: Number(m[2]) }));
+
+  it('mejora vuelta a vuelta en el Circuito y sigue aprendiendo con la memoria de la prueba anterior', async () => {
+    const primera = await correrEjemplo('seguidor-q', { segundos: 90 });
+    const v1 = vueltas(primera.serial);
+    expect(v1.length, primera.serial).toBeGreaterThanOrEqual(6);
+    expect((v1.at(-1)!.centrado + v1.at(-2)!.centrado) / 2, primera.serial).toBeGreaterThan(v1[0].centrado);
+    const espacio = primera.memoria.espacios['seguidor-q'];
+    expect(espacio.tabla.bytes).toHaveLength(10 * 5 * 4);
+    expect(espacio.vueltas.tipo).toBe('u32');
+    expect(primera.avisos).toEqual([]);
+
+    const segunda = await correrEjemplo('seguidor-q', { segundos: 30, memoria: primera.memoria });
+    expect(segunda.serial).toContain('Seguí aprendiendo con la tabla guardada.');
+    const v2 = vueltas(segunda.serial);
+    expect(v2[0].n).toBe(v1.at(-1)!.n + 1);
+    expect(v2[0].centrado, segunda.serial).toBeGreaterThan(v1[0].centrado);
+  });
+});
