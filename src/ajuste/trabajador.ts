@@ -4,11 +4,12 @@ import type { ModuloRecompensa } from './contrato';
 import { clasificarErrorEjecucion } from '../simulacion/errores';
 import type { Pista } from '../pista/tipos';
 import type { ConfigRobot } from '../robot/config';
+import type { MemoriaNvs } from '../simulacion/memoria';
 import type { AmbitoTrabajador } from '../ui/ambito';
 
 /** Worker del entrenamiento: recibe el programa una vez y corre pruebas de a una. */
 export type MensajeAlAjuste =
-  | { tipo: 'iniciar'; modulo: WebAssembly.Module; pista: Pista; robot: ConfigRobot; duracionS: number; latidos: SharedArrayBuffer; indice: number }
+  | { tipo: 'iniciar'; modulo: WebAssembly.Module; pista: Pista; robot: ConfigRobot; duracionS: number; memoria?: MemoriaNvs; latidos: SharedArrayBuffer; indice: number }
   | { tipo: 'probar'; id: number; valores: Record<string, number>; semilla: number };
 
 export type MensajeDelAjuste =
@@ -27,14 +28,14 @@ ambito.onmessage = async ({ data }) => {
     return;
   }
   if (!config || !latidos) return;
-  const { modulo, pista, robot, duracionS, indice } = config;
+  const { modulo, pista, robot, duracionS, memoria, indice } = config;
   const contador = latidos;
   // El primer latido avisa que el worker ya cargó: desde aquí corre la espera del ciclo sin fin.
   Atomics.add(contador, indice, 1);
   let respuesta: MensajeDelAjuste;
   try {
     const resultado = await ejecutarPruebaDeAjuste({
-      modulo, pista, robot, duracionS, valores: m.valores, semilla: m.semilla, recompensa: recompensa as ModuloRecompensa,
+      modulo, pista, robot, duracionS, memoria, valores: m.valores, semilla: m.semilla, recompensa: recompensa as ModuloRecompensa,
       alLatido: () => { Atomics.add(contador, indice, 1); },
     });
     respuesta = { tipo: 'resultado', id: m.id, resultado };

@@ -9,6 +9,7 @@ import { Simulador } from '../../src/simulacion/simulador';
 import type { ErrorEjecucion } from '../../src/simulacion/errores';
 import type { Instantanea } from '../../src/simulacion/ejecucion';
 import { compilarParaPrueba } from './compilar-prueba';
+import type { MemoriaNvs } from '../../src/simulacion/memoria';
 
 let nucleo: Promise<ArchivosNucleo> | null = null;
 
@@ -23,13 +24,15 @@ export interface CorridaEjemplo {
   /** Un estado cada 10 ms de tiempo virtual; yaw y pitch en radianes. */
   estados: Instantanea['estado'][];
   eventos: TipoEvento[];
+  /** La memoria del robot (Preferences) al terminar. */
+  memoria: MemoriaNvs;
 }
 
 /**
  * Corre un proyecto de ejemplo en su pista, desde la partida, con el juez, la semilla 1 y sin ritmo de
  * tiempo real. Termina cuando el juez la termina, o a los `segundos` de tiempo virtual.
  */
-export async function correrEjemplo(id: string, o: { segundos?: number } = {}): Promise<CorridaEjemplo> {
+export async function correrEjemplo(id: string, o: { segundos?: number; memoria?: MemoriaNvs; ajustes?: Record<string, number> } = {}): Promise<CorridaEjemplo> {
   const ejemplo = PROYECTOS_DE_EJEMPLO.find(e => e.id === id);
   if (!ejemplo) throw new Error(`No hay un ejemplo ${id}.`);
   const pista = PISTAS_DE_EJEMPLO.find(p => p.id === ejemplo.pista)!.pista;
@@ -44,7 +47,7 @@ export async function correrEjemplo(id: string, o: { segundos?: number } = {}): 
   let sim!: Simulador;
   sim = await Simulador.crear({
     modulo, mundo, robot: ROBOT_POR_DEFECTO, poseInicial: puntosDePartida(pista).find(p => p.id === 'partida')!.pose,
-    semilla: 1, ambiente: pista.ambiente,
+    semilla: 1, ambiente: pista.ambiente, memoria: o.memoria, ajustes: o.ajustes,
     alPasoFisica: (tUs, estado) => {
       juez.actualizar(tUs, estado);
       if (tUs >= proximoUs) {
@@ -61,5 +64,5 @@ export async function correrEjemplo(id: string, o: { segundos?: number } = {}): 
   const fin = r.motivo === 'error'
     ? { motivo: 'error' as const, error: r.error, juez: juez.estado }
     : { motivo: 'terminado' as const, juez: juez.estado };
-  return { fin, serial, avisos: sim.avisos, estados, eventos: juez.estado.eventos.map(e => e.tipo) };
+  return { fin, serial, avisos: sim.avisos, estados, eventos: juez.estado.eventos.map(e => e.tipo), memoria: sim.memoria.instantanea() };
 }

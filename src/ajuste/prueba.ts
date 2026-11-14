@@ -6,6 +6,7 @@ import { crearMundo } from '../mundo/pista';
 import { puntosDePartida } from '../pista/puntos';
 import { huellaRobot, type ConfigRobot } from '../robot/config';
 import { TAMANO_BALDOSA, type Pista } from '../pista/tipos';
+import type { MemoriaNvs } from '../simulacion/memoria';
 import { esFaltaImplementar, type ModuloRecompensa, type MotivoFin, type PasoRegistro, type RegistroPrueba, type ResumenPrueba } from './contrato';
 
 /** Lo que vuelve al hilo principal de cada prueba: sin el registro completo. */
@@ -30,6 +31,8 @@ export interface OpcionesPruebaAjuste {
   intervaloMs?: number;
   /** Se llama en cada paso de física: el pool lo usa para saber que el worker sigue vivo. */
   alLatido?: () => void;
+  /** La memoria del robot (Preferences) con que parte la prueba: se usa una copia y no se devuelve. */
+  memoria?: MemoriaNvs;
 }
 
 const MAXIMO_TRAYECTORIA = 200;
@@ -107,7 +110,7 @@ export async function ejecutarPruebaDeAjuste(o: OpcionesPruebaAjuste): Promise<R
 
   sim = await Simulador.crear({
     modulo: o.modulo, mundo, robot: o.robot, poseInicial: partida.pose, semilla: o.semilla, ajustes: o.valores,
-    ambiente: o.pista.ambiente,
+    ambiente: o.pista.ambiente, memoria: o.memoria,
     alPasoFisica: (tUs, estado) => {
       o.alLatido?.();
       juez.actualizar(tUs, estado);

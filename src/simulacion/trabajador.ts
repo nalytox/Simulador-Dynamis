@@ -2,6 +2,7 @@ import { ejecutarPrueba, type FinEjecucion, type Instantanea } from './ejecucion
 import { clasificarErrorEjecucion, ErrorSimulador } from './errores';
 import type { Pista } from '../pista/tipos';
 import type { ConfigRobot } from '../robot/config';
+import type { MemoriaNvs } from './memoria';
 import type { AmbitoTrabajador } from '../ui/ambito';
 
 /** Worker de simulación: corre una prueba completa y envía instantáneas. */
@@ -13,6 +14,7 @@ export interface MensajeAlSimulador {
   desde: string;
   semilla: number;
   ajustes?: Record<string, number>;
+  memoria?: MemoriaNvs;
   control: SharedArrayBuffer;
 }
 export type MensajeDelSimulador = { tipo: 'instantanea'; datos: Instantanea } | { tipo: 'fin'; datos: FinEjecucion };
@@ -29,6 +31,6 @@ ambito.onmessage = async ({ data }) => {
     });
     enviar({ tipo: 'fin', datos: fin });
   } catch (e) {
-    enviar({ tipo: 'fin', datos: { motivo: 'error', error: clasificarErrorEjecucion(new ErrorSimulador('el simulador', e)), juez: null } });
+    enviar({ tipo: 'fin', datos: { motivo: 'error', error: clasificarErrorEjecucion(new ErrorSimulador('el simulador', e)), juez: null, memoria: null } });
   }
 };
