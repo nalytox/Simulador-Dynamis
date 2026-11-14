@@ -23,9 +23,39 @@ int cuantosVen() {
 
 bool veAlCentro() { return ve(3) || ve(4); }
 
+// Dónde iba la línea en la última lectura sin nada en los bordes, en medios sensores: 7 es entre el
+// sensor 3 y el 4 (el centro).
+int centroLinea = 7;
+
+// ¿Sale línea hacia la izquierda (una rama, una barra o una línea atravesada)? Lo negro desde el
+// borde izquierdo llega hasta donde iba la línea. La línea sola, si se corre hacia el borde, se aleja
+// de donde iba: eso no cuenta.
+bool bloqueIzquierdo() {
+  int n = 0;
+  while (n < 8 && ve(n)) n++;
+  return n > 0 && 2 * (n - 1) >= centroLinea;
+}
+
+bool bloqueDerecho() {
+  int n = 0;
+  while (n < 8 && ve(7 - n)) n++;
+  return n > 0 && 2 * (8 - n) <= centroLinea;
+}
+
 // Lee el sensor de línea: 0 (bajo el sensor de la izquierda) a 7000 (bajo el de la derecha).
 uint16_t leerLinea() {
-  return invertida ? qtr.readLineWhite(valores) : qtr.readLineBlack(valores);
+  uint16_t posicion = invertida ? qtr.readLineWhite(valores) : qtr.readLineBlack(valores);
+  if (!ve(0) && !ve(7)) {  // solo la línea: recuerda dónde va
+    int suma = 0, n = 0;
+    for (int i = 0; i < 8; i++) {
+      if (ve(i)) {
+        suma += 2 * i;
+        n++;
+      }
+    }
+    if (n > 0 && n <= 3) centroLinea = suma / n;
+  }
+  return posicion;
 }
 
 // Gira sobre su eje mientras el sensor aprende qué es blanco y qué es negro.
@@ -77,6 +107,14 @@ void seguirLinea(uint16_t posicion) {
   int base = velocidadBase();
   int correccion = KP * error + KI * integral + KD * derivada;
   motores(base + correccion, base - correccion);
+}
+
+// Avanza corrigiendo hacia donde iba la línea la última vez que se vio sola. Sirve sobre cruces y
+// barras: lo que hay en los bordes no lo tira hacia un lado.
+void avanzarCentrado(int velocidad) {
+  int error = centroLinea * 500 - 3500;
+  int correccion = KP * error;
+  motores(velocidad + correccion, velocidad - correccion);
 }
 
 // Sin línea: si hace poco la veía, es un corte y sigue derecho; si no, la busca girando hacia donde la vio.

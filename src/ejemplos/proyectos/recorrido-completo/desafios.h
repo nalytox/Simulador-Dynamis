@@ -38,8 +38,8 @@ bool despuesDeL1() {
 // (L1) es una decisión del F2. Para no confundirse con los bordes chuecos de una barra completa (un
 // lado entra o sale un poco antes que el otro), la barra cuenta si hay espacio vacío antes y después.
 void observarBarras() {
-  bool izq = ve(0);
-  bool der = ve(7);
+  bool izq = bloqueIzquierdo();
+  bool der = bloqueDerecho();
   if (izq && der) {
     finBarraCompleta = millis();
     vacioDespuesDeL1 = false;

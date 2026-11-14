@@ -155,3 +155,22 @@ describe('Seguidor que aprende solo (Q-learning con su tabla en la memoria)', { 
     expect(v2[0].centrado, segunda.serial).toBeGreaterThan(v1[0].centrado);
   });
 });
+
+describe('Recorrido completo en la Pista completa', { timeout: 600_000 }, () => {
+  it('llega a la meta con los 8 hitos, sin equivocarse de camino, sin tocar el obstáculo y sin perder la línea', async () => {
+    const r = await correrEjemplo('recorrido-completo');
+    const resumen = `${r.serial}\neventos: ${r.eventos.join(', ')}`;
+    expect(r.fin, resumen).toMatchObject({ motivo: 'terminado', juez: { hitos: Array(8).fill('alcanzado'), meta: true } });
+    expect(r.eventos, resumen).not.toContain('camino-equivocado');
+    expect(r.eventos, resumen).not.toContain('toco-obstaculo');
+    expect(r.eventos, resumen).not.toContain('perdio-linea');
+    expect(r.avisos).toEqual([]);
+  });
+
+  it('con poca velocidad de subida se queda en la rampa: hay algo que entrenar', async () => {
+    const r = await correrEjemplo('recorrido-completo', { segundos: 120, ajustes: { 'giroscopio.VELOCIDAD_SUBIDA': 40, 'siguelineas.VELOCIDAD_MINIMA': 30 } });
+    expect(r.fin.juez.meta).toBe(false);
+    // La rampa sube por la columna 2 (x de 600 a 900), de y = 900 a y = 1200; el tramo alto empieza en y = 1200.
+    expect(Math.max(...r.estados.filter(e => e.x > 600 && e.x < 900).map(e => e.y))).toBeLessThan(1200);
+  });
+});

@@ -113,7 +113,8 @@ void loop() {
   revisarInvertida();
   observarBarras();
   if (sobreF2()) {
-    motores(VELOCIDAD_CRUCE, VELOCIDAD_CRUCE);  // sobre el F2: derecho, leyendo sus barras
+    // Sobre el F2 sigue la línea, sin que las barras lo tiren hacia su lado.
+    avanzarCentrado(VELOCIDAD_CRUCE);
     return;
   }
   if (hayCruce()) {

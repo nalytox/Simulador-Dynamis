@@ -34,15 +34,14 @@ void resolverCruce() {
   int verdesIzq = 0, verdesDer = 0;
   bool mirandoMarcas = true;
 
-  motores(VELOCIDAD_CRUCE, VELOCIDAD_CRUCE);
   unsigned long inicio = millis();
   while (millis() - inicio < (unsigned long)AVANCE_AL_CENTRO) {
     mpu.update();
     leerLinea();
     observarBarras();
-    // Solo cuenta lo que llega al borde del sensor: la línea sola, aunque vaya un poco corrida, no.
-    bool izq = ve(0);
-    bool der = ve(7);
+    avanzarCentrado(VELOCIDAD_CRUCE);
+    bool izq = bloqueIzquierdo();
+    bool der = bloqueDerecho();
     if (!paso) {
       if (izq) ramaIzq = true;
       if (der) ramaDer = true;
@@ -86,7 +85,8 @@ void resolverCruce() {
       girar(decision == 'i' ? 1 : -1, GIRO_MINIMO);
     } else if (recto) {
       Serial.println("Cruce sin marcas: sigo derecho.");
-    } else {
+    } else if (cuantosVen() == 0) {
+      // Una barra atravesada y después no hay nada de línea: la meta.
       detenerse("¡Llegué a la meta!");
     }
   } else if (ramaIzq && !recto) {
