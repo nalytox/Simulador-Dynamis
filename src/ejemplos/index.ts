@@ -4,11 +4,12 @@ import practica from './pistas/practica.json';
 import cruces from './pistas/cruces.json';
 import rampa from './pistas/rampa.json';
 import circuito from './pistas/circuito.json';
+import completa from './pistas/completa.json';
 import { normalizarPista } from '../pista/serializacion';
 import type { Pista } from '../pista/tipos';
 import type { Proyecto } from '../proyecto/proyecto';
 
-export type IdPista = 'practica' | 'cruces' | 'rampa' | 'circuito';
+export type IdPista = 'practica' | 'cruces' | 'rampa' | 'circuito' | 'completa';
 export interface EjemploPista { id: IdPista; nombre: string; descripcion: string; pista: Pista }
 export interface EjemploProyecto { id: string; nombre: string; descripcion: string; pista: IdPista; proyecto: Proyecto }
 
@@ -24,6 +25,7 @@ export const PISTAS_DE_EJEMPLO: EjemploPista[] = [
   { id: 'cruces', descripcion: 'Cruces con marcas de color y una línea cortada.', pista: leerPista(cruces) },
   { id: 'rampa', descripcion: 'Una rampa para subir y bajar, baches y el obstáculo.', pista: leerPista(rampa) },
   { id: 'circuito', descripcion: 'Un circuito cerrado, sin meta, para dar vueltas: ahí el robot aprende solo.', pista: leerPista(circuito) },
+  { id: 'completa', descripcion: 'Todo lo que trae una pista de rescate: cortes, línea invertida, cruces con marcas, vuelta en U, rampa, baches, obstáculo, F2 y F1.', pista: leerPista(completa) },
 ].map(e => ({ ...e, id: e.id as IdPista, nombre: e.pista.nombre }));
 
 /** Con lo que abre la app la primera vez: el seguidor de línea y la pista de práctica. */
