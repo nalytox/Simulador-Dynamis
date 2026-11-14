@@ -62,7 +62,7 @@ describe('errores amigables', () => {
   });
 
   it('las librerías disponibles son las del núcleo simulado', () => {
-    expect(LIBRERIAS_DISPONIBLES).toEqual(['Wire.h', 'QTRSensors.h', 'Adafruit_VL53L0X.h', 'MPU6050_light.h', 'Adafruit_TCS34725.h']);
+    expect(LIBRERIAS_DISPONIBLES).toEqual(['Wire.h', 'QTRSensors.h', 'Adafruit_VL53L0X.h', 'MPU6050_light.h', 'Adafruit_TCS34725.h', 'Preferences.h']);
     for (const l of LIBRERIAS_DISPONIBLES) expect(existsSync(`src/nucleo/include/${l}`), l).toBe(true);
   });
 });

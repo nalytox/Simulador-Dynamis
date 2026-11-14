@@ -3,6 +3,7 @@ import { clasificarErrorEjecucion, ErrorSimulador, type ErrorEjecucion } from '.
 import { Pines } from './pines';
 import { pinesAMotores, type Motores } from './motores';
 import { COSTOS_US, BUFER_SERIAL_BYTES, usPorCaracter } from './costos';
+import { MemoriaRobot, TIPOS_NVS, memoriaVacia, type MemoriaNvs } from './memoria';
 import { crearAzar, type Azar } from './azar';
 import { ROBOT_POR_DEFECTO, type ConfigRobot, type SensorColor } from '../robot/config';
 import { BusI2C } from './i2c';
@@ -41,6 +42,8 @@ export interface OpcionesSimulador {
   ambiente?: Ambiente;
   /** Valores de los parámetros @ajustar de esta prueba, por id (`grupo.nombre`); los que faltan usan el del código. */
   ajustes?: Record<string, number>;
+  /** La memoria del robot (Preferences) con que parte; por defecto, vacía. No se modifica: se copia. */
+  memoria?: MemoriaNvs;
 }
 
 export interface ResultadoEjecucion { motivo: 'tiempo' | 'error' | 'detenido'; tiempoUs: number; error?: ErrorEjecucion }
@@ -111,6 +114,7 @@ export class Simulador {
   private readonly ambiente: Ambiente;
   private readonly ajustes: Record<string, number>;
   private readonly busI2C: BusI2C;
+  private readonly memoriaRobot: MemoriaRobot;
 
   private bitsAdc = BITS_ADC_POR_DEFECTO;
   private serialActivo = false;
@@ -138,6 +142,7 @@ export class Simulador {
     this.ajustes = o.ajustes ?? {};
     this.estadoActual = this.dinamica.estadoInicial(o.poseInicial ?? { x: 0, y: 0, yaw: 0 }, this.robot, this.mundo);
     this.estadoAnterior = this.estadoActual;
+    this.memoriaRobot = new MemoriaRobot(o.memoria ?? memoriaVacia(), texto => this.avisar(texto));
     this.busI2C = new BusI2C(this.robot, {
       leerColor: (sensor, integracionMs, ganancia, ledEncendido) => this.leerTCS(sensor, integracionMs, ganancia, ledEncendido, this.azarModelos),
       nivelPin: pin => this.pinesSim.nivel(pin),
@@ -164,6 +169,8 @@ export class Simulador {
   get estado(): EstadoRobot { return this.estadoActual; }
   get motores(): Motores { return pinesAMotores(this.pinesSim, this.robot.motores); }
   get pines(): Pines { return this.pinesSim; }
+  /** La memoria del robot (Preferences) en este instante. */
+  get memoria(): MemoriaRobot { return this.memoriaRobot; }
 
   get avisos(): string[] {
     return [...new Set([...this.pinesSim.avisos.map(a => a.mensaje), ...this.avisosPropios])];
@@ -332,6 +339,18 @@ export class Simulador {
       },
       serialWrite: bytes => this.escribirSerial(bytes),
       aviso: texto => { this.avisar(texto); this.avanzar(COSTOS_US.aviso); },
+      nvsAbrir: (espacio, soloLectura) => { this.avanzar(COSTOS_US.nvsLectura); return this.memoriaRobot.abrir(espacio, soloLectura); },
+      nvsPoner: (espacio, clave, tipo, bytes) => {
+        const escritos = TIPOS_NVS[tipo] ? this.memoriaRobot.poner(espacio, clave, TIPOS_NVS[tipo], bytes, this.t) : 0;
+        this.avanzar(escritos > 0 ? COSTOS_US.nvsEscritura : COSTOS_US.nvsLectura);
+        return escritos;
+      },
+      nvsLargo: (espacio, clave, tipo) => { this.avanzar(COSTOS_US.nvsLectura); return this.memoriaRobot.largo(espacio, clave, TIPOS_NVS[tipo] ?? null); },
+      nvsLeer: (espacio, clave) => { this.avanzar(COSTOS_US.nvsLectura); return this.memoriaRobot.leer(espacio, clave); },
+      nvsTipo: (espacio, clave) => { this.avanzar(COSTOS_US.nvsLectura); return this.memoriaRobot.tipo(espacio, clave); },
+      nvsQuitar: (espacio, clave) => { this.avanzar(COSTOS_US.nvsEscritura); return this.memoriaRobot.quitar(espacio, clave); },
+      nvsVaciar: espacio => { this.avanzar(COSTOS_US.nvsEscritura); return this.memoriaRobot.vaciar(espacio); },
+      nvsLibres: () => { this.avanzar(COSTOS_US.nvsLectura); return this.memoriaRobot.libres(); },
       vl53Medir: () => acotar(this.leerVL53(this.azarModelos), SIN_OBJETIVO_VL53_MM),
       vl53Responde: direccion => this.busI2C.vl53Responde(direccion),
       mpuLeer: () => {

@@ -38,6 +38,16 @@ export interface Anfitrion {
   azarU32(): number;
   /** El valor de un parámetro @ajustar en esta prueba; `valor` es el del código. */
   ajustable(grupo: string, nombre: string, valor: number): number;
+  /** Memoria del robot (Preferences.h): ver src/simulacion/memoria.ts. `tipo` es el PreferenceType. */
+  nvsAbrir(espacio: string, soloLectura: boolean): boolean;
+  nvsPoner(espacio: string, clave: string, tipo: number, bytes: Uint8Array): number;
+  /** tipo −1: cualquiera. */
+  nvsLargo(espacio: string, clave: string, tipo: number): number;
+  nvsLeer(espacio: string, clave: string): Uint8Array | null;
+  nvsTipo(espacio: string, clave: string): number;
+  nvsQuitar(espacio: string, clave: string): boolean;
+  nvsVaciar(espacio: string): boolean;
+  nvsLibres(): number;
   /** printf y la salida estándar de C (en el ESP32 salen por el mismo UART que Serial). */
   salidaEstandar(bytes: Uint8Array): void;
   tiempoNs(): bigint;
@@ -104,6 +114,22 @@ const DYNAMIS: Record<string, FabricaImport> = {
   azar_u32: a => () => a.azarU32(),
   ajustable: (a, memoria) => (grupo: number, nombre: number, valor: number) =>
     a.ajustable(leerCadena(memoria, grupo), leerCadena(memoria, nombre), valor),
+  nvs_abrir: (a, memoria) => (espacio: number, soloLectura: number) => (a.nvsAbrir(leerCadena(memoria, espacio), soloLectura !== 0) ? 1 : 0),
+  nvs_poner: (a, memoria) => (espacio: number, clave: number, tipo: number, ptr: number, largo: number) =>
+    a.nvsPoner(leerCadena(memoria, espacio), leerCadena(memoria, clave), tipo, new Uint8Array(memoria().buffer, u32(ptr), u32(largo)).slice()),
+  nvs_largo: (a, memoria) => (espacio: number, clave: number, tipo: number) =>
+    a.nvsLargo(leerCadena(memoria, espacio), leerCadena(memoria, clave), tipo),
+  nvs_leer: (a, memoria) => (espacio: number, clave: number, ptr: number, maximo: number) => {
+    const bytes = a.nvsLeer(leerCadena(memoria, espacio), leerCadena(memoria, clave));
+    if (!bytes) return 0;
+    const n = Math.min(bytes.length, u32(maximo));
+    new Uint8Array(memoria().buffer, u32(ptr), n).set(bytes.subarray(0, n));
+    return n;
+  },
+  nvs_tipo: (a, memoria) => (espacio: number, clave: number) => a.nvsTipo(leerCadena(memoria, espacio), leerCadena(memoria, clave)),
+  nvs_quitar: (a, memoria) => (espacio: number, clave: number) => (a.nvsQuitar(leerCadena(memoria, espacio), leerCadena(memoria, clave)) ? 1 : 0),
+  nvs_vaciar: (a, memoria) => (espacio: number) => (a.nvsVaciar(leerCadena(memoria, espacio)) ? 1 : 0),
+  nvs_libres: a => () => a.nvsLibres(),
 };
 
 const ERRNO = { exito: 0, descriptorInvalido: 8, noImplementado: 52 };
