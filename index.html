@@ -229,8 +229,7 @@ float giro = mpu.getAngleZ();  // en grados</pre>
             <p class="sub" id="mem-vacia">La memoria está vacía.</p>
             <div class="mem-lista" id="mem-lista"></div>
             <button class="como" data-snip="s-mem">¿Cómo lo uso?</button>
-            <pre id="s-mem" hidden>#include &lt;Preferences.h&gt;
-Preferences memoria;
+            <pre id="s-mem" hidden>// arriba: #include &lt;Preferences.h&gt; y Preferences memoria;
 memoria.begin("robot");  // abre el espacio "robot"
 int veces = memoria.getInt("veces", 0);  // 0 si no existe
 memoria.putInt("veces", veces + 1);  // queda guardado aunque apagues</pre>
