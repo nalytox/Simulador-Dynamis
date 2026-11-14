@@ -37,8 +37,8 @@ void leerRestoF2(bool habiaBarra) {
   unsigned long inicio = millis();
   while (millis() - inicio < VENTANA_F2_MS) {
     leerLinea();
-    bool izq = ve(0) || ve(1);
-    bool der = ve(6) || ve(7);
+    bool izq = ve(0);
+    bool der = ve(7);
     bool barra = izq != der;
     if (barra && !habiaBarra) anotarDecision(izq ? 'i' : 'd');
     habiaBarra = barra;

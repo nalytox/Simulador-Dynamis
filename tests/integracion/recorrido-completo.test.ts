@@ -57,6 +57,37 @@ describe('Recorrido completo, caso por caso', { timeout: 300_000 }, () => {
       objetos: [{ tipo: 'bache', x: 450, y: 150, rot: 90, props: { largo: 250, radio: 6 } },
         { tipo: 'bache', x: 750, y: 150, rot: 45, props: { largo: 200, radio: 6 } }] }))));
   });
+
+  describe('cruces y uniones en T', () => {
+    it('cruce sin marcas: sigue derecho', async () => completa(await correr(pistaDe({ columnas: 5, filas: 3, inicio: { x: 150, y: 450, yaw: 0 },
+      baldosas: [{ c: 0, r: 1, tipo: 'partida' }, { c: 1, r: 1, tipo: 'recta' }, { c: 2, r: 1, tipo: 'cruce', props: { marcas: SIN } },
+        { c: 3, r: 1, tipo: 'recta' }, { c: 4, r: 1, tipo: 'meta' }] }))));
+
+    it('cruce con marca a la izquierda: gira a la izquierda', async () => completa(await correr(pistaDe({ columnas: 4, filas: 4, inicio: { x: 150, y: 450, yaw: 0 },
+      baldosas: [{ c: 0, r: 1, tipo: 'partida' }, { c: 1, r: 1, tipo: 'recta' }, { c: 2, r: 1, tipo: 'cruce', props: { marcas: { ...SIN, ai: true } } },
+        { c: 2, r: 2, tipo: 'recta', rot: 90 }, { c: 2, r: 3, tipo: 'meta', rot: 90 }] }))));
+
+    it('cruce con marca a la derecha: gira a la derecha', async () => completa(await correr(pistaDe({ columnas: 4, filas: 4, inicio: { x: 150, y: 750, yaw: 0 },
+      baldosas: [{ c: 0, r: 2, tipo: 'partida' }, { c: 1, r: 2, tipo: 'recta' }, { c: 2, r: 2, tipo: 'cruce', props: { marcas: { ...SIN, ad: true } } },
+        { c: 2, r: 1, tipo: 'recta', rot: 270 }, { c: 2, r: 0, tipo: 'meta', rot: 270 }] }))));
+
+    it('marcas a los dos lados: vuelta en U, y vuelve a pasar por el cruce anterior', async () => completa(await correr(pistaDe({ columnas: 6, filas: 4,
+      baldosas: [{ c: 0, r: 0, tipo: 'partida' }, { c: 1, r: 0, tipo: 'recta' }, { c: 2, r: 0, tipo: 'cruce', props: { marcas: { ...SIN, di: true } } },
+        { c: 3, r: 0, tipo: 'cruce', props: { marcas: { ...SIN, ai: true, ad: true } } },
+        { c: 2, r: 1, tipo: 'recta', rot: 90 }, { c: 2, r: 2, tipo: 'meta', rot: 90 }] }))));
+
+    it('unión en T con marca a la izquierda', async () => completa(await correr(pistaDe({ columnas: 4, filas: 4, inicio: { x: 150, y: 450, yaw: 0 },
+      baldosas: [{ c: 0, r: 1, tipo: 'partida' }, { c: 1, r: 1, tipo: 'recta' }, { c: 2, r: 1, tipo: 'unionT', props: { marcas: { ...SIN, ai: true }, rama: 'izq' } },
+        { c: 3, r: 1, tipo: 'recta' }, { c: 2, r: 2, tipo: 'recta', rot: 90 }, { c: 2, r: 3, tipo: 'meta', rot: 90 }] }))));
+
+    it('unión en T con marca a la derecha', async () => completa(await correr(pistaDe({ columnas: 4, filas: 4, inicio: { x: 150, y: 750, yaw: 0 },
+      baldosas: [{ c: 0, r: 2, tipo: 'partida' }, { c: 1, r: 2, tipo: 'recta' }, { c: 2, r: 2, tipo: 'unionT', props: { marcas: { ...SIN, ad: true }, rama: 'der' } },
+        { c: 3, r: 2, tipo: 'recta' }, { c: 2, r: 1, tipo: 'recta', rot: 270 }, { c: 2, r: 0, tipo: 'meta', rot: 270 }] }))));
+
+    it('unión en T sin marcas: sigue derecho', async () => completa(await correr(pistaDe({ columnas: 5, filas: 3, inicio: { x: 150, y: 450, yaw: 0 },
+      baldosas: [{ c: 0, r: 1, tipo: 'partida' }, { c: 1, r: 1, tipo: 'recta' }, { c: 2, r: 1, tipo: 'unionT', props: { marcas: SIN, rama: 'izq' } },
+        { c: 3, r: 1, tipo: 'recta' }, { c: 4, r: 1, tipo: 'meta' }, { c: 2, r: 2, tipo: 'recta', rot: 90 }] }))));
+  });
 });
 
 export { SIN };

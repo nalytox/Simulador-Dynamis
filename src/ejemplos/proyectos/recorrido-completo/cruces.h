@@ -41,9 +41,10 @@ void resolverCruce() {
   unsigned long inicio = millis();
   while (millis() - inicio < (unsigned long)AVANCE_AL_CENTRO) {
     leerLinea();
-    bool izq = ve(0) || ve(1);
-    bool der = ve(6) || ve(7);
-    if (cuantosVen() >= 6) completa = true;
+    // Solo cuenta lo que llega al borde del sensor: la línea sola, aunque vaya un poco corrida, no.
+    bool izq = ve(0);
+    bool der = ve(7);
+    if (izq && der) completa = true;
     if (!paso) {
       if (izq) ramaIzq = true;
       if (der) ramaDer = true;
