@@ -192,6 +192,15 @@ canvas.lienzo { width: 100%; aspect-ratio: 4 / 3; display: block; border-radius:
 .motor { height: 14px; background: var(--blanco); border-radius: 999px; position: relative; }
 .motor::after { content: ""; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 2px; background: var(--borde); }
 .motor b { position: absolute; top: 0; bottom: 0; background: var(--azul); border-radius: 999px; }
+.mem-lista { display: flex; flex-direction: column; gap: 6px; }
+.mem-espacio { background: var(--blanco); border-radius: 12px; padding: 6px 10px; }
+.mem-espacio summary { font-family: var(--f-codigo); font-size: 13px; font-weight: 600; color: var(--azul); cursor: pointer; }
+.mem-espacio table { width: 100%; border-collapse: collapse; margin-top: 4px; font-size: 12.5px; table-layout: fixed; }
+.mem-espacio td { padding: 3px 6px; border-top: 1px solid var(--hielo); overflow-wrap: anywhere; vertical-align: top; }
+.mem-clave { font-family: var(--f-codigo); width: 30%; }
+.mem-tipo { color: var(--tinta-suave); width: 25%; }
+.mem-valor { font-family: var(--f-codigo); font-variant-numeric: tabular-nums; }
+.mem-espacio tr.reciente td { background: var(--sol); }
 
 /* ---------- Vista Construir pista ---------- */
 .grid-pista { display: grid; grid-template-columns: 240px minmax(0, 1fr) 260px; gap: 16px; align-items: start; }

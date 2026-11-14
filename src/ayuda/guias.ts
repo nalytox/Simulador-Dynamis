@@ -1,6 +1,6 @@
 /** Las guías de cada sensor de la Ayuda: qué hace, cómo se usa y un programa completo que compila. */
 export interface GuiaSensor {
-  id: 'qtr' | 'vl53l0x' | 'tcs34725' | 'mpu6050' | 'motores';
+  id: 'qtr' | 'vl53l0x' | 'tcs34725' | 'mpu6050' | 'motores' | 'memoria';
   titulo: string;
   libreria: string;
   explicacion: string[];
@@ -203,6 +203,46 @@ void setup() {
   ledcWrite(PWM_IZQ, 0);
   ledcWrite(PWM_DER, 0);
   Serial.println("Detenido");
+}
+
+void loop() {
+}
+`,
+  },
+  {
+    id: 'memoria',
+    titulo: 'Memoria del robot con Preferences',
+    libreria: 'Preferences (de la placa esp32)',
+    explicacion: [
+      'El ESP32 guarda datos en su flash, en una memoria que no se borra al apagarlo: sirve para recordar la calibración, contar cuántas veces partió o guardar lo que el robot aprendió.',
+      'Los datos van en pares clave-valor dentro de un espacio de nombres: begin("robot") abre el espacio "robot", putInt("veces", 3) guarda y getInt("veces", 0) lee (el 0 es lo que devuelve si todavía no existe). Los nombres pueden tener hasta 15 letras.',
+      'Hay put y get para cada tipo: Int, UInt, Float, Bool, String y Bytes (para arreglos completos, como una tabla).',
+      'La flash se gasta si se escribe muchísimas veces: guarda solo cuando algo cambie, no en cada vuelta de loop().',
+      'En el simulador, la tarjeta «Memoria del robot» muestra lo guardado. Sigue ahí al volver a probar y al recargar la página, como en el robot real; «Borrar la memoria» la vacía.',
+    ],
+    programa: `#include <Preferences.h>
+
+Preferences memoria;
+
+void setup() {
+  Serial.begin(115200);
+  memoria.begin("robot");  // abre (o crea) el espacio "robot"
+
+  // Lee cuántas veces partió: 0 si es la primera vez.
+  unsigned int veces = memoria.getUInt("veces", 0);
+  veces = veces + 1;
+  memoria.putUInt("veces", veces);  // queda guardado aunque apagues el robot
+  Serial.printf("Es la vez número %u que parto.\\n", veces);
+
+  // Un arreglo completo se guarda con putBytes y se lee con getBytes.
+  int umbrales[3] = {600, 700, 800};
+  memoria.putBytes("umbrales", umbrales, sizeof(umbrales));
+  int leidos[3];
+  memoria.getBytes("umbrales", leidos, sizeof(leidos));
+  Serial.printf("Umbrales: %d, %d y %d\\n", leidos[0], leidos[1], leidos[2]);
+
+  Serial.printf("Quedan %u entradas libres.\\n", (unsigned)memoria.freeEntries());
+  memoria.end();
 }
 
 void loop() {

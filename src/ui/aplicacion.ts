@@ -4,6 +4,9 @@ import { crearConsola } from './consola';
 import { registrarPrueba } from './pruebas';
 import { crearLienzo } from './lienzo';
 import { crearTarjetas } from './tarjetas';
+import { crearTarjetaMemoria } from './memoria';
+import { confirmar } from './dialogo';
+import { memoriaVacia, type MemoriaNvs } from '../simulacion/memoria';
 import { crearTarjetaJuez } from './juez';
 import { crearAcciones, type EstadoApp } from './acciones';
 import { crearBurbuja } from './burbuja';
@@ -110,6 +113,15 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
   const guardarPreferencias = guardar('preferencias');
   const guardarPista = guardar('pista');
   const guardarRobot = guardar('robot');
+  const guardarMemoria = guardar('memoria');
+  /**
+   * La memoria del robot (Preferences): es del robot, no del programa. Sobrevive a recargar y a
+   * cambiar de programa; solo «Borrar la memoria» la vacía.
+   */
+  const memoriaGuardada = await leer(almacen, 'memoria');
+  let memoria: MemoriaNvs = memoriaGuardada && typeof memoriaGuardada.espacios === 'object' ? memoriaGuardada : memoriaVacia();
+  /** «Ver esta prueba» corre con la memoria guardada pero no la cambia, igual que el entrenamiento. */
+  let guardarEstaPrueba = true;
 
   // Mensajes del robot.
   const bitacora = new Bitacora();
@@ -223,7 +235,7 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
     alVer: m => {
       vistas.mostrar('programar');
       juez.elegirDesde('partida');
-      void probar({ ajustes: m.valores, semilla: m.semilla });
+      void probar({ ajustes: m.valores, semilla: m.semilla, guardarMemoria: false });
     },
     alUsar: m => usarValores(m.valores),
   });
@@ -231,6 +243,16 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
   lienzo.mostrarPista(pista);
   const poseDe = (id: string) => (puntosDePartida(pista).find(p => p.id === id) ?? puntosDePartida(pista)[0]).pose;
   const tarjetas = crearTarjetas(raiz);
+  const tarjetaMemoria = crearTarjetaMemoria(raiz, {
+    async alBorrar() {
+      const si = await confirmar(raiz, { titulo: '¿Borrar la memoria del robot? Es como borrar la flash del ESP32: se pierde todo lo guardado.', boton: 'Borrar la memoria' });
+      if (!si || simulacion.corriendo) return;
+      memoria = memoriaVacia();
+      tarjetaMemoria.mostrar(memoria, null);
+      guardarMemoria(memoria);
+    },
+  });
+  tarjetaMemoria.mostrar(memoria, null);
   const juez = crearTarjetaJuez(raiz, {
     alPedir: p => simulacion.pedir(p),
     alElegirDesde: id => lienzo.reiniciar(poseDe(id)),
@@ -257,6 +279,13 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
       tActual = i.t;
       lienzo.mostrarInstantanea(i);
       tarjetas.mostrar(i.sensores, i.estado, i.motores);
+      if (i.memoria) {
+        tarjetaMemoria.mostrar(i.memoria.datos, i.memoria.ultima);
+        if (guardarEstaPrueba) {
+          memoria = i.memoria.datos;
+          guardarMemoria(memoria);
+        }
+      }
       juez.mostrar(i.juez);
       $('chip-tiempo').textContent = `t = ${formatoTiempo(i.t)}`;
       bitacora.agregarSerial(i.t, i.serial);
@@ -268,6 +297,12 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
     },
     alTerminar(f: FinEjecucion) {
       juez.habilitar(false);
+      if (f.memoria && guardarEstaPrueba) {
+        memoria = f.memoria;
+        guardarMemoria(memoria);
+      } else {
+        tarjetaMemoria.mostrar(memoria, null);
+      }
       if (f.motivo === 'error' && f.error) {
         burbuja.mostrar(f.error);
         mostrar('error');
@@ -301,6 +336,7 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
   acciones.fijarVelocidad(preferencias.velocidad);
   function mostrar(e: EstadoApp, progreso?: number) {
     acciones.mostrar(e, progreso);
+    tarjetaMemoria.habilitarBorrar(!simulacion.corriendo);
   }
 
   /** Pasa a Programar la pista del editor y el robot de "Mi robot", si cambiaron. */
@@ -339,7 +375,7 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
     const pool = crearPool({
       modulo: r.modulo, pista: pistaEditada, robot: robotEditado, duracionS: pedido.duracionS, tamano: pedido.robots,
       crearTrabajador: () => contado(new Worker(new URL('../ajuste/trabajador.ts', import.meta.url), { type: 'module' })),
-      recompensaPrincipal: (registro: RegistroPrueba) => calcularRecompensa(registro),
+      recompensaPrincipal: (registro: RegistroPrueba) => calcularRecompensa(registro), memoria,
     });
     return entrenar({
       crearAgente: () => agente, parametros: pedido.parametros, presupuesto: pedido.presupuesto, pool,
@@ -354,6 +390,7 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
     tActual = 0;
     lienzo.reiniciar(poseDe(juez.desde()));
     tarjetas.mostrar(null, null, null);
+    tarjetaMemoria.mostrar(memoria, null);
     juez.mostrar(null);
     $('chip-tiempo').textContent = `t = ${formatoTiempo(0)}`;
   }
@@ -371,7 +408,7 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
   }
 
   /** Corre el programa en la pista; el entrenamiento pasa sus valores y su semilla para repetir una prueba. */
-  async function probar(opciones: { ajustes?: Record<string, number>; semilla?: number } = {}) {
+  async function probar(opciones: { ajustes?: Record<string, number>; semilla?: number; guardarMemoria?: boolean } = {}) {
     const mio = ++intento;
     burbuja.ocultar();
     programa.limpiarError();
@@ -401,10 +438,11 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
       return;
     }
     dejarListo();
+    guardarEstaPrueba = opciones.guardarMemoria ?? true;
     simulacion.iniciar({
       modulo: r.modulo, pista, robot, desde: juez.desde(),
       semilla: opciones.semilla ?? crypto.getRandomValues(new Uint32Array(1))[0], velocidad: preferencias.velocidad,
-      ajustes: opciones.ajustes,
+      ajustes: opciones.ajustes, memoria,
     });
     juez.habilitar(true);
     mostrar('corriendo');
@@ -413,6 +451,7 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
   function detener() {
     intento++;
     simulacion.detener();
+    tarjetaMemoria.mostrar(memoria, null);
     juez.habilitar(false);
     burbuja.ocultar();
     mostrar('detenido');

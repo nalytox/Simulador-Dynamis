@@ -219,6 +219,23 @@ tcs.getRawData(&amp;r, &amp;g, &amp;b, &amp;c);</pre>
 float giro = mpu.getAngleZ();  // en grados</pre>
           </section>
 
+          <section class="sensor ancho" id="tarjeta-memoria">
+            <div class="fila-qtr">
+              <h3>Memoria del robot <small>Preferences · se guarda en la flash</small></h3>
+              <button class="btn-mini" id="btn-borrar-memoria">Borrar la memoria</button>
+            </div>
+            <div class="medidor"><b id="mem-barra" style="width:0%"></b></div>
+            <div class="sub" id="mem-uso">0 de 504 entradas (0 %)</div>
+            <p class="sub" id="mem-vacia">La memoria está vacía.</p>
+            <div class="mem-lista" id="mem-lista"></div>
+            <button class="como" data-snip="s-mem">¿Cómo lo uso?</button>
+            <pre id="s-mem" hidden>#include &lt;Preferences.h&gt;
+Preferences memoria;
+memoria.begin("robot");  // abre el espacio "robot"
+int veces = memoria.getInt("veces", 0);  // 0 si no existe
+memoria.putInt("veces", veces + 1);  // queda guardado aunque apagues</pre>
+          </section>
+
           <section class="sensor">
             <h3>Motores <small>ESP32 · PWM</small></h3>
             <div class="motores">

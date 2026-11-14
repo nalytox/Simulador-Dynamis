@@ -26,7 +26,7 @@ ambito.onmessage = async ({ data }) => {
   const m = data as MensajeAlSimulador;
   try {
     const fin = await ejecutarPrueba({
-      modulo: m.modulo, pista: m.pista, robot: m.robot, desde: m.desde, semilla: m.semilla, ajustes: m.ajustes,
+      modulo: m.modulo, pista: m.pista, robot: m.robot, desde: m.desde, semilla: m.semilla, ajustes: m.ajustes, memoria: m.memoria,
       control: new Int32Array(m.control), publicar: datos => enviar({ tipo: 'instantanea', datos }),
     });
     enviar({ tipo: 'fin', datos: fin });

@@ -76,10 +76,10 @@ it('puntaje sale de las constantes del juez', () => {
   ]);
 });
 
-it('hay una guía para cada sensor del robot y para los motores', () => {
-  expect(GUIAS.map(g => g.id)).toEqual(['qtr', 'vl53l0x', 'tcs34725', 'mpu6050', 'motores']);
+it('hay una guía para cada sensor del robot, para los motores y para la memoria', () => {
+  expect(GUIAS.map(g => g.id)).toEqual(['qtr', 'vl53l0x', 'tcs34725', 'mpu6050', 'motores', 'memoria']);
   expect(GUIAS.map(g => g.libreria)).toEqual(['QTRSensors (Pololu)', 'Adafruit_VL53L0X', 'Adafruit_TCS34725', 'MPU6050_light',
-    'Sin librería: pinMode, digitalWrite, ledcAttach y ledcWrite']);
+    'Sin librería: pinMode, digitalWrite, ledcAttach y ledcWrite', 'Preferences (de la placa esp32)']);
   for (const g of GUIAS) {
     expect(g.titulo, g.id).not.toBe('');
     expect(g.explicacion.length, g.id).toBeGreaterThan(0);
