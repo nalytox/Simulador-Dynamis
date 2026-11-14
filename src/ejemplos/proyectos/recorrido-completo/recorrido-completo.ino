@@ -33,8 +33,8 @@ const int VELOCIDAD_BAJADA = 70;     // velocidad bajando una rampa · @ajustar 
 const float PITCH_RAMPA = 8;         // grados de inclinación desde los que está en una rampa · @ajustar giroscopio 3..15
 const int AVANCE_AL_CENTRO = 330;    // ms para llevar las ruedas al centro de un cruce · @ajustar recorrido 100..600
 const int GIRO_MINIMO = 50;          // grados que gira antes de buscar la otra línea · @ajustar recorrido 20..80
-const int DISTANCIA_OBSTACULO = 50;  // mm a los que ve el obstáculo y lo rodea · @ajustar distancia 30..150
-const int RODEO_MS = 570;            // ms apartándose del obstáculo antes de volver · @ajustar distancia 300..1200
+const int DISTANCIA_OBSTACULO = 90;  // mm a los que empieza a acercarse al obstáculo · @ajustar distancia 50..200
+const int RODEO_MS = 480;            // ms apartándose de la línea para rodear el obstáculo · @ajustar distancia 300..1000
 
 // ----- Fijos -----
 const int VELOCIDAD_CRUCE = 90;      // velocidad al pasar por un cruce (AVANCE_AL_CENTRO cuenta con ella)
@@ -111,6 +111,11 @@ void loop() {
   }
   uint16_t posicion = leerLinea();
   revisarInvertida();
+  observarBarras();
+  if (sobreF2()) {
+    motores(VELOCIDAD_CRUCE, VELOCIDAD_CRUCE);  // sobre el F2: derecho, leyendo sus barras
+    return;
+  }
   if (hayCruce()) {
     resolverCruce();
     return;

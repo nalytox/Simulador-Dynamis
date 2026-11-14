@@ -88,6 +88,33 @@ describe('Recorrido completo, caso por caso', { timeout: 300_000 }, () => {
       baldosas: [{ c: 0, r: 1, tipo: 'partida' }, { c: 1, r: 1, tipo: 'recta' }, { c: 2, r: 1, tipo: 'unionT', props: { marcas: SIN, rama: 'izq' } },
         { c: 3, r: 1, tipo: 'recta' }, { c: 4, r: 1, tipo: 'meta' }, { c: 2, r: 2, tipo: 'recta', rot: 90 }] }))));
   });
+
+  it('el obstáculo: lo rodea sin tocarlo y vuelve a la línea', async () => completa(await correr(pistaDe({ columnas: 7, filas: 3, inicio: { x: 150, y: 450, yaw: 0 },
+    baldosas: [{ c: 0, r: 1, tipo: 'partida' }, ...[1, 2, 3, 4, 5].map(c => ({ c, r: 1, tipo: 'recta' })), { c: 6, r: 1, tipo: 'meta' }],
+    objetos: [{ tipo: 'obstaculo', x: 1050, y: 450, rot: 0, props: { ancho: 100, largo: 100, alto: 100 } }] }))));
+
+  describe('desafíos F2 y F1', () => {
+    it('F2 con dos decisiones para los dos cruces sin marcas que siguen', async () => {
+      const r = await correr(pistaDe({ columnas: 6, filas: 3, inicio: { x: 150, y: 750, yaw: 0 },
+        baldosas: [{ c: 0, r: 2, tipo: 'partida' }, { c: 1, r: 2, tipo: 'indicadorF2', props: { decisiones: ['der', 'izq'] } },
+          { c: 2, r: 2, tipo: 'recta' }, { c: 3, r: 2, tipo: 'cruce', props: { marcas: SIN, accion: 'der' } },
+          { c: 3, r: 1, tipo: 'recta', rot: 270 }, { c: 3, r: 0, tipo: 'cruce', rot: 270, props: { marcas: SIN, accion: 'izq' } },
+          { c: 4, r: 0, tipo: 'recta' }, { c: 5, r: 0, tipo: 'meta' }] }));
+      completa(r);
+      expect(r.serial).toContain('F2: decisión 2, a la izquierda.');
+    });
+
+    for (const lado of ['der', 'izq'] as const) {
+      it(`F2 que manda recorrer el cuadrado F1 por la ${lado === 'der' ? 'derecha' : 'izquierda'}`, async () => {
+        const r = await correr(pistaDe({ columnas: 6, filas: 3, inicio: { x: 150, y: 450, yaw: 0 },
+          baldosas: [{ c: 0, r: 1, tipo: 'partida' }, { c: 1, r: 1, tipo: 'indicadorF2', props: { decisiones: [lado] } },
+            { c: 2, r: 1, tipo: 'recta' }, { c: 3, r: 1, tipo: 'cuadradoF1', props: { correcto: lado } },
+            { c: 4, r: 1, tipo: 'recta' }, { c: 5, r: 1, tipo: 'meta' }] }));
+        completa(r);
+        expect(r.serial).toContain('Salgo del cuadrado F1.');
+      });
+    }
+  });
 });
 
 export { SIN };

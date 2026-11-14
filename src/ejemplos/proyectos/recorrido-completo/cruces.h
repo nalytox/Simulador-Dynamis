@@ -30,34 +30,23 @@ bool hayCruce() {
 
 void resolverCruce() {
   bool ramaIzq = false, ramaDer = false;  // sale línea hacia ese lado
-  bool completa = false;                   // hubo una barra que cubría todo el sensor
   bool paso = false;                       // la primera barra ya quedó atrás del sensor de línea
-  bool habiaBarra = false;                 // la lectura anterior veía una barra de un solo lado
-  bool esF2 = false;
   int verdesIzq = 0, verdesDer = 0;
   bool mirandoMarcas = true;
 
   motores(VELOCIDAD_CRUCE, VELOCIDAD_CRUCE);
   unsigned long inicio = millis();
   while (millis() - inicio < (unsigned long)AVANCE_AL_CENTRO) {
+    mpu.update();
     leerLinea();
+    observarBarras();
     // Solo cuenta lo que llega al borde del sensor: la línea sola, aunque vaya un poco corrida, no.
     bool izq = ve(0);
     bool der = ve(7);
-    if (izq && der) completa = true;
     if (!paso) {
       if (izq) ramaIzq = true;
       if (der) ramaDer = true;
       if (!izq && !der) paso = true;
-    } else if (completa) {
-      // Después de una barra completa, una barra de un solo lado: es el indicador F2.
-      bool barra = izq != der;
-      if (barra && !habiaBarra) {
-        if (!esF2) empezarF2();
-        esF2 = true;
-        anotarDecision(izq ? 'i' : 'd');
-      }
-      habiaBarra = barra;
     }
     if (mirandoMarcas) {
       Color ci = leerColor(colorIzq, CANAL_COLOR_IZQ);
@@ -69,10 +58,7 @@ void resolverCruce() {
       if (ci == NEGRO && cd == NEGRO) mirandoMarcas = false;
     }
   }
-  if (esF2) {
-    leerRestoF2(habiaBarra);
-    return;
-  }
+  if (sobreF2()) return;  // era la barra L1 de un F2: sigue derecho leyendo sus barras
 
   leerLinea();
   bool recto = ve(2) || ve(3) || ve(4) || ve(5);

@@ -2,6 +2,7 @@
 #pragma once
 
 bool invertida = false;  // true sobre una baldosa con línea blanca y fondo negro
+void olvidarBarras();    // en desafios.h
 int errorAnterior = 0;
 float integral = 0;
 int ultimoLado = 1;      // dónde vio la línea la última vez: 1 a la derecha, -1 a la izquierda
@@ -104,4 +105,5 @@ void girar(int lado, float minimo) {
   errorAnterior = 0;
   integral = 0;
   ultimaVezLinea = millis();
+  olvidarBarras();
 }
