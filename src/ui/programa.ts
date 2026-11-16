@@ -7,6 +7,7 @@ import { archivoPrincipal, moverArchivo, ordenarArchivos, programasDelProyecto, 
 import { leerArrastre, leerCarpeta, leerInput, leerZip, proyectoDesdeArchivos, type ArchivoLeido } from '../proyecto/importar';
 import { guardarEnCarpeta, nombreZip, proyectoAZip, type CarpetaEscribible } from '../proyecto/exportar';
 import { firmaProyecto } from '../compilador/cliente';
+import { aplicar as aplicarOperacion, describir, type Operacion, type Resultado } from '../proyecto/operaciones';
 import { PROYECTOS_DE_EJEMPLO } from '../ejemplos';
 
 export interface OpcionesPrograma {
@@ -16,6 +17,8 @@ export interface OpcionesPrograma {
   alCambiarActivo(ruta: string): void;
   mensajeSistema(texto: string): void;
   mostrarError(titulo: string, mensaje: string): void;
+  /** Un aviso con el botón «Deshacer» (crear, renombrar, borrar o mover archivos, elegir programa). */
+  avisarConDeshacer(texto: string, deshacer: () => void): void;
 }
 
 export interface PanelPrograma {
@@ -67,45 +70,84 @@ export function crearPanelPrograma(raiz: Document, o: OpcionesPrograma): PanelPr
   /** Otro proyecto: sin historial de deshacer del anterior. */
   const abrirProyecto = (p: Proyecto) => {
     editor.olvidar();
+    porDeshacer.length = 0;
+    porRehacer.length = 0;
     cambiar(p);
     elegir(archivoPrincipal(p) ?? ordenarArchivos(p)[0]);
   };
+  // Deshacer y rehacer lo que se hace con los archivos: cada operación guarda su inversa.
+  const MAXIMO_DESHACER = 100;
+  const porDeshacer: Operacion[] = [];
+  const porRehacer: Operacion[] = [];
+  const mostrarResultado = (r: Resultado) => {
+    for (const ruta of Object.keys(proyecto.archivos)) if (!(ruta in r.proyecto.archivos)) editor.olvidar(ruta);
+    cambiar(r.proyecto);
+    const siguiente = r.enfocar && r.enfocar in proyecto.archivos ? r.enfocar
+      : activo in proyecto.archivos ? activo : (archivoPrincipal(proyecto) ?? ordenarArchivos(proyecto)[0]);
+    elegir(siguiente);
+  };
+  const deshacerUno = () => {
+    const op = porDeshacer.pop();
+    if (!op) return;
+    const r = aplicarOperacion(proyecto, op);
+    porRehacer.push(r.inversa);
+    mostrarResultado(r);
+  };
+  const rehacerUno = () => {
+    const op = porRehacer.pop();
+    if (!op) return;
+    const r = aplicarOperacion(proyecto, op);
+    porDeshacer.push(r.inversa);
+    mostrarResultado(r);
+  };
+  /** Hace una operación de archivos; queda para deshacer, con un aviso. */
+  const operar = (op: Operacion) => {
+    const r = aplicarOperacion(proyecto, op);
+    porDeshacer.push(r.inversa);
+    if (porDeshacer.length > MAXIMO_DESHACER) porDeshacer.shift();
+    porRehacer.length = 0;
+    mostrarResultado(r);
+    o.avisarConDeshacer(describir(op), deshacerUno);
+  };
+  // Ctrl+Z y Ctrl+Y en la vista Programar, fuera del texto: dentro del editor, deshacen lo escrito.
+  raiz.addEventListener('keydown', e => {
+    if (!(e.ctrlKey || e.metaKey) || e.altKey || ($('vista-programar') as HTMLElement).hidden) return;
+    const destino = e.target as Element | null;
+    if (destino?.closest?.('.cm-editor, input, select, textarea, dialog')) return;
+    const tecla = e.key.toLowerCase();
+    if (tecla === 'z' && !e.shiftKey) deshacerUno();
+    else if (tecla === 'y' || (tecla === 'z' && e.shiftKey)) rehacerUno();
+    else return;
+    e.preventDefault();
+  });
+
   const pestanas = crearPestanas($('pestanas'), {
     alElegir: elegir,
     alMover(ruta, aIndice) {
-      cambiar(moverArchivo(proyecto, ruta, aIndice));
-      pintar();
+      operar({ tipo: 'mover', orden: moverArchivo(proyecto, ruta, aIndice).orden! });
     },
     async alCrear() {
       const nombre = await pedirNombre(raiz, { titulo: 'Archivo nuevo', inicial: '', boton: 'Crear', validar: n => validarNombreArchivo(proyecto, n) });
       if (!nombre) return;
-      cambiar({ ...proyecto, archivos: { ...proyecto.archivos, [nombre]: plantilla(nombre) } });
-      elegir(nombre);
+      operar({ tipo: 'crear', ruta: nombre, texto: plantilla(nombre) });
     },
     async alRenombrar(ruta) {
       const nombre = await pedirNombre(raiz, { titulo: `Renombrar ${ruta}`, inicial: ruta, boton: 'Renombrar', validar: n => validarNombreArchivo(proyecto, n, ruta) });
       if (!nombre || nombre === ruta) return;
-      const archivos = Object.fromEntries(Object.entries(proyecto.archivos).map(([r, t]) => [r === ruta ? nombre : r, t]));
-      editor.olvidar(ruta);
-      cambiar({ ...proyecto, archivos });
-      elegir(activo === ruta ? nombre : activo);
+      operar({ tipo: 'renombrar', de: ruta, a: nombre });
     },
     async alBorrar(ruta) {
       const problema = puedeBorrar(proyecto, ruta);
       if (problema) return o.mostrarError(`No se puede borrar ${ruta}`, problema);
       if (!(await confirmar(raiz, { titulo: `¿Borrar ${ruta}?`, boton: 'Borrar' }))) return;
-      const { [ruta]: _, ...archivos } = proyecto.archivos;
-      editor.olvidar(ruta);
-      cambiar({ ...proyecto, archivos });
-      elegir(activo === ruta ? (archivoPrincipal(proyecto) ?? ordenarArchivos(proyecto)[0]) : activo);
+      operar({ tipo: 'borrar', ruta });
     },
   });
   /** «Programa a ejecutar»: los .ino de la raíz, con el que se compila seleccionado. */
   const selPrograma = $('sel-programa') as HTMLSelectElement;
   const elegirPrograma = (ruta: string) => {
     if (ruta === archivoPrincipal(proyecto)) return;
-    cambiar({ ...proyecto, principal: ruta });
-    pintar();
+    operar({ tipo: 'principal', ruta });
   };
   selPrograma.addEventListener('change', () => elegirPrograma(selPrograma.value));
   function pintar() {

@@ -141,6 +141,7 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
     alCambiarActivo: ruta => { preferencias.archivoAbierto = ruta; guardarPreferencias({ ...preferencias }); },
     mensajeSistema,
     mostrarError: (titulo, mensaje) => burbuja.mostrar({ titulo, mensaje }),
+    avisarConDeshacer: (texto, deshacer) => avisos.conAccion(texto, 'Deshacer', deshacer),
   });
   // La versión elegida vale desde la próxima prueba: no cambia la que está corriendo.
   crearSelectorVersion(raiz, versionEsp32(), v => {

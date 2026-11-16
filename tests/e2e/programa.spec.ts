@@ -55,3 +55,31 @@ test('las pestañas se ordenan arrastrándolas o con Alt+flechas, y el orden sig
   await page.reload();
   await expect(pestanas(page)).toHaveText(['a.ino', 'c.h', 'b.h']);
 });
+
+test('borrar un archivo se deshace con el botón del aviso, y Ctrl+Y / Ctrl+Z lo rehacen y deshacen', async ({ page }) => {
+  await page.goto('/');
+  await abrir(page, { 'a.ino': programa('a'), 'b.h': '// lo que tenía b\n' });
+  await page.getByRole('button', { name: 'Opciones de b.h' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Borrar' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Borrar' }).click();
+  await expect(pestanas(page)).toHaveText(['a.ino']);
+  await expect(page.locator('#toast')).toContainText('Borraste b.h');
+  await page.locator('#toast').getByRole('button', { name: 'Deshacer' }).click();
+  await expect(pestanas(page)).toHaveText(['a.ino', 'b.h']);
+  await expect(page.getByRole('tab', { name: 'b.h' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('#editor .cm-content')).toContainText('lo que tenía b');
+
+  // Con el foco en las pestañas (fuera del texto), Ctrl+Y lo vuelve a borrar y Ctrl+Z lo devuelve.
+  await page.getByRole('tab', { name: 'a.ino' }).click();
+  await page.keyboard.press('Control+y');
+  await expect(pestanas(page)).toHaveText(['a.ino']);
+  await page.keyboard.press('Control+z');
+  await expect(pestanas(page)).toHaveText(['a.ino', 'b.h']);
+
+  // Dentro del editor, Ctrl+Z deshace lo escrito, no los archivos.
+  await page.locator('#editor .cm-content').click();
+  await page.keyboard.type('// nuevo');
+  await page.keyboard.press('Control+z');
+  await expect(pestanas(page)).toHaveText(['a.ino', 'b.h']);
+  await expect(page.locator('#editor .cm-content')).not.toContainText('// nuevo');
+});
