@@ -73,3 +73,16 @@ test('las pestañas se usan con las flechas y Esc cierra', async ({ page }) => {
   await expect(page.locator('#ventana-ayuda')).toBeHidden();
   await expect(page.locator('#btn-ayuda')).toBeFocused();
 });
+
+test('Primeros pasos explica el programa a ejecutar y los atajos', async ({ page }) => {
+  await page.goto('/');
+  await abrirAyuda(page);
+  await page.locator('#ay-tab-inicio').click();
+  const atajos = page.locator('#ay-atajos');
+  await expect(atajos).toBeVisible();
+  await expect(atajos).toContainText('Programa a ejecutar');
+  await expect(atajos).toContainText('Ctrl + Z');
+  await expect(atajos).toContainText('Ctrl + Y');
+  await expect(atajos).toContainText('Alt + ←');
+  await expect(atajos).toContainText('Doble clic');
+});

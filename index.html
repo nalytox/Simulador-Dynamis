@@ -314,7 +314,7 @@ ledcWrite(PWM_IZQ, 150);  // 0 a 255</pre>
         <header><h2 id="panel-titulo">Baldosa elegida</h2></header>
         <div class="props">
           <div id="panel-pista" class="props" style="padding:0"></div>
-          <div class="ayuda-teclas">Elige una pieza y haz clic en la pista. <kbd>R</kbd> gira la baldosa elegida, <kbd>Supr</kbd> la deja vacía y <kbd>Esc</kbd> vuelve a Elegir.</div>
+          <div class="ayuda-teclas">Elige una pieza y haz clic en la pista. <kbd>R</kbd> gira la baldosa elegida, <kbd>Supr</kbd> la deja vacía y <kbd>Esc</kbd> vuelve a Elegir. <kbd>Ctrl</kbd> + <kbd>Z</kbd> deshace y <kbd>Ctrl</kbd> + <kbd>Y</kbd> rehace.</div>
         </div>
       </article>
     </div>
@@ -432,6 +432,14 @@ ledcWrite(PWM_IZQ, 150);  // 0 a 255</pre>
   <div class="ay-panel" id="ay-inicio" role="tabpanel" aria-labelledby="ay-tab-inicio" hidden>
     <p>Escribe tu programa en «Programar» y presiona «Probar mi robot». En «Construir pista» armas la pista con las piezas de las bases, y en «Ejemplos» hay proyectos para empezar.</p>
     <button class="btn-sec" id="ay-recorrido">Ver el recorrido de nuevo</button>
+    <h3>Atajos y trucos</h3>
+    <table class="ay-tabla" id="ay-atajos">
+      <tr><th>Programa a ejecutar</th><td>Si tu proyecto tiene varios programas (cada <code>.ino</code> con su propio <code>setup()</code> y <code>loop()</code>), elige en «Mi programa» cuál corre. Las pestañas sin <code>setup()</code> ni <code>loop()</code> se juntan con el elegido.</td></tr>
+      <tr><th>Ordenar pestañas</th><td>Arrastra una pestaña a otro lugar, o usa <kbd>Alt</kbd> + <kbd>←</kbd> y <kbd>Alt</kbd> + <kbd>→</kbd>.</td></tr>
+      <tr><th>Agrandar o achicar</th><td>Arrastra la esquina de «Mi programa» o de «Pista»: de lado cambia el ancho, hacia abajo el alto. Doble clic en la esquina la deja como al principio.</td></tr>
+      <tr><th>Deshacer y rehacer</th><td><kbd>Ctrl</kbd> + <kbd>Z</kbd> deshace y <kbd>Ctrl</kbd> + <kbd>Y</kbd> (o <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd>) rehace: lo que escribes, crear, renombrar o borrar archivos, mover pestañas, cambiar el programa a ejecutar, y la pista en «Construir pista».</td></tr>
+      <tr><th>En el código</th><td><kbd>Ctrl</kbd> + <kbd>F</kbd> busca y <kbd>Ctrl</kbd> + <kbd>/</kbd> convierte la línea en comentario (o la vuelve a código).</td></tr>
+    </table>
     <h3>Sin internet</h3>
     <p>La primera vez que pruebas tu robot, el simulador descarga su compilador. Después queda guardado en este navegador y funciona sin internet.</p>
     <button class="btn-sec" id="ay-instalar" hidden>Instalar en este computador</button>
