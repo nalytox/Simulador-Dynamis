@@ -13,6 +13,7 @@ import { crearBurbuja } from './burbuja';
 import { crearAvisos } from './avisos';
 import { crearVistas } from './vistas';
 import { crearEditorPista } from './editor-pista';
+import { Historial } from '../pista/historial';
 import { crearPanelPista } from './panel-pista';
 import { crearArchivoPista } from './archivo-pista';
 import { crearVentanaRobot } from './mi-robot';
@@ -156,8 +157,47 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
     alCambiar: p => editorPista.editar(p),
     alElegir: s => editorPista.elegir(s),
   });
+  // Deshacer y rehacer en Construir pista: cada cambio guarda la pista que había.
+  const historialPista = new Historial<Pista>();
+  let pistaConfirmada = pista;
+  let moviendoseEnHistorial = false;
+  const botonDeshacerPista = $('btn-deshacer-pista') as HTMLButtonElement;
+  const botonRehacerPista = $('btn-rehacer-pista') as HTMLButtonElement;
+  const pintarHistorialPista = () => {
+    botonDeshacerPista.disabled = !historialPista.puedeDeshacer;
+    botonRehacerPista.disabled = !historialPista.puedeRehacer;
+  };
+  const recordarPista = (p: Pista) => {
+    if (!moviendoseEnHistorial && p !== pistaConfirmada) historialPista.hacer(pistaConfirmada);
+    pistaConfirmada = p;
+    pintarHistorialPista();
+  };
+  const moverHistorialPista = (paso: 'deshacer' | 'rehacer') => {
+    const actual = editorPista.pista();
+    const p = paso === 'deshacer' ? historialPista.deshacer(actual) : historialPista.rehacer(actual);
+    if (!p) return;
+    moviendoseEnHistorial = true;
+    editorPista.editar(p);
+    moviendoseEnHistorial = false;
+    pistaConfirmada = p;
+    pintarHistorialPista();
+  };
+  botonDeshacerPista.addEventListener('click', () => moverHistorialPista('deshacer'));
+  botonRehacerPista.addEventListener('click', () => moverHistorialPista('rehacer'));
+  // Ctrl+Z y Ctrl+Y en Construir pista; dentro de un campo de texto deshacen lo escrito.
+  raiz.addEventListener('keydown', e => {
+    if (!(e.ctrlKey || e.metaKey) || e.altKey || ($('vista-pista') as HTMLElement).hidden) return;
+    if ((e.target as Element | null)?.closest?.('input, select, textarea, dialog, .cm-editor')) return;
+    const tecla = e.key.toLowerCase();
+    if (tecla === 'z' && !e.shiftKey) moverHistorialPista('deshacer');
+    else if (tecla === 'y' || (tecla === 'z' && e.shiftKey)) moverHistorialPista('rehacer');
+    else return;
+    e.preventDefault();
+  });
+
   const editorPista = crearEditorPista(raiz, {
     alCambiar: p => {
+      recordarPista(p);
       alEditarPista(p);
       panelPista.mostrar(p, editorPista.seleccion());
     },
@@ -167,6 +207,7 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
   const archivoPista = crearArchivoPista(raiz, {
     pista: () => pistaEditada,
     alAbrir: p => {
+      recordarPista(p);
       editorPista.mostrar(p);
       alEditarPista(p);
     },
