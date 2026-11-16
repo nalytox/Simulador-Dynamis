@@ -41,3 +41,23 @@ describe('prepararUnidades', () => {
     expect(lineas.indexOf('void avanzar();')).toBeGreaterThan(lineas.indexOf('#endif'));
   });
 });
+
+describe('el programa elegido', () => {
+  const dos: Proyecto = { nombre: 'robot', archivos: {
+    'uno.ino': 'void setup() { Serial.println("uno"); }\nvoid loop() {}\n',
+    'dos.ino': 'void setup() { Serial.println("dos"); girar(); }\nvoid loop() {}\n',
+    'ayuda.ino': 'void girar() {}\n' } };
+
+  it('compila el elegido y las pestañas de ayuda, sin los otros programas', () => {
+    const [u] = prepararUnidades({ ...dos, principal: 'dos.ino' });
+    expect(u.codigo).toContain('"dos"');
+    expect(u.codigo).not.toContain('"uno"');
+    expect(u.codigo).toContain('void girar() {}');
+    expect(u.codigo.indexOf('#line 1 "dos.ino"')).toBeLessThan(u.codigo.indexOf('#line 1 "ayuda.ino"'));
+  });
+
+  it('con dos programas y ninguno elegido, compila uno solo', () => {
+    const [u] = prepararUnidades(dos);
+    expect((u.codigo.match(/void setup\(\) \{/g) ?? []).length).toBe(1);
+  });
+});

@@ -109,3 +109,9 @@ describe('cliente del compilador', () => {
     expect(falso.preparaciones).toBe(2);
   });
 });
+
+it('la firma del proyecto cambia con el programa elegido y con el orden de las pestañas', () => {
+  const base = { nombre: 'p', archivos: { 'a.ino': 'x', 'b.ino': 'y' } };
+  expect(firmaProyecto({ ...base, principal: 'b.ino' })).not.toBe(firmaProyecto(base));
+  expect(firmaProyecto({ ...base, orden: ['b.ino', 'a.ino'] })).not.toBe(firmaProyecto(base));
+});

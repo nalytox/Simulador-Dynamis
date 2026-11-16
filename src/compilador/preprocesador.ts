@@ -1,4 +1,4 @@
-import { ordenarArchivos, tipoDeArchivo, type Proyecto } from '../proyecto/proyecto';
+import { archivosCompilados, tipoDeArchivo, type Proyecto } from '../proyecto/proyecto';
 import { buscarDefiniciones } from './prototipos';
 
 export interface UnidadCompilacion {
@@ -18,13 +18,13 @@ export function normalizarTexto(texto: string): string {
 const directivaLinea = (linea: number, ruta: string) => `#line ${linea} ${JSON.stringify(ruta)}`;
 
 /**
- * Prepara las unidades de compilación como el Arduino IDE: une los .ino de la raíz
- * (el principal primero), agrega Arduino.h y los prototipos, y conserva la numeración
+ * Prepara las unidades de compilación como el Arduino IDE: une los .ino de la raíz que se compilan
+ * (el programa elegido primero, después las pestañas de ayuda; ver archivosCompilados), agrega Arduino.h y los prototipos, y conserva la numeración
  * original con directivas #line. Cada .cpp y .c de la raíz o de src/ es su propia
  * unidad; los de otras carpetas no se compilan, igual que en el Arduino IDE.
  */
 export function prepararUnidades(p: Proyecto): UnidadCompilacion[] {
-  const orden = ordenarArchivos(p);
+  const orden = archivosCompilados(p);
   const inos = orden.filter(r => !r.includes('/') && tipoDeArchivo(r) === 'ino');
   if (inos.length === 0) {
     throw new ErrorProyecto('Tu proyecto no tiene ningún archivo .ino. Crea uno con el mismo nombre de la carpeta.');
