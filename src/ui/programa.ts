@@ -107,7 +107,9 @@ export function crearPanelPrograma(raiz: Document, o: OpcionesPrograma): PanelPr
     if (porDeshacer.length > MAXIMO_DESHACER) porDeshacer.shift();
     porRehacer.length = 0;
     mostrarResultado(r);
-    o.avisarConDeshacer(describir(op), deshacerUno);
+    // El botón del aviso deshace esta acción y ninguna otra: si ya se deshizo (Ctrl+Z), no hace nada.
+    const estaAccion = r.inversa;
+    o.avisarConDeshacer(describir(op), () => { if (porDeshacer.at(-1) === estaAccion) deshacerUno(); });
   };
   // Ctrl+Z y Ctrl+Y en la vista Programar, fuera del texto: dentro del editor, deshacen lo escrito.
   raiz.addEventListener('keydown', e => {

@@ -83,3 +83,23 @@ test('borrar un archivo se deshace con el botón del aviso, y Ctrl+Y / Ctrl+Z lo
   await expect(pestanas(page)).toHaveText(['a.ino', 'b.h']);
   await expect(page.locator('#editor .cm-content')).not.toContainText('// nuevo');
 });
+
+test('después de Ctrl+Z, el «Deshacer» del aviso no deshace otra acción más antigua', async ({ page }) => {
+  await page.goto('/');
+  await abrir(page, { 'a.ino': programa('a'), 'b.h': '// b\n', 'c.h': '// c\n' });
+  // Dos acciones: borrar b.h y después c.h.
+  for (const archivo of ['b.h', 'c.h']) {
+    await page.getByRole('button', { name: `Opciones de ${archivo}` }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Borrar' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Borrar' }).click();
+  }
+  await expect(pestanas(page)).toHaveText(['a.ino']);
+  await expect(page.locator('#toast')).toContainText('Borraste c.h');
+  // Ctrl+Z (fuera del texto) ya deshizo «Borraste c.h»: el botón de ese aviso no debe deshacer «Borraste b.h».
+  await page.getByRole('tab', { name: 'a.ino' }).click();
+  await page.keyboard.press('Control+z');
+  await expect(pestanas(page)).toHaveText(['a.ino', 'c.h']);
+  const boton = page.locator('#toast').getByRole('button', { name: 'Deshacer' });
+  if (await boton.isVisible()) await boton.click();
+  await expect(pestanas(page)).toHaveText(['a.ino', 'c.h']);
+});
