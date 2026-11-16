@@ -3,7 +3,7 @@ import { crearEditor } from './editor';
 import { crearPestanas } from './pestanas';
 import { confirmar, pedirNombre } from './dialogo';
 import { puedeBorrar, validarNombreArchivo } from './archivos';
-import { archivoPrincipal, ordenarArchivos, type Proyecto } from '../proyecto/proyecto';
+import { archivoPrincipal, ordenarArchivos, programasDelProyecto, type Proyecto } from '../proyecto/proyecto';
 import { leerArrastre, leerCarpeta, leerInput, leerZip, proyectoDesdeArchivos, type ArchivoLeido } from '../proyecto/importar';
 import { guardarEnCarpeta, nombreZip, proyectoAZip, type CarpetaEscribible } from '../proyecto/exportar';
 import { firmaProyecto } from '../compilador/cliente';
@@ -96,9 +96,21 @@ export function crearPanelPrograma(raiz: Document, o: OpcionesPrograma): PanelPr
       elegir(activo === ruta ? (archivoPrincipal(proyecto) ?? ordenarArchivos(proyecto)[0]) : activo);
     },
   });
+  /** «Programa a ejecutar»: los .ino de la raíz, con el que se compila seleccionado. */
+  const selPrograma = $('sel-programa') as HTMLSelectElement;
+  const elegirPrograma = (ruta: string) => {
+    if (ruta === archivoPrincipal(proyecto)) return;
+    cambiar({ ...proyecto, principal: ruta });
+    pintar();
+  };
+  selPrograma.addEventListener('change', () => elegirPrograma(selPrograma.value));
   function pintar() {
     pestanas.pintar(ordenarArchivos(proyecto), activo);
     $('chip-carpeta').textContent = `Carpeta: ${proyecto.nombre}`;
+    const programas = programasDelProyecto(proyecto);
+    selPrograma.replaceChildren(...programas.map(ruta => new Option(ruta, ruta)));
+    selPrograma.value = archivoPrincipal(proyecto) ?? '';
+    selPrograma.disabled = programas.length === 0;
   }
 
   /** El proyecto del navegador puede ser la única copia: antes de reemplazarlo se pregunta, salvo si es un ejemplo intacto. */
