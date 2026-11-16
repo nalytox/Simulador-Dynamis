@@ -1,0 +1,120 @@
+import { describe, it, expect } from 'vitest';
+import { correrEjemplo, type CorridaEjemplo } from '../ayuda/correr-ejemplo';
+import { pistaDe } from '../ayuda/pistas';
+import type { Pista } from '../../src/pista/tipos';
+
+/** El recorrido completo en una pista chica, hasta 60 s. */
+const correr = (pista: Pista) => correrEjemplo('recorrido-completo', { pista, segundos: 60 });
+
+/** Llega a la meta sin perder la línea, sin equivocarse de camino y sin tocar el obstáculo. */
+function completa(r: CorridaEjemplo) {
+  const resumen = `${r.serial}\neventos: ${r.eventos.join(', ')}\nfin: ${JSON.stringify(r.estados.at(-1))}`;
+  expect(r.fin.motivo, resumen).toBe('terminado');
+  expect(r.fin.juez.meta, resumen).toBe(true);
+  expect(r.eventos, resumen).not.toContain('camino-equivocado');
+  expect(r.eventos, resumen).not.toContain('perdio-linea');
+  expect(r.eventos, resumen).not.toContain('toco-obstaculo');
+  expect(r.avisos, resumen).toEqual([]);
+}
+
+const ALTO = 300 * Math.tan(20 * Math.PI / 180);
+const SIN = { ai: false, ad: false, di: false, dd: false };
+
+describe('Recorrido completo, caso por caso', { timeout: 300_000 }, () => {
+  describe('la línea', () => {
+    it('rectas y curvas suaves a los dos lados', async () => completa(await correr(pistaDe({ columnas: 5, filas: 2,
+      baldosas: [{ c: 0, r: 0, tipo: 'partida' }, { c: 1, r: 0, tipo: 'recta' }, { c: 2, r: 0, tipo: 'giroSuave', rot: 0 },
+        { c: 2, r: 1, tipo: 'giroSuave', rot: 180 }, { c: 3, r: 1, tipo: 'recta' }, { c: 4, r: 1, tipo: 'meta' }] }))));
+
+    it('giro en L a la izquierda', async () => completa(await correr(pistaDe({ columnas: 3, filas: 3,
+      baldosas: [{ c: 0, r: 0, tipo: 'partida' }, { c: 1, r: 0, tipo: 'recta' }, { c: 2, r: 0, tipo: 'giroL', rot: 0 },
+        { c: 2, r: 1, tipo: 'recta', rot: 90 }, { c: 2, r: 2, tipo: 'meta', rot: 90 }] }))));
+
+    it('giro en L a la derecha', async () => completa(await correr(pistaDe({ columnas: 3, filas: 3, inicio: { x: 150, y: 750, yaw: 0 },
+      baldosas: [{ c: 0, r: 2, tipo: 'partida' }, { c: 1, r: 2, tipo: 'recta' }, { c: 2, r: 2, tipo: 'giroL', rot: 90 },
+        { c: 2, r: 1, tipo: 'recta', rot: 270 }, { c: 2, r: 0, tipo: 'meta', rot: 270 }] }))));
+
+    it('cortes de 4 cm', async () => completa(await correr(pistaDe({ columnas: 6, filas: 1,
+      baldosas: [{ c: 0, r: 0, tipo: 'partida' }, { c: 1, r: 0, tipo: 'recta' }, { c: 2, r: 0, tipo: 'cortes', props: { guion: 50, espacio: 40 } },
+        { c: 3, r: 0, tipo: 'cortes', props: { guion: 30, espacio: 40 } }, { c: 4, r: 0, tipo: 'recta' }, { c: 5, r: 0, tipo: 'meta' }] }))));
+
+    it('línea blanca sobre fondo negro', async () => completa(await correr(pistaDe({ columnas: 6, filas: 1,
+      baldosas: [{ c: 0, r: 0, tipo: 'partida' }, { c: 1, r: 0, tipo: 'recta' }, { c: 2, r: 0, tipo: 'recta', props: { invertida: true } },
+        { c: 3, r: 0, tipo: 'recta', props: { invertida: true } }, { c: 4, r: 0, tipo: 'recta' }, { c: 5, r: 0, tipo: 'meta' }] }))));
+
+    it('rampa: sube y baja', async () => {
+      const r = await correr(pistaDe({ columnas: 7, filas: 1,
+        baldosas: [{ c: 0, r: 0, tipo: 'partida' }, { c: 1, r: 0, tipo: 'recta' }, { c: 2, r: 0, tipo: 'rampa', props: { angulo: 20 } },
+          { c: 3, r: 0, tipo: 'recta', nivel: ALTO }, { c: 4, r: 0, tipo: 'rampa', rot: 180, props: { angulo: 20 } },
+          { c: 5, r: 0, tipo: 'recta' }, { c: 6, r: 0, tipo: 'meta' }] }));
+      completa(r);
+      expect(Math.max(...r.estados.map(e => e.z))).toBeGreaterThan(ALTO - 5);
+    });
+
+    it('un bache atravesado y otro a 45°', async () => completa(await correr(pistaDe({ columnas: 5, filas: 1,
+      baldosas: [{ c: 0, r: 0, tipo: 'partida' }, { c: 1, r: 0, tipo: 'recta' }, { c: 2, r: 0, tipo: 'recta' }, { c: 3, r: 0, tipo: 'recta' },
+        { c: 4, r: 0, tipo: 'meta' }],
+      objetos: [{ tipo: 'bache', x: 450, y: 150, rot: 90, props: { largo: 250, radio: 6 } },
+        { tipo: 'bache', x: 750, y: 150, rot: 45, props: { largo: 200, radio: 6 } }] }))));
+  });
+
+  describe('cruces y uniones en T', () => {
+    it('cruce sin marcas: sigue derecho', async () => completa(await correr(pistaDe({ columnas: 5, filas: 3, inicio: { x: 150, y: 450, yaw: 0 },
+      baldosas: [{ c: 0, r: 1, tipo: 'partida' }, { c: 1, r: 1, tipo: 'recta' }, { c: 2, r: 1, tipo: 'cruce', props: { marcas: SIN } },
+        { c: 3, r: 1, tipo: 'recta' }, { c: 4, r: 1, tipo: 'meta' }] }))));
+
+    it('cruce con marca a la izquierda: gira a la izquierda', async () => completa(await correr(pistaDe({ columnas: 4, filas: 4, inicio: { x: 150, y: 450, yaw: 0 },
+      baldosas: [{ c: 0, r: 1, tipo: 'partida' }, { c: 1, r: 1, tipo: 'recta' }, { c: 2, r: 1, tipo: 'cruce', props: { marcas: { ...SIN, ai: true } } },
+        { c: 2, r: 2, tipo: 'recta', rot: 90 }, { c: 2, r: 3, tipo: 'meta', rot: 90 }] }))));
+
+    it('cruce con marca a la derecha: gira a la derecha', async () => completa(await correr(pistaDe({ columnas: 4, filas: 4, inicio: { x: 150, y: 750, yaw: 0 },
+      baldosas: [{ c: 0, r: 2, tipo: 'partida' }, { c: 1, r: 2, tipo: 'recta' }, { c: 2, r: 2, tipo: 'cruce', props: { marcas: { ...SIN, ad: true } } },
+        { c: 2, r: 1, tipo: 'recta', rot: 270 }, { c: 2, r: 0, tipo: 'meta', rot: 270 }] }))));
+
+    it('marcas a los dos lados: vuelta en U, y vuelve a pasar por el cruce anterior', async () => completa(await correr(pistaDe({ columnas: 6, filas: 4,
+      baldosas: [{ c: 0, r: 0, tipo: 'partida' }, { c: 1, r: 0, tipo: 'recta' }, { c: 2, r: 0, tipo: 'cruce', props: { marcas: { ...SIN, di: true } } },
+        { c: 3, r: 0, tipo: 'cruce', props: { marcas: { ...SIN, ai: true, ad: true } } },
+        { c: 2, r: 1, tipo: 'recta', rot: 90 }, { c: 2, r: 2, tipo: 'meta', rot: 90 }] }))));
+
+    it('unión en T con marca a la izquierda', async () => completa(await correr(pistaDe({ columnas: 4, filas: 4, inicio: { x: 150, y: 450, yaw: 0 },
+      baldosas: [{ c: 0, r: 1, tipo: 'partida' }, { c: 1, r: 1, tipo: 'recta' }, { c: 2, r: 1, tipo: 'unionT', props: { marcas: { ...SIN, ai: true }, rama: 'izq' } },
+        { c: 3, r: 1, tipo: 'recta' }, { c: 2, r: 2, tipo: 'recta', rot: 90 }, { c: 2, r: 3, tipo: 'meta', rot: 90 }] }))));
+
+    it('unión en T con marca a la derecha', async () => completa(await correr(pistaDe({ columnas: 4, filas: 4, inicio: { x: 150, y: 750, yaw: 0 },
+      baldosas: [{ c: 0, r: 2, tipo: 'partida' }, { c: 1, r: 2, tipo: 'recta' }, { c: 2, r: 2, tipo: 'unionT', props: { marcas: { ...SIN, ad: true }, rama: 'der' } },
+        { c: 3, r: 2, tipo: 'recta' }, { c: 2, r: 1, tipo: 'recta', rot: 270 }, { c: 2, r: 0, tipo: 'meta', rot: 270 }] }))));
+
+    it('unión en T sin marcas: sigue derecho', async () => completa(await correr(pistaDe({ columnas: 5, filas: 3, inicio: { x: 150, y: 450, yaw: 0 },
+      baldosas: [{ c: 0, r: 1, tipo: 'partida' }, { c: 1, r: 1, tipo: 'recta' }, { c: 2, r: 1, tipo: 'unionT', props: { marcas: SIN, rama: 'izq' } },
+        { c: 3, r: 1, tipo: 'recta' }, { c: 4, r: 1, tipo: 'meta' }, { c: 2, r: 2, tipo: 'recta', rot: 90 }] }))));
+  });
+
+  it('el obstáculo: lo rodea sin tocarlo y vuelve a la línea', async () => completa(await correr(pistaDe({ columnas: 7, filas: 3, inicio: { x: 150, y: 450, yaw: 0 },
+    baldosas: [{ c: 0, r: 1, tipo: 'partida' }, ...[1, 2, 3, 4, 5].map(c => ({ c, r: 1, tipo: 'recta' })), { c: 6, r: 1, tipo: 'meta' }],
+    objetos: [{ tipo: 'obstaculo', x: 1050, y: 450, rot: 0, props: { ancho: 100, largo: 100, alto: 100 } }] }))));
+
+  describe('desafíos F2 y F1', () => {
+    it('F2 con dos decisiones para los dos cruces sin marcas que siguen', async () => {
+      const r = await correr(pistaDe({ columnas: 6, filas: 3, inicio: { x: 150, y: 750, yaw: 0 },
+        baldosas: [{ c: 0, r: 2, tipo: 'partida' }, { c: 1, r: 2, tipo: 'indicadorF2', props: { decisiones: ['der', 'izq'] } },
+          { c: 2, r: 2, tipo: 'recta' }, { c: 3, r: 2, tipo: 'cruce', props: { marcas: SIN, accion: 'der' } },
+          { c: 3, r: 1, tipo: 'recta', rot: 270 }, { c: 3, r: 0, tipo: 'cruce', rot: 270, props: { marcas: SIN, accion: 'izq' } },
+          { c: 4, r: 0, tipo: 'recta' }, { c: 5, r: 0, tipo: 'meta' }] }));
+      completa(r);
+      expect(r.serial).toContain('F2: decisión 2, a la izquierda.');
+    });
+
+    for (const lado of ['der', 'izq'] as const) {
+      it(`F2 que manda recorrer el cuadrado F1 por la ${lado === 'der' ? 'derecha' : 'izquierda'}`, async () => {
+        const r = await correr(pistaDe({ columnas: 6, filas: 3, inicio: { x: 150, y: 450, yaw: 0 },
+          baldosas: [{ c: 0, r: 1, tipo: 'partida' }, { c: 1, r: 1, tipo: 'indicadorF2', props: { decisiones: [lado] } },
+            { c: 2, r: 1, tipo: 'recta' }, { c: 3, r: 1, tipo: 'cuadradoF1', props: { correcto: lado } },
+            { c: 4, r: 1, tipo: 'recta' }, { c: 5, r: 1, tipo: 'meta' }] }));
+        completa(r);
+        expect(r.serial).toContain('Salgo del cuadrado F1.');
+      });
+    }
+  });
+});
+
+export { SIN };

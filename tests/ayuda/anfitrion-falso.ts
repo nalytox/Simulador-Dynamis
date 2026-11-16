@@ -29,6 +29,14 @@ export function crearAnfitrionFalso(): { anfitrion: Anfitrion; llamadas: unknown
     i2cLeer: (direccion: number, largo: number) => { llamadas.push(['i2cLeer', direccion, largo]); return null; },
     azarU32: registrar('azarU32', 12345), salidaEstandar: escribir('salidaEstandar'), tiempoNs: () => 0n,
     ajustable: (grupo: string, nombre: string, valor: number) => { llamadas.push(['ajustable', grupo, nombre, valor]); return valor; },
+    nvsAbrir: (espacio: string, soloLectura: boolean) => { llamadas.push(['nvsAbrir', espacio, soloLectura]); return false; },
+    nvsPoner: (espacio: string, clave: string, tipo: number, bytes: Uint8Array) => { llamadas.push(['nvsPoner', espacio, clave, tipo, [...bytes]]); return 0; },
+    nvsLargo: (espacio: string, clave: string, tipo: number) => { llamadas.push(['nvsLargo', espacio, clave, tipo]); return -1; },
+    nvsLeer: (espacio: string, clave: string) => { llamadas.push(['nvsLeer', espacio, clave]); return null; },
+    nvsTipo: (espacio: string, clave: string) => { llamadas.push(['nvsTipo', espacio, clave]); return 10; },
+    nvsQuitar: (espacio: string, clave: string) => { llamadas.push(['nvsQuitar', espacio, clave]); return false; },
+    nvsVaciar: (espacio: string) => { llamadas.push(['nvsVaciar', espacio]); return false; },
+    nvsLibres: registrar('nvsLibres', 504),
   };
   return { anfitrion, llamadas, texto: () => texto };
 }

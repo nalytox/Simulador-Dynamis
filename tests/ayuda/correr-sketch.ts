@@ -7,6 +7,7 @@ import { crearMundo } from '../../src/mundo/pista';
 import { poseInicial } from '../../src/pista/serializacion';
 import type { Pista } from '../../src/pista/tipos';
 import type { ConfigRobot } from '../../src/robot/config';
+import type { MemoriaNvs } from '../../src/simulacion/memoria';
 import { compilarParaPrueba } from './compilar-prueba';
 import { pistaDe } from './pistas';
 
@@ -22,6 +23,8 @@ export interface OpcionesSketch {
   alPasoFisica?: (tUs: number, estado: EstadoRobot) => void;
   /** La versión del core ESP32 con que se compila (por defecto, 3.x). */
   version?: VersionEsp32;
+  /** La memoria (Preferences) con que parte el robot; por defecto, vacía. */
+  memoria?: MemoriaNvs;
 }
 
 /**
@@ -34,7 +37,7 @@ export async function correrSketch(codigo: string, o: OpcionesSketch = {}): Prom
   const modulo = await compilarParaPrueba({ 'p.ino': codigo }, await nucleo, 'p', { version: o.version });
   const sim = await Simulador.crear({
     modulo, mundo: crearMundo(pista), robot: o.robot, modelos: o.modelos, ambiente: pista.ambiente,
-    poseInicial: o.pose ?? poseInicial(pista), alPasoFisica: o.alPasoFisica,
+    poseInicial: o.pose ?? poseInicial(pista), alPasoFisica: o.alPasoFisica, memoria: o.memoria,
   });
   const resultado = sim.ejecutar(o.duracionUs ?? 100_000);
   return { sim, texto: sim.tomarSerial(), resultado };

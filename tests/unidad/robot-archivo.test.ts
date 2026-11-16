@@ -12,7 +12,9 @@ it('escribirRobot y leerRobot son inversos', () => {
 
 it('un robot incompleto se completa con los valores del profe y lo informa', () => {
   const { chasis, ...sinChasis } = copia();
-  const datos = { ...sinChasis, chasis: { largo: chasis.largo, ancho: 150, xDelantero: chasis.xDelantero }, vl53l0x: undefined };
+  const { alto, ...chasisSinAlto } = chasis;
+  void alto;
+  const datos = { ...sinChasis, chasis: { ...chasisSinAlto, ancho: 150 }, vl53l0x: undefined };
   const r = normalizarRobot(JSON.parse(JSON.stringify(datos)));
   expect(r.ok).toBe(true);
   if (!r.ok) return;
@@ -93,12 +95,17 @@ it('el QTR necesita exactamente 8 pines, sin huecos', () => {
 it('un robot.json antiguo (el robot por defecto anterior) se carga: lo que falta se completa y se avisa', () => {
   const r = normalizarRobot(JSON.parse(JSON.stringify(ROBOT_POR_DEFECTO_ANTERIOR)));
   expect(r).toEqual({ ok: true, robot: { ...structuredClone(ROBOT_POR_DEFECTO_ANTERIOR),
+    chasis: { ...ROBOT_POR_DEFECTO_ANTERIOR.chasis, masa: 800, xCentroMasa: 20, alturaLibre: 15 },
     ruedasLocas: ROBOT_POR_DEFECTO.ruedasLocas,
-    motores: { ...ROBOT_POR_DEFECTO_ANTERIOR.motores, vMaxMmS: 600 },
+    motores: { ...ROBOT_POR_DEFECTO_ANTERIOR.motores, vMaxMmS: 600, torqueKgCm: 2 },
     vl53l0x: { ...ROBOT_POR_DEFECTO_ANTERIOR.vl53l0x, canal: 2 },
   }, avisos: [
+    'Faltaba chasis.masa: se usó el valor del profe.',
+    'Faltaba chasis.xCentroMasa: se usó el valor del profe.',
+    'Faltaba chasis.alturaLibre: se usó el valor del profe.',
     'Faltaba ruedasLocas: se usaron los valores del profe.',
     'Faltaba motores.vMaxMmS: se usó el valor del profe.',
+    'Faltaba motores.torqueKgCm: se usó el valor del profe.',
     'Faltaba vl53l0x.canal: se usó el valor del profe.',
   ] });
 });
@@ -143,6 +150,24 @@ it('ruedas locas, velocidad máxima y canal del láser: tipos, rangos y campos',
   expect(conCampo(copia(), 'ruedasLocas.instalado', false).ruedasLocas.instalado).toBe(false);
 });
 
+it('masa, centro de masa, altura libre y torque: tipos, rangos y campos de Mi robot', () => {
+  const datos = copia() as unknown as Record<string, Record<string, unknown>>;
+  datos.chasis.masa = 0;
+  datos.chasis.alturaLibre = -2;
+  datos.motores.torqueKgCm = 'mucho';
+  expect(normalizarRobot(datos)).toEqual({ ok: false, errores: [
+    'chasis.masa debe ser un número mayor que 0.',
+    'chasis.alturaLibre debe ser un número mayor que 0.',
+    'motores.torqueKgCm debe ser un número.',
+  ] });
+  const campo = (ruta: string) => CAMPOS_ROBOT.find(c => c.ruta === ruta);
+  expect(campo('chasis.masa')).toMatchObject({ grupo: 'Medidas', unidad: 'g', min: 50, max: 5000 });
+  expect(campo('chasis.xCentroMasa')).toMatchObject({ grupo: 'Medidas', unidad: 'mm' });
+  expect(campo('chasis.alturaLibre')).toMatchObject({ grupo: 'Medidas', unidad: 'mm', min: 1, max: 100 });
+  expect(campo('motores.torqueKgCm')).toMatchObject({ grupo: 'Medidas', unidad: 'kg·cm', min: 0.1, max: 50 });
+  expect(conCampo(copia(), 'chasis.masa', 950).chasis.masa).toBe(950);
+});
+
 it('canales del multiplexor y el segundo TCS34725: tipos y rangos', () => {
   const datos = copia() as unknown as Record<string, Record<string, unknown>>;
   datos.tcs34725.canal = 9;
@@ -175,7 +200,7 @@ it('el robot guardado con cambios del estudiante se queda como está y se avisa'
   expect(m.actualizado).toBe(false);
   expect(m.aviso).toBe(AVISO_ROBOT_ANTERIOR);
   expect(m.robot.ruedas).toEqual({ diametro: 42, trocha: 120, x: 0 });
-  expect(m.robot.chasis).toEqual(ROBOT_POR_DEFECTO_ANTERIOR.chasis);
+  expect(m.robot.chasis).toEqual({ ...ROBOT_POR_DEFECTO_ANTERIOR.chasis, masa: 800, xCentroMasa: 20, alturaLibre: 15 });
   // Lo que le faltaba toma el valor por defecto.
   expect(m.robot.ruedasLocas).toEqual(ROBOT_POR_DEFECTO.ruedasLocas);
   expect(m.robot.vl53l0x.canal).toBe(2);

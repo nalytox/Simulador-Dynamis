@@ -2,15 +2,28 @@ import { describe, it, expect } from 'vitest';
 import { correrSketch } from '../ayuda/correr-sketch';
 import { pistaDe } from '../ayuda/pistas';
 import { ROBOT_POR_DEFECTO } from '../../src/robot/config';
+import type { Simulador } from '../../src/simulacion/simulador';
 
 // Pines del robot por defecto: izquierdo PWM 4, IN1 16, IN2 17; derecho PWM 19, IN1 5, IN2 18.
 const PINES = 'pinMode(16, OUTPUT); pinMode(17, OUTPUT); pinMode(5, OUTPUT); pinMode(18, OUTPUT); ledcAttach(4, 5000, 8); ledcAttach(19, 5000, 8);';
-/** Gira a la izquierda: la rueda izquierda hacia atrás y la derecha hacia adelante, al máximo. */
-const GIRAR = `${PINES} digitalWrite(16, LOW); digitalWrite(17, HIGH); digitalWrite(5, HIGH); digitalWrite(18, LOW); ledcWrite(4, 255); ledcWrite(19, 255); delay(100);`;
+/**
+ * Gira a la izquierda: la rueda izquierda hacia atrás y la derecha hacia adelante, al máximo. En 300 ms el robot
+ * ya gira a velocidad estable (el agarre limita el arranque los primeros ~60 ms).
+ */
+const GIRAR = `${PINES} digitalWrite(16, LOW); digitalWrite(17, HIGH); digitalWrite(5, HIGH); digitalWrite(18, LOW); ledcWrite(4, 255); ledcWrite(19, 255); delay(300);`;
 const INICIO = '#include <Wire.h>\n#include <MPU6050_light.h>\nMPU6050 mpu(Wire);\n';
-/** Lo que gira el robot con GIRAR, en °/s, y lo que entrega el chip con `lsb` LSB por °/s (saturado a 16 bits). */
-const GIRO_DPS = 1200 / 160 * 180 / Math.PI;
-const crudo = (lsb: number) => Math.max(-32768, Math.min(32767, Math.round(GIRO_DPS * lsb)));
+/**
+ * Lo que gira el robot con GIRAR al terminar la prueba, en °/s: cada rueda a 600 mm/s, una hacia cada lado, daría
+ * 1200 / trocha rad/s; la rodadura de las ruedas lo deja apenas por debajo.
+ */
+function giroDe(sim: Simulador): number {
+  const dps = (sim.estado.w as number) * 180 / Math.PI;
+  const maximo = 1200 / ROBOT_POR_DEFECTO.ruedas.trocha * 180 / Math.PI;
+  expect(dps).toBeGreaterThan(0.97 * maximo); expect(dps).toBeLessThan(maximo);
+  return dps;
+}
+/** Lo que entrega el chip girando a `dps` °/s con `lsb` LSB por °/s (saturado a 16 bits). */
+const crudo = (dps: number, lsb: number) => Math.max(-32768, Math.min(32767, Math.round(dps * lsb)));
 
 const RAMPA = pistaDe({ columnas: 3, filas: 1, baldosas: [{ c: 0, r: 0, tipo: 'recta' }, { c: 1, r: 0, tipo: 'rampa' },
   { c: 2, r: 0, tipo: 'recta', nivel: 300 * Math.tan(20 * Math.PI / 180) }] });
@@ -50,30 +63,35 @@ describe('MPU6050 (MPU6050_light)', { timeout: 120_000 }, () => {
   it('en la rampa, begin deja getAngleY en la inclinación que mide el acelerómetro (el MPU mira hacia atrás: sube positivo)', async () => {
     const alto = 300 * Math.tan(20 * Math.PI / 180);
     const pista = pistaDe({ columnas: 3, filas: 1, baldosas: [{ c: 0, r: 0, tipo: 'recta' }, { c: 1, r: 0, tipo: 'rampa' }, { c: 2, r: 0, tipo: 'recta', nivel: alto }] });
-    const { texto } = await correrSketch(`${INICIO}void setup() { Serial.begin(115200); mpu.begin();
+    const { texto, sim } = await correrSketch(`${INICIO}void setup() { Serial.begin(115200); mpu.begin();
       Serial.printf("%.2f %.2f %.1f %.1f\\n", mpu.getAccX(), mpu.getAccZ(), mpu.getAccAngleY(), mpu.getAngleY()); }\nvoid loop() {}`,
       { pista, pose: { x: 450, y: 150, yaw: 0 } });
-    expect(texto).toBe('-0.34 0.94 20.0 20.0\n');
+    // El chasis queda a 20° de la rampa salvo por la diferencia de radio entre las ruedas y las ruedas locas (~0,1°).
+    const inclinacion = -sim.estado.pitch * 180 / Math.PI;
+    expect(inclinacion).toBeCloseTo(20, 0);
+    expect(texto).toBe(`-0.34 0.94 ${inclinacion.toFixed(1)} ${inclinacion.toFixed(1)}\n`);
   });
 
   it('giro: ±500 °/s por defecto, saturación con setGyroConfig(0) y configuración inválida', async () => {
-    const { texto } = await correrSketch(`${INICIO}void setup() { Serial.begin(115200); mpu.begin(); ${GIRAR}
+    const { texto, sim } = await correrSketch(`${INICIO}void setup() { Serial.begin(115200); mpu.begin(); ${GIRAR}
       mpu.update(); Serial.printf("%.1f\\n", mpu.getGyroZ());
       Serial.println(mpu.setGyroConfig(0)); mpu.update(); Serial.printf("%.2f\\n", mpu.getGyroZ());
-      Serial.println(mpu.setGyroConfig(7)); }\nvoid loop() {}`, { duracionUs: 300_000 });
-    expect(texto).toBe(`${(crudo(65.5) / 65.5).toFixed(1)}\n0\r\n${(32767 / 131).toFixed(2)}\n1\r\n`);
+      Serial.println(mpu.setGyroConfig(7)); }\nvoid loop() {}`, { duracionUs: 500_000 });
+    const lineas = texto.split(/\r?\n/);
+    expect(Number(lineas[0])).toBeCloseTo(crudo(giroDe(sim), 65.5) / 65.5, 0);
+    expect(lineas.slice(1)).toEqual(['0', (32767 / 131).toFixed(2), '1', '']);
   });
 
   it('offsets: se restan, calcOffsets los mide con 500 lecturas y update integra el giro en getAngleZ', async () => {
-    const { texto } = await correrSketch(`${INICIO}void setup() { Serial.begin(115200); mpu.begin();
+    const { texto, sim } = await correrSketch(`${INICIO}void setup() { Serial.begin(115200); mpu.begin();
       mpu.setGyroOffsets(1, 2, 3); mpu.update(); Serial.printf("%.2f %.2f\\n", mpu.getGyroZoffset(), mpu.getGyroZ());
       unsigned long t0 = micros(); mpu.calcOffsets(); Serial.println((micros() - t0 + 500) / 1000);
       Serial.printf("%.2f %.2f\\n", mpu.getGyroZoffset(), mpu.getAccZoffset());
       ${GIRAR} mpu.update(); float z0 = mpu.getAngleZ(); t0 = millis(); while (millis() - t0 < 200) mpu.update();
-      Serial.printf("%.1f\\n", mpu.getAngleZ() - z0); }\nvoid loop() {}`, { duracionUs: 1_200_000 });
+      Serial.printf("%.1f\\n", mpu.getAngleZ() - z0); }\nvoid loop() {}`, { duracionUs: 1_500_000 });
     const lineas = texto.split(/\r?\n/);
     expect(lineas.slice(0, 3)).toEqual(['3.00 -3.00', '700', '0.00 0.00']);
-    expect(Number(lineas[3])).toBeCloseTo(crudo(65.5) / 65.5 * 0.2, 0);
+    expect(Number(lineas[3])).toBeCloseTo(crudo(giroDe(sim), 65.5) / 65.5 * 0.2, 0);
   });
 
   it('writeData y readData usan los registros del chip simulado', async () => {
@@ -82,9 +100,12 @@ describe('MPU6050 (MPU6050_light)', { timeout: 120_000 }, () => {
       Serial.println(mpu.readData(0x3F)); ${GIRAR}
       Serial.println(mpu.writeData(MPU6050_GYRO_CONFIG_REGISTER, 0x18)); mpu.update(); Serial.printf("%.1f\\n", mpu.getGyroZ());
       mpu.writeData(MPU6050_PWR_MGMT_1_REGISTER, 0x40); mpu.update(); Serial.printf("%.1f\\n", mpu.getGyroZ()); }\nvoid loop() {}`,
-      { duracionUs: 300_000 });
+      { duracionUs: 500_000 });
     // ±2000 °/s en el chip, pero la librería sigue dividiendo por 65,5: como en el robot real.
-    expect(texto).toBe(`68\r\n1\r\n8\r\n64\r\n0\r\n${(crudo(16.4) / 65.5).toFixed(1)}\n0.0\n`);
+    const lineas = texto.split(/\r?\n/);
+    expect(lineas.slice(0, 5)).toEqual(['68', '1', '8', '64', '0']);
+    expect(Number(lineas[5])).toBeCloseTo(crudo(giroDe(sim), 16.4) / 65.5, 0);
+    expect(lineas.slice(6)).toEqual(['0.0', '']);
     expect(sim.avisos).toEqual(['Llama a begin() del MPU6050 antes de leerlo.']);
   });
 

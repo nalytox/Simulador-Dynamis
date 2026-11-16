@@ -3,6 +3,7 @@ import type { FinEjecucion, Instantanea } from './ejecucion';
 import type { MensajeAlSimulador, MensajeDelSimulador } from './trabajador';
 import type { Pista } from '../pista/tipos';
 import type { ConfigRobot } from '../robot/config';
+import type { MemoriaNvs } from './memoria';
 
 export interface EventosSimulacion {
   alInstantanea(i: Instantanea): void;
@@ -19,6 +20,8 @@ export interface OpcionesInicio {
   semilla: number;
   /** Valores de los parámetros @ajustar (para "Ver esta prueba en la pista"). */
   ajustes?: Record<string, number>;
+  /** La memoria del robot (Preferences) con que parte. */
+  memoria?: MemoriaNvs;
   /** Centésimas de la velocidad real (100 = ×1). */
   velocidad: number;
 }
@@ -55,7 +58,7 @@ export class ClienteSimulacion {
     trabajador.onmessage = e => this.recibir(trabajador, e.data as MensajeDelSimulador);
     const mensaje: MensajeAlSimulador = {
       tipo: 'iniciar', modulo: o.modulo, pista: o.pista, robot: o.robot, desde: o.desde, semilla: o.semilla,
-      ajustes: o.ajustes, control: control.buffer as SharedArrayBuffer,
+      ajustes: o.ajustes, memoria: o.memoria, control: control.buffer as SharedArrayBuffer,
     };
     trabajador.postMessage(mensaje);
     this.trabajador = trabajador;

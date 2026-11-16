@@ -8,11 +8,21 @@ import { entradasDe, recorridoEsperado } from '../ayuda/recorrido';
 const pista = (id: IdPista): Pista => PISTAS_DE_EJEMPLO.find(p => p.id === id)!.pista;
 const hitos = (p: Pista) => p.objetos.flatMap(o => (o.tipo === 'hito' ? [o.props.numero] : [])).sort((a, b) => a - b);
 
-it('hay tres pistas de ejemplo, con sus nombres', () => {
+it('las pistas de ejemplo, con sus nombres', () => {
   expect(PISTAS_DE_EJEMPLO.map(p => [p.id, p.pista.nombre])).toEqual([
-    ['practica', 'Práctica FIRVI'], ['cruces', 'Cruces con marcas'], ['rampa', 'Rampa y baches'],
+    ['practica', 'Práctica FIRVI'], ['cruces', 'Cruces con marcas'], ['rampa', 'Rampa y baches'], ['circuito', 'Circuito'],
+    ['completa', 'Pista completa'],
   ]);
-  for (const { pista: p } of PISTAS_DE_EJEMPLO) expect([p.columnas, p.filas]).toEqual([8, 6]);
+  for (const id of ['practica', 'cruces', 'rampa'] as const) expect([pista(id).columnas, pista(id).filas]).toEqual([8, 6]);
+});
+
+it('el Circuito es una vuelta cerrada con curvas a los dos lados y sin meta', () => {
+  const p = pista('circuito');
+  // Es para dar vueltas, no una pista de competencia: las bases piden hitos y meta, y esta no los tiene.
+  expect(revisarPista(p).map(a => a.mensaje)).toEqual(['La pista tiene 0 hitos; las bases piden 8.', 'La pista necesita una baldosa de meta.']);
+  expect(p.baldosas.filter(b => b.tipo === 'partida')).toHaveLength(1);
+  // Las curvas suaves conectan bocas que giran hacia los dos lados: a lo largo de la vuelta hay giros a la izquierda y a la derecha.
+  expect(p.baldosas.filter(b => b.tipo === 'giroSuave').length).toBeGreaterThanOrEqual(5);
 });
 
 it('las pistas nuevas cumplen las bases', () => {
@@ -56,4 +66,32 @@ it('el catálogo de proyectos empieza con el seguidor del comienzo', () => {
     expect(e.proyecto.nombre).toBe(e.id);
     expect(Object.keys(e.proyecto.archivos), e.id).toContain(`${e.id}.ino`);
   }
+});
+
+it('la Pista completa trae todos los casos y cumple las bases', () => {
+  const p = pista('completa');
+  expect(revisarPista(p)).toEqual([]);
+  expect(hitos(p)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+  const recorrido = recorridoEsperado(p);
+  expect(recorrido.at(-1)!.tipo).toBe('meta');
+  const tipos = new Set(recorrido.map(b => b.tipo));
+  for (const t of ['cortes', 'cruce', 'unionT', 'giroL', 'giroSuave', 'rampa', 'indicadorF2', 'cuadradoF1'] as const) expect(tipos.has(t), t).toBe(true);
+  expect(recorrido.some(b => b.props.invertida)).toBe(true);
+  // Cruces y uniones en T: girar a cada lado, seguir recto y la vuelta en U (que vuelve a pasar por un cruce).
+  const cruces = p.baldosas.flatMap(b => (b.tipo === 'cruce' || b.tipo === 'unionT' ? [accionEsperada(b)] : []));
+  for (const a of ['izq', 'der', 'recto', 'vuelta'] as const) expect(cruces, a).toContain(a);
+  expect(new Set(recorrido.map(b => `${b.c},${b.r}`)).size).toBeLessThan(recorrido.length);
+  const entradas = entradasDe(recorrido);
+  const rampas = recorrido.flatMap((b, i) => (b.tipo === 'rampa' ? [entradas[i] === 'oeste' ? 'sube' : 'baja'] : []));
+  expect(rampas).toEqual(['sube', 'baja']);
+  const baches = p.objetos.flatMap(o => (o.tipo === 'bache' ? [o.rot % 90] : []));
+  expect(baches.sort()).toEqual([0, 45]);
+  expect(p.objetos.filter(o => o.tipo === 'obstaculo')).toHaveLength(1);
+  // F2: sus decisiones son las de los dos cruces que vienen y la del cuadrado F1.
+  const desdeF2 = recorrido.slice(recorrido.findIndex(b => b.tipo === 'indicadorF2'));
+  const f2 = desdeF2[0];
+  if (f2.tipo !== 'indicadorF2') throw new Error('sin F2');
+  const siguientes = desdeF2.filter(b => b.tipo === 'cruce').slice(0, 2).map(b => accionEsperada(b));
+  const f1 = desdeF2.find(b => b.tipo === 'cuadradoF1');
+  expect(f2.props.decisiones).toEqual([...siguientes, f1?.tipo === 'cuadradoF1' ? f1.props.correcto : null]);
 });

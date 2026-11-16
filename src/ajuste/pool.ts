@@ -1,6 +1,7 @@
 import { puntosDePartida } from '../pista/puntos';
 import type { Pista } from '../pista/tipos';
 import type { ConfigRobot } from '../robot/config';
+import type { MemoriaNvs } from '../simulacion/memoria';
 import type { RegistroPrueba } from './contrato';
 import { registroDeCicloSinFin, resumirRegistro, type ResultadoPrueba } from './prueba';
 import type { MensajeAlAjuste, MensajeDelAjuste } from './trabajador';
@@ -23,6 +24,8 @@ export interface OpcionesPool {
   recompensaPrincipal: (r: RegistroPrueba) => number;
   /** Tiempo real sin latidos antes de dar una prueba por colgada (2 s por defecto). */
   esperaCicloSinFinMs?: number;
+  /** La memoria del robot (Preferences) con que parte cada prueba; ninguna la cambia. */
+  memoria?: MemoriaNvs;
 }
 
 interface Pendiente {
@@ -70,7 +73,7 @@ export function crearPool(o: OpcionesPool): PoolPruebas {
     const trabajador = o.crearTrabajador();
     trabajador.onmessage = e => recibir(indice, trabajador, e.data as MensajeDelAjuste);
     trabajador.onerror = e => reemplazar(indice, errorCon('ErrorSimulador', 'El worker de la prueba se detuvo.', detalleDeCarga(e)));
-    const mensaje: MensajeAlAjuste = { tipo: 'iniciar', modulo: o.modulo, pista: o.pista, robot: o.robot, duracionS: o.duracionS, latidos: latidosBuffer, indice };
+    const mensaje: MensajeAlAjuste = { tipo: 'iniciar', modulo: o.modulo, pista: o.pista, robot: o.robot, duracionS: o.duracionS, memoria: o.memoria, latidos: latidosBuffer, indice };
     trabajador.postMessage(mensaje);
     return trabajador;
   };

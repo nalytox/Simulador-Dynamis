@@ -4,10 +4,10 @@ import { ROBOT_POR_DEFECTO, ROBOT_POR_DEFECTO_ANTERIOR, esRobotPorDefectoAnterio
 describe('configuración del robot', () => {
   it('el robot por defecto es el Dynamis real: placa V2 sobre la base RGB', () => {
     expect(ROBOT_POR_DEFECTO).toEqual({
-      chasis: { largo: 125, ancho: 180, alto: 117, xDelantero: 97 },
+      chasis: { largo: 125, ancho: 180, alto: 117, xDelantero: 97, masa: 800, xCentroMasa: 20, alturaLibre: 15 },
       ruedas: { diametro: 60, trocha: 160, x: 0 },
       ruedasLocas: { instalado: true, diametro: 55, x: 70, trocha: 160 },
-      motores: { driver: 'TB6612', izq: { pwm: 4, in1: 16, in2: 17 }, der: { pwm: 19, in1: 5, in2: 18 }, stby: null, vMaxMmS: 600 },
+      motores: { driver: 'TB6612', izq: { pwm: 4, in1: 16, in2: 17 }, der: { pwm: 19, in1: 5, in2: 18 }, stby: null, vMaxMmS: 600, torqueKgCm: 2 },
       qtr: { pines: [36, 39, 34, 35, 32, 33, 25, 26], emisor: 27, x: 74, separacion: 8, altura: 7 },
       vl53l0x: { x: 82, y: 0, z: 20, yaw: 0, pitch: 0, canal: 2 },
       tcs34725: { x: 35, y: 22, z: 7, led: null, canal: 0 },
@@ -64,6 +64,18 @@ describe('configuración del robot', () => {
     expect(validarRobot(r)).toEqual([{ campo: 'ruedasLocas.x', mensaje: 'Las ruedas locas quedan fuera del chasis.' }]);
     r.ruedasLocas.x = 0;
     expect(validarRobot(r)).toEqual([{ campo: 'ruedasLocas.x', mensaje: 'Las ruedas locas no pueden estar en el eje de las ruedas.' }]);
+    r.ruedasLocas.instalado = false;
+    expect(validarRobot(r)).toEqual([]);
+  });
+
+  it('el centro de masa tiene que quedar entre el eje de las ruedas y las ruedas locas', () => {
+    const volcado = [{ campo: 'chasis.xCentroMasa', mensaje: 'El centro de masa queda fuera de los apoyos (entre el eje de las ruedas y las ruedas locas): el robot se volcaría.' }];
+    const r = structuredClone(ROBOT_POR_DEFECTO);
+    r.chasis.xCentroMasa = 80;
+    expect(validarRobot(r)).toEqual(volcado);
+    r.chasis.xCentroMasa = -5;
+    expect(validarRobot(r)).toEqual(volcado);
+    // Sin ruedas locas, el chasis se apoya en su frente o su cola: no se vuelca.
     r.ruedasLocas.instalado = false;
     expect(validarRobot(r)).toEqual([]);
   });

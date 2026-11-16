@@ -8,6 +8,7 @@ import { crearMundo } from '../mundo/pista';
 import { puntosDePartida } from '../pista/puntos';
 import type { Pista } from '../pista/tipos';
 import type { ConfigRobot } from '../robot/config';
+import { memoriaVacia, type ClaveEscrita, type MemoriaNvs } from './memoria';
 
 /** Lo que la UI necesita para dibujar un cuadro. */
 export interface Instantanea {
@@ -25,6 +26,11 @@ export interface Instantanea {
   avisos: string[];
   /** Respuesta a un pedido que no se pudo hacer ("Ya usaste los 3 reinicios."). */
   mensaje: string | null;
+  /**
+   * La memoria del robot (Preferences), solo si cambió desde la instantánea anterior (y en la
+   * primera); `ultima` es la última clave escrita.
+   */
+  memoria: { datos: MemoriaNvs; ultima: ClaveEscrita | null } | null;
 }
 
 export interface FinEjecucion {
@@ -32,6 +38,8 @@ export interface FinEjecucion {
   error?: ErrorEjecucion;
   /** null si la prueba no alcanzó a empezar (por ejemplo, el worker falló al instanciar el programa). */
   juez: EstadoJuez | null;
+  /** La memoria del robot al terminar, también si terminó con error; null si la prueba no alcanzó a empezar. */
+  memoria: MemoriaNvs | null;
 }
 
 export interface OpcionesPrueba {
@@ -43,6 +51,8 @@ export interface OpcionesPrueba {
   semilla: number;
   /** Valores de los parámetros @ajustar (para "Ver esta prueba en la pista"). */
   ajustes?: Record<string, number>;
+  /** La memoria del robot (Preferences) con que parte; por defecto, vacía. No se modifica. */
+  memoria?: MemoriaNvs;
   control: Int32Array;
   publicar: (i: Instantanea) => void;
   /** Reloj real (por defecto, performance.now y Atomics.wait); las pruebas usan uno de mentira. */
@@ -75,10 +85,18 @@ export async function ejecutarPrueba(o: OpcionesPrueba): Promise<FinEjecucion> {
   let ultima = -Infinity;
   /** Avisos ya publicados: el simulador los lista por origen, no en el orden en que aparecen. */
   const publicados = new Set<string>();
+  /** La memoria pasa de una corrida a la siguiente cuando el juez reinicia el programa. */
+  let memoria = o.memoria ?? memoriaVacia();
+  let memoriaPublicada = false;
   for (;;) {
     let poseReinicio: Pose | null = null;
     let sim!: Simulador;
+    let escriturasPublicadas = 0;
     const publicar = () => {
+      const escrituras = sim.memoria.escrituras;
+      const cambioMemoria = !memoriaPublicada || escrituras !== escriturasPublicadas;
+      memoriaPublicada = true;
+      escriturasPublicadas = escrituras;
       const { x, y, z, yaw, pitch, roll } = sim.estado;
       const avisos = sim.avisos.filter(a => !publicados.has(a));
       for (const a of avisos) publicados.add(a);
@@ -86,13 +104,14 @@ export async function ejecutarPrueba(o: OpcionesPrueba): Promise<FinEjecucion> {
         reinicio, t: sim.tiempoUs / 1e6, estado: { x, y, z, yaw, pitch, roll }, motores: sim.motores,
         sensores: sim.medirParaVista(azarVista), juez: juez.estado, serial: sim.tomarSerial(),
         avisos, mensaje,
+        memoria: cambioMemoria ? { datos: sim.memoria.instantanea(), ultima: sim.memoria.ultima } : null,
       });
       mensaje = null;
       ultima = ahora();
     };
     sim = await Simulador.crear({
       modulo: o.modulo, mundo, robot: o.robot, poseInicial: pose, semilla: o.semilla, ajustes: o.ajustes,
-      ambiente: o.pista.ambiente,
+      ambiente: o.pista.ambiente, memoria,
       alPasoFisica: (tUs, estado) => {
         juez.actualizar(tUs, estado);
         if (juez.termino) return sim.detener();
@@ -112,12 +131,13 @@ export async function ejecutarPrueba(o: OpcionesPrueba): Promise<FinEjecucion> {
     publicar();
     const r = sim.ejecutar(Infinity);
     publicar();
-    if (r.motivo === 'error') return { motivo: 'error', error: r.error, juez: juez.estado };
+    memoria = sim.memoria.instantanea();
+    if (r.motivo === 'error') return { motivo: 'error', error: r.error, juez: juez.estado, memoria };
     if (poseReinicio) {
       pose = poseReinicio;
       reinicio++;
       continue;
     }
-    return { motivo: 'terminado', juez: juez.estado };
+    return { motivo: 'terminado', juez: juez.estado, memoria };
   }
 }

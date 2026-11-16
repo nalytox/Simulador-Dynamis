@@ -52,6 +52,22 @@ static inline void dynAvisar(const char* texto) { dyn_aviso(texto, strlen(texto)
 DYN_IMPORTAR("ajustable") double __dyn_ajustable(const char* grupo, const char* nombre, double valor);
 DYN_IMPORTAR("azar_u32") uint32_t dyn_azar_u32(void);
 
+// Memoria del robot (NVS, la usa Preferences.h). Los nombres son cadenas C. tipo: el enum
+// PreferenceType (PT_I8 = 0 … PT_BLOB = 9). La memoria vive en el simulador (src/simulacion/memoria.ts).
+/** 1 si abrió el espacio de nombres (en solo lectura, solo si ya existe), 0 si no. */
+DYN_IMPORTAR("nvs_abrir") int dyn_nvs_abrir(const char* espacio, int solo_lectura);
+/** Bytes escritos, o 0 si no se pudo (solo lectura, nombre largo, sin espacio…). Cuesta COSTOS_US.nvsEscritura. */
+DYN_IMPORTAR("nvs_poner") size_t dyn_nvs_poner(const char* espacio, const char* clave, int tipo, const void* datos, size_t largo);
+/** Largo del valor si existe con ese tipo (−1: cualquier tipo); −1 si no existe o es de otro tipo. */
+DYN_IMPORTAR("nvs_largo") int dyn_nvs_largo(const char* espacio, const char* clave, int tipo);
+/** Copia hasta `maximo` bytes del valor y devuelve cuántos copió. Cuesta COSTOS_US.nvsLectura. */
+DYN_IMPORTAR("nvs_leer") size_t dyn_nvs_leer(const char* espacio, const char* clave, void* datos, size_t maximo);
+/** El tipo guardado (PreferenceType), o 10 (PT_INVALID) si la clave no existe. */
+DYN_IMPORTAR("nvs_tipo") int dyn_nvs_tipo(const char* espacio, const char* clave);
+DYN_IMPORTAR("nvs_quitar") int dyn_nvs_quitar(const char* espacio, const char* clave);
+DYN_IMPORTAR("nvs_vaciar") int dyn_nvs_vaciar(const char* espacio);
+DYN_IMPORTAR("nvs_libres") size_t dyn_nvs_libres(void);
+
 #ifdef __cplusplus
 }
 #endif

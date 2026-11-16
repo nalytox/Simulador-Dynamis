@@ -6,6 +6,10 @@ export const COSTOS_US = {
   lecturaMpu: 400,
   /** Un byte por I2C a 400 kHz (8 bits y el ACK), en el I2C directo: la dirección cuenta como un byte. */
   i2cByte: 22.5,
+  /** Escribir en la memoria del robot (Preferences: nvs_set y nvs_commit en la flash). Estimado. */
+  nvsEscritura: 3000,
+  /** Leer de la memoria del robot (Preferences). Estimado. */
+  nvsLectura: 20,
   /** Un aviso de una librería mal usada: así un ciclo que la llama sin parar no congela el tiempo. */
   aviso: 1,
 } as const;

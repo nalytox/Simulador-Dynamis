@@ -33,10 +33,41 @@ export function pasoDinamica(estado, motores, dt, mundo, robot, azar) → nuevo 
 | `robot` | Configuración del robot (medidas, montaje de sensores, pines). Ver `src/robot/config.ts`. `huellaRobot(x, y, yaw, robot)` da el contorno del chasis. |
 | `azar` | `() => número en [0, 1)` con la semilla de la ejecución. |
 
-**El placeholder actual:**
-- cinemática diferencial ideal con `robot.motores.vMaxMmS` (la velocidad de cada rueda con duty = 1, que se edita en «Mi robot»);
-- `z`, `pitch` y `roll` salen de `mundo.altura`. El pitch: si el robot tiene ruedas locas (`robot.ruedasLocas.instalado`), con la altura bajo el eje de las ruedas motrices (`ruedas.x`) y bajo el de las locas (`ruedasLocas.x`), así que se inclina cuando las locas llegan a la rampa; sin ruedas locas, con la altura bajo el frente y la cola del chasis. El roll, con la altura bajo cada rueda motriz. Un bache de 6 mm lo inclina apenas unos grados;
-- si el robot choca, no avanza.
+**El modelo actual** (un modelo de fuerzas; los valores marcados como estimados hay que medirlos):
+
+- **Motores:** cada uno empuja su rueda con `F = Fb · (duty − v_rueda / vMaxMmS)`, donde `Fb` es el
+  torque de bloqueo (`robot.motores.torqueKgCm`, en «Mi robot») dividido por el radio de la rueda. Así
+  un motor con la rueda frenada da todo su torque y a `vMaxMmS` ya no empuja. En `'freno'` frena con
+  `−Fb · v / vMaxMmS`; en `'libre'` no hace fuerza.
+- **Tracción:** una rueda no empuja más que `PISO.mu ·` su carga. Si el motor pide más, la rueda patina.
+- **Masa e inercia:** `robot.chasis.masa` (g). El centro de masa (`robot.chasis.xCentroMasa`) reparte el
+  peso entre las ruedas motrices y las ruedas locas, o el apoyo que se arrastra si no hay ruedas locas.
+  La inercia de giro es la de una placa del tamaño del chasis.
+- **Rodadura:** cada apoyo frena con `rodadura · carga` (`PISO.rodadura` las motrices,
+  `PISO.rodaduraLocas` las locas y `PISO.muArrastre` un apoyo que se arrastra). Al girar, las ruedas
+  locas van de lado y también frenan el giro.
+- **Relieve:** cada rueda tiene su radio. Sobre un bache no salta: rueda sobre él y su centro sube de a
+  poco. Subir cuesta una fuerza de `carga · pendiente`, donde la pendiente es la del camino del centro de
+  la rueda. Por eso, con poco PWM, una rueda puede no alcanzar a subir un bache de 6 mm. Con más PWM, o
+  más torque, lo pasa. En una rampa, la misma fuerza es el peso que tira hacia abajo.
+- **Partes bajas:** la barra del QTR (`qtr.altura`), los TCS34725 (`z`) y la panza entre las ruedas y
+  las ruedas locas (`robot.chasis.alturaLibre`) chocan con el relieve. Si avanzar las mete más en el
+  suelo, el robot queda trabado.
+- **Rugosidad del piso:**
+  - Cada baldosa queda hasta `PISO.desnivelMm` más alta o más baja que su vecina, y su rodadura cambia
+    hasta `PISO.variacionRodadura`. Las dos cosas dependen solo de la baldosa.
+  - El agarre de cada rueda varía al azar, `PISO.ruidoAgarre` en `PISO.ruidoAgarreS`, con el `azar` de
+    la prueba.
+  - El robot se sacude un poco al cruzar las uniones y no anda perfectamente derecho.
+- **Obstáculos:** si el chasis choca, no avanza.
+- **Inclinación:** `z`, `pitch` y `roll` salen de la altura del centro de cada rueda menos su radio.
+  - El pitch se calcula entre el eje de las ruedas y el de las ruedas locas. Sin ruedas locas, entre el
+    frente y la cola del chasis.
+  - El roll se calcula entre las dos ruedas motrices.
+  - En una rampa, el eje queda `R · (1/cos θ − 1)` sobre el suelo bajo él.
+
+El estado agrega `v` (mm/s hacia adelante), `w` (rad/s) y el agarre de cada rueda (`agarreIzq`,
+`agarreDer`). Las constantes del piso están en [`parametros.js`](parametros.js).
 
 ## El mundo de la pista
 
