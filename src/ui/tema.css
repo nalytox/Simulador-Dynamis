@@ -129,7 +129,8 @@ main.gutter { padding-block: 18px 28px; }
 .btn-mini svg.ico { width: 16px; height: 16px; }
 
 /* ---------- Vista Programar ---------- */
-.grid-programar { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.12fr); gap: 16px; align-items: start; }
+/* --columnas la fija tamanos.ts (la manilla de cada ventana); sin ella, el reparto original. */
+.grid-programar { display: grid; grid-template-columns: var(--columnas, minmax(0, 470fr) minmax(0, 530fr)); gap: 16px; align-items: start; }
 .col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 
 .editor { font-family: var(--f-codigo); font-size: 14px; line-height: 1.7; padding: 10px 0; overflow-x: auto; max-height: 470px; overflow-y: auto; }
@@ -163,6 +164,17 @@ main.gutter { padding-block: 18px 28px; }
 
 .lienzo-caja { position: relative; padding: 12px; }
 canvas.lienzo { width: 100%; aspect-ratio: 4 / 3; display: block; border-radius: 14px; background: #EAF5FD; touch-action: none; }
+/* Ventanas que se agrandan desde una esquina (tamanos.ts): la que da hacia la otra columna. */
+.editor-caja { position: relative; }
+.manilla { position: absolute; bottom: 4px; width: 24px; height: 24px; display: grid; place-items: center; z-index: 6;
+  border-radius: 8px; color: var(--tinta-suave); background: rgba(255, 255, 255, .9); touch-action: none; user-select: none; }
+.manilla svg { width: 14px; height: 14px; }
+.manilla:hover { color: var(--azul); background: var(--hielo); }
+.manilla:focus-visible { outline: 3px solid var(--sol); outline-offset: 1px; }
+#manilla-editor { right: 6px; cursor: nwse-resize; }
+#manilla-pista { left: 4px; cursor: nesw-resize; }
+#manilla-pista svg { transform: scaleX(-1); }
+.grid-programar.pista-con-alto #lienzo-sim { aspect-ratio: auto; height: var(--alto-pista); }
 .pista-pie { display: flex; gap: 14px; padding: 0 16px 12px; font-size: 12.5px; color: var(--tinta-suave); flex-wrap: wrap; }
 .pista-pie span { display: inline-flex; align-items: center; gap: 6px; }
 .pista-pie i { width: 12px; height: 12px; border-radius: 4px; display: inline-block; }
@@ -346,6 +358,7 @@ canvas.mini { width: 100%; aspect-ratio: 4 / 3; display: block; border-radius: 1
 
 @media (max-width: 1100px) {
   .grid-programar { grid-template-columns: minmax(0, 1fr); }
+  .manilla { cursor: ns-resize !important; }
   .grid-pista { grid-template-columns: minmax(0, 1fr); }
   .piezas { grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); }
 }

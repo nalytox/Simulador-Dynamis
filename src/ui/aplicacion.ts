@@ -3,6 +3,7 @@ import { Bitacora, formatoTiempo } from './bitacora';
 import { crearConsola } from './consola';
 import { registrarPrueba } from './pruebas';
 import { crearLienzo } from './lienzo';
+import { acotar, crearManillas } from './tamanos';
 import { crearTarjetas } from './tarjetas';
 import { crearTarjetaMemoria } from './memoria';
 import { confirmar } from './dialogo';
@@ -148,6 +149,12 @@ export async function iniciarAplicacion(raiz: Document): Promise<void> {
   crearSelectorVersion(raiz, versionEsp32(), v => {
     preferencias.versionEsp32 = v;
     guardarPreferencias({ ...preferencias });
+  });
+
+  // Las ventanas de Programar se agrandan desde una esquina; el tamaño queda en las preferencias.
+  crearManillas(raiz, {
+    inicial: acotar(preferencias.tamanos, raiz.defaultView?.innerHeight ?? 900),
+    alCambiar: t => { preferencias.tamanos = t; guardarPreferencias({ ...preferencias }); },
   });
 
   // Las dos vistas: al volver a Programar, los mensajes se muestran desde el final.

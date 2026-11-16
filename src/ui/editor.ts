@@ -68,7 +68,8 @@ const campoError = StateField.define<DecorationSet>({
 
 /** Tema con la paleta de Dynamis. */
 const tema = EditorView.theme({
-  '&': { height: '470px', fontSize: '14px', backgroundColor: '#FFFFFF', color: '#12164A' },
+  // El alto lo puede cambiar la manilla de «Mi programa» (tamanos.ts).
+  '&': { height: 'var(--alto-editor, 470px)', fontSize: '14px', backgroundColor: '#FFFFFF', color: '#12164A' },
   // Sin ligaduras: ">=" se ve como dos caracteres, igual que como se escribe.
   '.cm-scroller': { fontFamily: "'JetBrains Mono', monospace", lineHeight: '1.7', fontVariantLigatures: 'none' },
   '.cm-gutters': { backgroundColor: '#FFFFFF', color: '#9AA6C9', border: 'none' },
