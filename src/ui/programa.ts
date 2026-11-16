@@ -3,7 +3,7 @@ import { crearEditor } from './editor';
 import { crearPestanas } from './pestanas';
 import { confirmar, pedirNombre } from './dialogo';
 import { puedeBorrar, validarNombreArchivo } from './archivos';
-import { archivoPrincipal, ordenarArchivos, programasDelProyecto, type Proyecto } from '../proyecto/proyecto';
+import { archivoPrincipal, moverArchivo, ordenarArchivos, programasDelProyecto, type Proyecto } from '../proyecto/proyecto';
 import { leerArrastre, leerCarpeta, leerInput, leerZip, proyectoDesdeArchivos, type ArchivoLeido } from '../proyecto/importar';
 import { guardarEnCarpeta, nombreZip, proyectoAZip, type CarpetaEscribible } from '../proyecto/exportar';
 import { firmaProyecto } from '../compilador/cliente';
@@ -72,6 +72,10 @@ export function crearPanelPrograma(raiz: Document, o: OpcionesPrograma): PanelPr
   };
   const pestanas = crearPestanas($('pestanas'), {
     alElegir: elegir,
+    alMover(ruta, aIndice) {
+      cambiar(moverArchivo(proyecto, ruta, aIndice));
+      pintar();
+    },
     async alCrear() {
       const nombre = await pedirNombre(raiz, { titulo: 'Archivo nuevo', inicial: '', boton: 'Crear', validar: n => validarNombreArchivo(proyecto, n) });
       if (!nombre) return;

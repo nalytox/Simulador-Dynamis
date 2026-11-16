@@ -23,3 +23,35 @@ test('el selector «Programa a ejecutar» decide qué .ino corre, y la elección
   await page.reload();
   await expect(page.getByLabel('Programa a ejecutar')).toHaveValue('uno.ino');
 });
+
+const pestanas = (page: Page) => page.locator('#pestanas [role="tab"]');
+
+test('las pestañas se ordenan arrastrándolas o con Alt+flechas, y el orden sigue al recargar', async ({ page }) => {
+  await page.goto('/');
+  await abrir(page, { 'a.ino': programa('a'), 'b.h': '#pragma once\n', 'c.h': '#pragma once\n' });
+  await expect(pestanas(page)).toHaveText(['a.ino', 'b.h', 'c.h']);
+
+  // Arrastra c.h hasta antes de b.h.
+  const c = (await page.getByRole('tab', { name: 'c.h' }).boundingBox())!;
+  const b = (await page.getByRole('tab', { name: 'b.h' }).boundingBox())!;
+  await page.mouse.move(c.x + c.width / 2, c.y + c.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 5 });
+  await page.mouse.move(b.x + 4, b.y + b.height / 2, { steps: 5 });
+  await page.mouse.up();
+  await expect(pestanas(page)).toHaveText(['a.ino', 'c.h', 'b.h']);
+  // Arrastrar no cambia el archivo abierto.
+  await expect(page.getByRole('tab', { name: 'a.ino' })).toHaveAttribute('aria-selected', 'true');
+
+  // Con el teclado: Alt+← mueve la pestaña con el foco.
+  await page.getByRole('tab', { name: 'b.h' }).click();
+  await page.keyboard.press('Alt+ArrowLeft');
+  await expect(pestanas(page)).toHaveText(['a.ino', 'b.h', 'c.h']);
+  await expect(page.getByRole('tab', { name: 'b.h' })).toBeFocused();
+  await page.keyboard.press('Alt+ArrowRight');
+  await expect(pestanas(page)).toHaveText(['a.ino', 'c.h', 'b.h']);
+
+  await page.waitForTimeout(800);
+  await page.reload();
+  await expect(pestanas(page)).toHaveText(['a.ino', 'c.h', 'b.h']);
+});

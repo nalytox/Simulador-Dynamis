@@ -108,6 +108,10 @@ main.gutter { padding-block: 18px 28px; }
 .card h2 svg.ico { color: var(--azul); }
 .chip { font-size: 12.5px; background: var(--hielo); color: var(--azul); padding: 3px 10px; border-radius: 999px; font-weight: 500; font-variant-numeric: tabular-nums; }
 .header-der { margin-left: auto; display: flex; gap: 8px; }
+.pestana { touch-action: none; }
+.pestana.arrastrando { opacity: .5; }
+.pestana.destino-antes { box-shadow: inset 4px 0 0 var(--azul); }
+.pestana.destino-despues { box-shadow: inset -4px 0 0 var(--azul); }
 .programa-a-ejecutar { order: 10; flex-basis: 100%; display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--tinta-suave); }
 .programa-a-ejecutar select { font: inherit; font-family: var(--f-codigo); color: var(--tinta); padding: 4px 8px; border: 2px solid var(--borde); border-radius: 10px; background: var(--blanco); min-height: 32px; }
 /* Versión de la placa esp32, bajo «Mi programa»: dos botones de radio como un interruptor. */
