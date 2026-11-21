@@ -13,6 +13,13 @@ subirlo al robot físico.
   sensores, el juez virtual y los errores de compilación explicados en español. Bajo «Mi programa»
   se elige la versión de la placa esp32 con que se compila: **3.x** o **2.0.14**, la misma que tenga
   el Arduino IDE con que se sube el programa al robot.
+  - **Programa a ejecutar:** si el proyecto tiene varios programas (cada `.ino` con su propio
+    `setup()` y `loop()`), el selector bajo «Mi programa» elige cuál corre. Los `.ino` sin
+    `setup()` ni `loop()` son pestañas de ayuda: se juntan con el elegido en el orden de las
+    pestañas. La elección se guarda con el proyecto.
+  - Las pestañas se ordenan arrastrándolas (o con <kbd>Alt</kbd>+<kbd>←</kbd>/<kbd>→</kbd>), y
+    las ventanas «Mi programa» y «Pista» se agrandan o achican arrastrando su esquina (doble clic
+    vuelve al tamaño original).
 - **Construir pista:** las piezas de las bases (líneas, cortes, cruces con marcas, rampas, F1 y F2,
   partida y meta, obstáculos, baches e hitos), sus propiedades, una revisión según las bases, y
   guardar o abrir la pista como `.json`.
@@ -51,6 +58,16 @@ subirlo al robot físico.
    "Descargar mi proyecto" entrega un `.zip` que también se abre en el Arduino IDE para subirlo al
    robot.
 4. **"Instalar en este computador"** deja un ícono en el escritorio, si el navegador lo permite.
+
+### Atajos
+
+| Atajo | Qué hace |
+|---|---|
+| <kbd>Ctrl</kbd>+<kbd>Z</kbd> | Deshace: lo escrito en el código; crear, renombrar o borrar archivos, mover pestañas y cambiar el programa a ejecutar (fuera del editor, o con el botón «Deshacer» del aviso); y los cambios en «Construir pista». |
+| <kbd>Ctrl</kbd>+<kbd>Y</kbd> o <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> | Rehace. |
+| <kbd>Alt</kbd>+<kbd>←</kbd> / <kbd>Alt</kbd>+<kbd>→</kbd> | Mueve la pestaña que tiene el foco. |
+| Flechas en la esquina de una ventana | Cambian su tamaño (con <kbd>Shift</kbd>, en pasos grandes). |
+| <kbd>Ctrl</kbd>+<kbd>F</kbd> y <kbd>Ctrl</kbd>+<kbd>/</kbd> | Buscan en el código y comentan la línea. |
 
 ## Librerías soportadas
 

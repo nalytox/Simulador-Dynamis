@@ -10,7 +10,7 @@ export type CompilacionWeb =
 
 /** Igual para dos proyectos con los mismos archivos y contenidos, en cualquier orden. */
 export function firmaProyecto(p: Proyecto): string {
-  return JSON.stringify([p.nombre, ...Object.keys(p.archivos).sort().map(ruta => [ruta, p.archivos[ruta]])]);
+  return JSON.stringify([p.nombre, p.principal ?? null, p.orden ?? null, ...Object.keys(p.archivos).sort().map(ruta => [ruta, p.archivos[ruta]])]);
 }
 
 interface Preparacion {

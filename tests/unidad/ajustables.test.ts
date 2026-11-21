@@ -121,3 +121,10 @@ it('formatearValor', () => {
   expect(formatearValor(-1.25, false)).toBe('-1.25');
   expect(formatearValor(123456.7, false)).toBe('123500.0');
 });
+
+it('solo busca marcas en los archivos que se compilan: no en otro programa del proyecto', () => {
+  const p = { nombre: 'robot', principal: 'dos.ino', archivos: {
+    'uno.ino': 'const int A = 1; // @ajustar g\nvoid setup() {}\nvoid loop() {}\n',
+    'dos.ino': 'const int B = 2; // @ajustar g\nvoid setup() {}\nvoid loop() {}\n' } };
+  expect(buscarAjustables(p).parametros.map(a => a.id)).toEqual(['g.B']);
+});

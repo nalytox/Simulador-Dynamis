@@ -78,6 +78,9 @@
           <header>
             <h2><svg class="ico" viewBox="0 0 24 24"><path d="M8 6l-6 6 6 6M16 6l6 6-6 6"/></svg>Mi programa</h2>
             <span class="chip" id="chip-carpeta">Carpeta</span>
+            <label class="programa-a-ejecutar" for="sel-programa">Programa a ejecutar
+              <select id="sel-programa"></select>
+            </label>
             <div class="header-der">
               <button class="btn-mini" id="btn-carpeta"><svg class="ico" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Abrir carpeta</button>
               <button class="btn-mini" id="btn-zip">Abrir .zip</button>
@@ -96,7 +99,12 @@
             <span class="nota-version" id="nota-version"></span>
           </fieldset>
           <div class="barra-pestanas" id="pestanas" role="tablist" aria-label="Archivos del proyecto"></div>
-          <div class="editor" id="editor" aria-label="Código del programa"></div>
+          <div class="editor-caja">
+            <div class="editor" id="editor" aria-label="Código del programa"></div>
+            <div class="manilla" id="manilla-editor" role="separator" tabindex="0" aria-valuemin="30" aria-valuemax="70" aria-valuenow="47"
+                 aria-label="Tamaño del código: arrastra la esquina o usa las flechas; doble clic para volver al original"
+                 title="Arrastra para agrandar o achicar el código. Doble clic: tamaño original"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M12.5 2.5l-10 10M12.5 7l-5.5 5.5M12.5 11.2l-1.3 1.3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></div>
+          </div>
           <div class="burbuja" id="burbuja" hidden>
             <svg class="mascota" viewBox="0 0 64 64" aria-hidden="true"><use href="#mascota"/></svg>
             <div>
@@ -136,7 +144,12 @@
             <span class="chip" id="chip-pista">8 × 6 baldosas de 30 cm</span>
             <span class="chip" id="chip-tiempo">t = 0,0 s</span>
           </header>
-          <div class="lienzo-caja"><canvas class="lienzo" id="lienzo-sim" aria-label="Vista de la pista con el robot"></canvas></div>
+          <div class="lienzo-caja">
+            <canvas class="lienzo" id="lienzo-sim" aria-label="Vista de la pista con el robot"></canvas>
+            <div class="manilla" id="manilla-pista" role="separator" tabindex="0" aria-valuemin="30" aria-valuemax="70" aria-valuenow="47"
+                 aria-label="Tamaño de la pista: arrastra la esquina o usa las flechas; doble clic para volver al original"
+                 title="Arrastra para agrandar o achicar la pista. Doble clic: tamaño original"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M12.5 2.5l-10 10M12.5 7l-5.5 5.5M12.5 11.2l-1.3 1.3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></div>
+          </div>
           <div class="pista-pie">
             <span><i style="background:#FFD166"></i>Sensor de línea detectando</span>
             <span><i style="background:rgba(101,199,247,.55)"></i>Rayo del sensor de distancia</span>
@@ -257,6 +270,8 @@ ledcWrite(PWM_IZQ, 150);  // 0 a 255</pre>
       <button class="btn-sec" id="btn-guardar"><svg class="ico" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Guardar pista</button>
       <button class="btn-sec" id="btn-abrir"><svg class="ico" viewBox="0 0 24 24"><path d="M12 20V9M7 14l5-5 5 5M5 4h14"/></svg>Abrir pista</button>
       <button class="btn-sec" id="btn-nueva"><svg class="ico" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M12 8v8M8 12h8"/></svg>Pista nueva</button>
+      <button class="btn-sec" id="btn-deshacer-pista" title="Deshacer (Ctrl+Z)" disabled><svg class="ico" viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>Deshacer</button>
+      <button class="btn-sec" id="btn-rehacer-pista" title="Rehacer (Ctrl+Y)" disabled><svg class="ico" viewBox="0 0 24 24"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/></svg>Rehacer</button>
       <input type="file" id="in-pista" accept=".json,application/json" hidden>
       <span class="chip-estado"><i></i>Los cambios se guardan solos en este navegador</span>
     </div>
@@ -299,7 +314,7 @@ ledcWrite(PWM_IZQ, 150);  // 0 a 255</pre>
         <header><h2 id="panel-titulo">Baldosa elegida</h2></header>
         <div class="props">
           <div id="panel-pista" class="props" style="padding:0"></div>
-          <div class="ayuda-teclas">Elige una pieza y haz clic en la pista. <kbd>R</kbd> gira la baldosa elegida, <kbd>Supr</kbd> la deja vacía y <kbd>Esc</kbd> vuelve a Elegir.</div>
+          <div class="ayuda-teclas">Elige una pieza y haz clic en la pista. <kbd>R</kbd> gira la baldosa elegida, <kbd>Supr</kbd> la deja vacía y <kbd>Esc</kbd> vuelve a Elegir. <kbd>Ctrl</kbd> + <kbd>Z</kbd> deshace y <kbd>Ctrl</kbd> + <kbd>Y</kbd> rehace.</div>
         </div>
       </article>
     </div>
@@ -417,6 +432,14 @@ ledcWrite(PWM_IZQ, 150);  // 0 a 255</pre>
   <div class="ay-panel" id="ay-inicio" role="tabpanel" aria-labelledby="ay-tab-inicio" hidden>
     <p>Escribe tu programa en «Programar» y presiona «Probar mi robot». En «Construir pista» armas la pista con las piezas de las bases, y en «Ejemplos» hay proyectos para empezar.</p>
     <button class="btn-sec" id="ay-recorrido">Ver el recorrido de nuevo</button>
+    <h3>Atajos y trucos</h3>
+    <table class="ay-tabla" id="ay-atajos">
+      <tr><th>Programa a ejecutar</th><td>Si tu proyecto tiene varios programas (cada <code>.ino</code> con su propio <code>setup()</code> y <code>loop()</code>), elige en «Mi programa» cuál corre. Las pestañas sin <code>setup()</code> ni <code>loop()</code> se juntan con el elegido.</td></tr>
+      <tr><th>Ordenar pestañas</th><td>Arrastra una pestaña a otro lugar, o usa <kbd>Alt</kbd> + <kbd>←</kbd> y <kbd>Alt</kbd> + <kbd>→</kbd>.</td></tr>
+      <tr><th>Agrandar o achicar</th><td>Arrastra la esquina de «Mi programa» o de «Pista»: de lado cambia el ancho, hacia abajo el alto. Doble clic en la esquina la deja como al principio.</td></tr>
+      <tr><th>Deshacer y rehacer</th><td><kbd>Ctrl</kbd> + <kbd>Z</kbd> deshace y <kbd>Ctrl</kbd> + <kbd>Y</kbd> (o <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd>) rehace: lo que escribes, crear, renombrar o borrar archivos, mover pestañas, cambiar el programa a ejecutar, y la pista en «Construir pista».</td></tr>
+      <tr><th>En el código</th><td><kbd>Ctrl</kbd> + <kbd>F</kbd> busca y <kbd>Ctrl</kbd> + <kbd>/</kbd> convierte la línea en comentario (o la vuelve a código).</td></tr>
+    </table>
     <h3>Sin internet</h3>
     <p>La primera vez que pruebas tu robot, el simulador descarga su compilador. Después queda guardado en este navegador y funciona sin internet.</p>
     <button class="btn-sec" id="ay-instalar" hidden>Instalar en este computador</button>
@@ -509,7 +532,7 @@ ledcWrite(PWM_IZQ, 150);  // 0 a 255</pre>
   </div>
 </dialog>
 
-<div class="toast" id="toast" hidden><i></i><span id="toast-txt"></span></div>
+<div class="toast" id="toast" hidden><i></i><span id="toast-txt"></span><button class="toast-accion" id="toast-accion" hidden></button></div>
 <div class="aviso-global" id="aviso-global" role="alert" hidden><div id="aviso-global-txt"></div></div>
 
 <script type="module" src="/src/main.ts"></script>

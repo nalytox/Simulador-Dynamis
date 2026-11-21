@@ -5,7 +5,11 @@ import type { VersionEsp32 } from '../compilador/version';
 import type { MemoriaNvs } from '../simulacion/memoria';
 
 /** Autoguardado en IndexedDB: el proyecto, la pista, el robot, su memoria (Preferences) y las preferencias. */
-export interface Preferencias { velocidad: number; archivoAbierto?: string; versionEsp32?: VersionEsp32 }
+export interface Preferencias {
+  velocidad: number; archivoAbierto?: string; versionEsp32?: VersionEsp32;
+  /** El tamaño de las ventanas de Programar (ver ui/tamanos.ts). */
+  tamanos?: { columna: number; altoEditor: number | null; altoPista: number | null };
+}
 export interface DatosGuardados {
   proyecto: Proyecto; pista: Pista; robot: ConfigRobot; preferencias: Preferencias;
   /** La memoria del robot (Preferences): es del robot, no del programa, como la flash del ESP32. */

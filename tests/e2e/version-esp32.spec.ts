@@ -26,11 +26,11 @@ test('bajo «Mi programa» se elige la versión de la placa esp32; parte en 3.x'
   await expect(grupo).toBeVisible();
   await expect(opcion(page, '3.x')).toBeChecked();
   await expect(page.locator('#nota-version')).toContainText('ledcAttach(pin, frecuencia, bits)');
-  // Queda justo debajo del título «Mi programa».
+  // Queda justo debajo del encabezado de «Mi programa» (el título, sus botones y «Programa a ejecutar»).
   const titulo = await page.getByRole('heading', { name: 'Mi programa' }).boundingBox();
   const caja = await grupo.boundingBox();
   expect(caja!.y).toBeGreaterThan(titulo!.y);
-  expect(caja!.y - (titulo!.y + titulo!.height)).toBeLessThan(80);
+  expect(caja!.y - (titulo!.y + titulo!.height)).toBeLessThan(130);
 });
 
 test('con 2.0.14 corre el PWM por canal, y la elección sigue al volver', async ({ page }) => {

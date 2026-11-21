@@ -1,5 +1,5 @@
 import { normalizarTexto } from './preprocesador';
-import { ordenarArchivos, tipoDeArchivo, type Proyecto } from '../proyecto/proyecto';
+import { archivosCompilados, tipoDeArchivo, type Proyecto } from '../proyecto/proyecto';
 
 /**
  * Marcas `@ajustar`: un valor del código marcado en su comentario se puede probar
@@ -124,7 +124,7 @@ function recorrer(p: Proyecto): { encontradas: Encontrada[]; avisos: AvisoAjusta
   const encontradas: Encontrada[] = [];
   const avisos: AvisoAjustable[] = [];
   const vistos = new Set<string>();
-  for (const archivo of ordenarArchivos(p).filter(conMarcas)) {
+  for (const archivo of archivosCompilados(p).filter(conMarcas)) {
     normalizarTexto(p.archivos[archivo]).split('\n').forEach((linea, indice) => {
       const a = analizarLinea(linea);
       if (!a) return;
